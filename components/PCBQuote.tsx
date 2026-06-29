@@ -35,10 +35,10 @@ const Pill = ({
     activeColor?: "blue" | "orange" | "green";
     badge?: string;
 }) => {
-    const baseClasses = "px-4 py-1.5 rounded text-sm font-medium transition-all relative border";
+    const baseClasses = "px-4 py-1.5 rounded text-sm font-medium transition-all relative border cursor-pointer";
 
     const colors = {
-        blue: "border-primary bg-[#e6f0ff] text-primary",
+        blue: "border-primary bg-primary/10 text-primary",
         orange: "border-[#f5821f] bg-[#fff5eb] text-[#f5821f]",
         green: "border-[#52c41a] bg-[#f6ffed] text-[#52c41a]"
     };
@@ -84,7 +84,7 @@ const ConfigRow = ({ label, children, tooltip }: { label: string; children: Reac
 const ColorCircle = ({ color, active, onClick, checkColor = "white" }: any) => (
     <button
         onClick={onClick}
-        className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all ${active ? "border-primary shadow-sm" : "border-transparent shadow-sm hover:scale-110"
+        className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${active ? "border-primary shadow-sm" : "border-transparent shadow-sm hover:scale-110"
             }`}
         style={{ backgroundColor: color }}
     >
@@ -99,6 +99,44 @@ export default function PCBQuote() {
     const [specsOpen, setSpecsOpen] = useState(true);
     const [highSpecsOpen, setHighSpecsOpen] = useState(false);
     const [advancedOpen, setAdvancedOpen] = useState(false);
+
+    // File Upload State
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+
+    // File Validation & Event Handlers
+    const handleFileValidation = (file: File) => {
+        setUploadError(null);
+        const fileExtension = file.name.split('.').pop()?.toLowerCase();
+
+        if (fileExtension !== 'zip' && fileExtension !== 'rar') {
+            setUploadError("Invalid file type. Please upload a Gerber file in .zip or .rar format.");
+            return false;
+        }
+
+        const maxSizeBytes = 100 * 1024 * 1024; // 100 MB
+        if (file.size > maxSizeBytes) {
+            setUploadError("File is too large. Maximum size allowed is 100 MB.");
+            return false;
+        }
+
+        setUploadedFile(file);
+        return true;
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            handleFileValidation(e.target.files[0]);
+        }
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFileValidation(e.dataTransfer.files[0]);
+        }
+    };
 
     // Form State
     const [baseMaterial, setBaseMaterial] = useState("FR-4");
@@ -129,6 +167,7 @@ export default function PCBQuote() {
 
     const [assemblyOn, setAssemblyOn] = useState(false);
     const [stencilOn, setStencilOn] = useState(false);
+    const [buildTime, setBuildTime] = useState("2 days");
 
     // Constants
     const tabs = [
@@ -145,11 +184,10 @@ export default function PCBQuote() {
         <div className="min-h-screen bg-[#f0f2f5] font-sans">
             {/* Header */}
             <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-                <div className="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
+                <div className="max-w-[1400px] mx-auto px-4 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Link href="/" className="flex items-center gap-2 group">
-                            <CircuitBoard className="w-7 h-7 text-primary" />
-                            <span className="text-xl font-bold text-primary tracking-tight">Megabyte Circuit</span>
+                            <img src="/images/logo.png" alt="Megabyte Circuit Logo" className="h-18 w-auto object-contain" />
                         </Link>
                     </div>
 
@@ -193,7 +231,7 @@ export default function PCBQuote() {
 
                             {/* Card Header */}
                             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                                <h1 className="text-[22px] font-bold text-gray-900">Online PCB Quote</h1>
+                                <h1 className="text-lg font-bold text-gray-900">Online PCB Quote</h1>
                                 <div className="flex items-center gap-4 text-sm">
                                     <a href="#" className="text-primary hover:underline">Instructions For Ordering &gt;</a>
                                     <a href="#" className="text-primary hover:underline">Upload History &gt;</a>
@@ -206,15 +244,57 @@ export default function PCBQuote() {
                                     }`}
                                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                                 onDragLeave={() => setIsDragging(false)}
-                                onDrop={(e) => { e.preventDefault(); setIsDragging(false); }}
+                                onDrop={handleDrop}
                             >
-                                <button className="bg-primary hover:bg-blue-600 text-white px-8 py-3.5 rounded-md font-medium inline-flex items-center gap-2 shadow-sm transition-colors text-base">
-                                    <Upload className="w-5 h-5" />
-                                    Add gerber file
-                                </button>
-                                <p className="mt-4 text-sm text-gray-500">
-                                    Only accept zip or rar, Max 100 MB. <a href="#" className="text-primary hover:underline">View example &gt;</a>
-                                </p>
+                                <input
+                                    type="file"
+                                    id="gerber-upload"
+                                    accept=".zip,.rar"
+                                    className="hidden"
+                                    onChange={handleFileChange}
+                                />
+
+                                {uploadedFile ? (
+                                    <div className="flex flex-col items-center justify-center space-y-3">
+                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                            <Upload className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-gray-900 text-base">{uploadedFile.name}</p>
+                                            <p className="text-sm text-gray-500">{(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setUploadedFile(null)}
+                                            className="px-4 py-1.5 border border-red-200 text-red-500 rounded text-sm font-medium hover:bg-red-50 transition-colors cursor-pointer"
+                                        >
+                                            Remove File
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() => document.getElementById("gerber-upload")?.click()}
+                                            className="bg-primary hover:bg-secondary text-white px-8 py-3.5 rounded-md font-medium inline-flex items-center gap-2 shadow-sm transition-colors text-base cursor-pointer"
+                                        >
+                                            <Upload className="w-5 h-5" />
+                                            Add gerber file
+                                        </button>
+                                        <p className="mt-4 text-sm text-gray-500">
+                                            Only accept zip or rar, Max 100 MB
+                                        </p>
+                                    </>
+                                )}
+
+                                {uploadError && (
+                                    <div className="mt-3">
+                                        <p className="text-sm font-medium text-red-500 bg-red-50 border border-red-100 rounded-md py-2 px-3 inline-block">
+                                            {uploadError}
+                                        </p>
+                                    </div>
+                                )}
+
                                 <div className="mt-4 inline-flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
                                     <Lock className="w-3.5 h-3.5" />
                                     <span>All uploads are secure and confidential.</span>
@@ -271,7 +351,7 @@ export default function PCBQuote() {
                             <div className="mt-8 border border-gray-200 rounded-lg overflow-hidden">
                                 <button
                                     onClick={() => setSpecsOpen(!specsOpen)}
-                                    className="w-full flex items-center justify-between px-6 py-4 bg-gray-50/50 hover:bg-gray-50 transition-colors border-b border-gray-200"
+                                    className="w-full flex items-center justify-between px-6 py-4 bg-gray-50/50 hover:bg-gray-50 transition-colors border-b border-gray-200 cursor-pointer"
                                 >
                                     <span className="text-base font-bold text-gray-900">PCB Specifications</span>
                                     {specsOpen ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
@@ -321,7 +401,7 @@ export default function PCBQuote() {
 
                                         <ConfigRow label="Surface Finish">
                                             {["HASL(with lead)", "LeadFree HASL", "ENIG"].map(s => (
-                                                <Pill key={s} active={surfaceFinish === s} onClick={() => setSurfaceFinish(s)} activeColor={s.includes("HASL") ? "orange" : "blue"}>{s}</Pill>
+                                                <Pill key={s} active={surfaceFinish === s} onClick={() => setSurfaceFinish(s)} activeColor="blue">{s}</Pill>
                                             ))}
                                         </ConfigRow>
                                     </div>
@@ -332,7 +412,7 @@ export default function PCBQuote() {
                             <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
                                 <button
                                     onClick={() => setHighSpecsOpen(!highSpecsOpen)}
-                                    className={`w-full flex items-center justify-between px-6 py-4 bg-gray-50/50 hover:bg-gray-50 transition-colors ${highSpecsOpen ? "border-b border-gray-200" : ""}`}
+                                    className={`w-full flex items-center justify-between px-6 py-4 bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer ${highSpecsOpen ? "border-b border-gray-200" : ""}`}
                                 >
                                     <span className="text-base font-bold text-gray-900">High-spec Options</span>
                                     {highSpecsOpen ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
@@ -360,7 +440,7 @@ export default function PCBQuote() {
 
                                         <ConfigRow label="Electrical Test">
                                             {["Flying Probe Fully Test", "Not Tested"].map(t => (
-                                                <Pill key={t} active={elecTest === t} onClick={() => setElecTest(t)} activeColor={t.includes("Test") ? "green" : "blue"}>{t}</Pill>
+                                                <Pill key={t} active={elecTest === t} onClick={() => setElecTest(t)} activeColor="blue">{t}</Pill>
                                             ))}
                                         </ConfigRow>
 
@@ -377,7 +457,7 @@ export default function PCBQuote() {
                             <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden mb-6">
                                 <button
                                     onClick={() => setAdvancedOpen(!advancedOpen)}
-                                    className={`w-full flex items-center justify-between px-6 py-4 bg-gray-50/50 hover:bg-gray-50 transition-colors ${advancedOpen ? "border-b border-gray-200" : ""}`}
+                                    className={`w-full flex items-center justify-between px-6 py-4 bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer ${advancedOpen ? "border-b border-gray-200" : ""}`}
                                 >
                                     <span className="text-base font-bold text-gray-900">Advanced Options</span>
                                     {advancedOpen ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
@@ -385,33 +465,32 @@ export default function PCBQuote() {
 
                                 {advancedOpen && (
                                     <div className="p-6 pt-4 space-y-4">
-                                        <div>
+                                        <div className="w-full">
                                             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                                 PCB Remark <Edit2 className="w-3.5 h-3.5 text-gray-400" />
                                             </label>
-                                            <input type="text" className="w-full max-w-md h-10 px-3 border border-gray-300 rounded focus:border-primary outline-none text-sm" placeholder="Add remark..." />
+                                            <textarea rows={4} className="w-full p-3 border border-gray-300 rounded focus:border-primary outline-none text-sm resize-y" placeholder="Add your PCB remarks here..." />
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Addons Row 1 */}
                             <div className="mt-4 p-4 border border-gray-200 rounded-lg flex items-center justify-between bg-white hover:border-primary/50 transition-colors">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center">
-                                        <Cpu className="w-5 h-5 text-[#f5821f]" />
+                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <Cpu className="w-5 h-5 text-primary" />
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <span className="font-bold text-gray-900">PCB Assembly</span>
-                                            <span className="bg-[#f5821f] text-white text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">QUOTE</span>
+                                            <span className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">QUOTE</span>
                                         </div>
                                         <p className="text-sm text-gray-500 mt-0.5">Assembly cost starting from $0 with coupon <a href="#" className="text-primary hover:underline">&gt;</a></p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setAssemblyOn(!assemblyOn)}
-                                    className={`w-11 h-6 rounded-full relative transition-colors ${assemblyOn ? 'bg-primary' : 'bg-gray-200'}`}
+                                    className={`w-11 h-6 rounded-full relative transition-colors cursor-pointer ${assemblyOn ? 'bg-primary' : 'bg-gray-200'}`}
                                 >
                                     <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${assemblyOn ? 'translate-x-5' : 'translate-x-0'}`} />
                                 </button>
@@ -430,7 +509,7 @@ export default function PCBQuote() {
                                 </div>
                                 <button
                                     onClick={() => setStencilOn(!stencilOn)}
-                                    className={`w-11 h-6 rounded-full relative transition-colors ${stencilOn ? 'bg-primary' : 'bg-gray-200'}`}
+                                    className={`w-11 h-6 rounded-full relative transition-colors cursor-pointer ${stencilOn ? 'bg-primary' : 'bg-gray-200'}`}
                                 >
                                     <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${stencilOn ? 'translate-x-5' : 'translate-x-0'}`} />
                                 </button>
@@ -468,20 +547,40 @@ export default function PCBQuote() {
                                 <div className="pt-4 border-t border-gray-100">
                                     <div className="text-[14px] text-gray-600 mb-3">PCB Build Time</div>
                                     <div className="space-y-2">
-                                        <label className="flex items-center justify-between p-3 rounded border border-primary bg-[#e6f0ff]/50 cursor-pointer">
+                                        <label
+                                            onClick={() => setBuildTime("2 days")}
+                                            className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-colors ${buildTime === "2 days" ? "border-primary bg-primary/10" : "border-gray-200 hover:border-primary/50"
+                                                }`}
+                                        >
                                             <div className="flex items-center gap-2">
-                                                <input type="radio" name="buildTime" defaultChecked className="w-4 h-4 text-primary" />
-                                                <span className="text-sm font-medium text-primary">2 days</span>
+                                                <input
+                                                    type="radio"
+                                                    name="buildTime"
+                                                    checked={buildTime === "2 days"}
+                                                    onChange={() => setBuildTime("2 days")}
+                                                    className="w-4 h-4 text-primary cursor-pointer"
+                                                />
+                                                <span className={`text-sm font-medium ${buildTime === "2 days" ? "text-primary" : "text-gray-700"}`}>2 days</span>
                                             </div>
                                             <span className="text-sm font-medium text-gray-900">$0.00</span>
                                         </label>
 
-                                        <label className="flex items-center justify-between p-3 rounded border border-gray-200 hover:border-primary/50 cursor-pointer">
+                                        <label
+                                            onClick={() => setBuildTime("24 hours")}
+                                            className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-colors ${buildTime === "24 hours" ? "border-primary bg-primary/10" : "border-gray-200 hover:border-primary/50"
+                                                }`}
+                                        >
                                             <div className="flex items-center gap-2">
-                                                <input type="radio" name="buildTime" className="w-4 h-4 text-primary" />
+                                                <input
+                                                    type="radio"
+                                                    name="buildTime"
+                                                    checked={buildTime === "24 hours"}
+                                                    onChange={() => setBuildTime("24 hours")}
+                                                    className="w-4 h-4 text-primary cursor-pointer"
+                                                />
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-gray-700">24 hours</span>
-                                                    <span className="bg-[#fff5eb] text-[#f5821f] text-[10px] px-1.5 py-0.5 rounded border border-[#f5821f]/20">+$14/day</span>
+                                                    <span className={`text-sm font-medium ${buildTime === "24 hours" ? "text-primary" : "text-gray-700"}`}>24 hours</span>
+                                                    <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded border border-primary/20">+$14/day</span>
                                                 </div>
                                             </div>
                                             <span className="text-sm font-medium text-gray-900">$14.00</span>
@@ -491,11 +590,11 @@ export default function PCBQuote() {
 
                                 <div className="pt-4 border-t border-gray-100 text-right">
                                     <div className="text-sm text-gray-500 mb-1 text-left">Calculated Price:</div>
-                                    <div className="text-3xl font-bold text-[#f5821f]">$18.50</div>
+                                    <div className="text-3xl font-bold text-primary">$18.50</div>
                                     <p className="text-[11px] text-gray-400 mt-1">*Additional charges may apply for special cores</p>
                                 </div>
 
-                                <button className="w-full h-12 bg-gradient-to-r from-[#f5821f] to-[#ff9e40] hover:from-[#e67312] hover:to-[#f5821f] text-white font-bold rounded shadow-sm transition-all flex items-center justify-center gap-2 text-[15px]">
+                                <button className="w-full h-12 bg-primary hover:bg-secondary text-white font-bold rounded shadow-sm transition-all flex items-center justify-center gap-2 text-[15px] cursor-pointer">
                                     SAVE TO CART
                                 </button>
 
@@ -512,10 +611,10 @@ export default function PCBQuote() {
                                 </div>
 
                                 <div className="flex flex-wrap gap-2 pt-2">
-                                    <span className="inline-flex items-center gap-1 text-xs border border-[#f5821f]/30 bg-[#fff5eb] text-[#f5821f] px-2 py-1 rounded">
+                                    <span className="inline-flex items-center gap-1 text-xs border border-primary/30 bg-primary/10 text-primary px-2 py-1 rounded">
                                         Save $20.00
                                     </span>
-                                    <span className="inline-flex items-center gap-1 text-xs border border-[#f5821f]/30 bg-[#fff5eb] text-[#f5821f] px-2 py-1 rounded">
+                                    <span className="inline-flex items-center gap-1 text-xs border border-primary/30 bg-primary/10 text-primary px-2 py-1 rounded">
                                         Save $50.00
                                     </span>
                                 </div>
@@ -526,7 +625,7 @@ export default function PCBQuote() {
             </main>
 
             {/* Footer */}
-            <footer className="bg-[#1f2329] text-gray-300 pt-16 pb-8 mt-12 border-t-4 border-primary">
+            <footer className="bg-[#0f1729] text-gray-300 pt-16 pb-8 mt-12 border-t-4 border-primary">
                 <div className="max-w-[1400px] mx-auto px-4">
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-12">
                         <div>
@@ -561,26 +660,19 @@ export default function PCBQuote() {
                         </div>
                         <div className="lg:col-span-3 flex flex-col items-start lg:items-end">
                             <div className="flex items-center gap-2 mb-6">
-                                <CircuitBoard className="w-8 h-8 text-primary" />
-                                <span className="text-2xl font-bold text-white tracking-tight">Megabyte Circuit</span>
+                                <img src="/images/logo.png" alt="Megabyte Circuit Logo" className="h-24 w-auto object-contain brightness-0 invert" />
                             </div>
-                            <p className="text-sm mb-6 max-w-sm lg:text-right">
-                                Accelerating hardware innovation globally with high-quality, reliable, and rapid electronics manufacturing.
+                            <p className="text-sm leading-relaxed mb-2 max-w-sm lg:text-right text-gray-400">
+                                India's trusted PCB manufacturing partner delivering precision-engineered boards for startups, engineers, and enterprises.
                             </p>
-                            <div className="flex gap-4">
-                                <div className="bg-gray-800 p-2 rounded cursor-pointer hover:bg-gray-700 transition-colors">
-                                    <span className="text-xs font-bold block text-center mb-1">APP</span>
-                                    <div className="flex gap-2">
-                                        <span className="text-[10px]">iOS</span>
-                                        <span className="text-[10px]">Android</span>
-                                    </div>
-                                </div>
-                            </div>
+                            <p className="text-xs text-primary font-semibold italic mb-6 lg:text-right">
+                                "From Imagination To Innovation"
+                            </p>
                         </div>
                     </div>
 
                     <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
-                        <div>© 2026 Megabyte Circuit. All Rights Reserved.</div>
+                        <div>© {new Date().getFullYear()} Megabyte Circuit. All Rights Reserved.</div>
                         <div className="flex gap-6">
                             <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
                             <a href="#" className="hover:text-white transition-colors">Terms & Conditions</a>
