@@ -1,7 +1,7 @@
 "use client";
 
-import PCBQuote from "@/components/PCBQuote";
+import PCBSpecification from "@/components/PCBSpecification";
 
 export default function Home() {
-    return <PCBQuote />;
+    return <PCBSpecification />;
 }
