@@ -115,6 +115,7 @@ export default function QuoteForm({
     const [panelColSpacing, setPanelColSpacing] = useState(0);
     const [panelRowSpacing, setPanelRowSpacing] = useState(0);
     const [panelEdgeRails, setPanelEdgeRails] = useState("No rails");
+    const [panelRailWidth, setPanelRailWidth] = useState(5);
 
     const [showMegabytesModal, setShowMegabytesModal] = useState(false);
     const [tempColumns, setTempColumns] = useState(2);
@@ -122,6 +123,7 @@ export default function QuoteForm({
     const [tempColSpacing, setTempColSpacing] = useState(0);
     const [tempRowSpacing, setTempRowSpacing] = useState(0);
     const [tempEdgeRails, setTempEdgeRails] = useState("No rails");
+    const [tempRailWidth, setTempRailWidth] = useState(5);
     const [modalActiveTab, setModalActiveTab] = useState<"outline" | "preview">("outline");
 
     const panelCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -129,20 +131,37 @@ export default function QuoteForm({
     const singleWidth = parseFloat(formData.width) || 100;
     const singleHeight = parseFloat(formData.height) || 100;
 
-    const calculatePanelWidth = (cols: number, colSpacing: number, rails: string) => {
+    const calculatePanelWidth = (cols: number, colSpacing: number, rails: string, railW: number) => {
         let w = (singleWidth * cols) + (colSpacing * (cols - 1));
-        if (rails !== "No rails") {
-            w += 10; // 5mm rails on both sides
+        if (rails === "On left and right sides" || rails === "On four sides") {
+            w += railW * 2;
         }
         return w.toFixed(2);
     };
 
-    const calculatePanelHeight = (rows: number, rowSpacing: number, rails: string) => {
+    const calculatePanelHeight = (rows: number, rowSpacing: number, rails: string, railW: number) => {
         let h = (singleHeight * rows) + (rowSpacing * (rows - 1));
-        if (rails !== "No rails") {
-            h += 10; // 5mm rails on both sides
+        if (rails === "On top and bottom sides" || rails === "On four sides") {
+            h += railW * 2;
         }
         return h.toFixed(2);
+    };
+
+    // Helper to draw drill alignment holes inside rails
+    const drawAlignmentHole = (ctx: CanvasRenderingContext2D, x: number, y: number, drawScale: number) => {
+        ctx.save();
+        // Hole ring
+        ctx.fillStyle = "#D9D9D9";
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner dark hole
+        ctx.fillStyle = "#1B1B1B";
+        ctx.beginPath();
+        ctx.arc(x, y, 0.95, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
     };
 
     // Draw dynamic panel simulation
@@ -154,27 +173,32 @@ export default function QuoteForm({
         if (!ctx) return;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#1E293B"; // Dark slate background matching the screenshot theme
+        ctx.fillStyle = "#1E293B"; // Dark slate background
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Draw panel grid
+        // Draw panel grid parameters
         const cols = tempColumns;
         const rows = tempRows;
         const colSpacingVal = tempColSpacing;
         const rowSpacingVal = tempRowSpacing;
         const railVal = tempEdgeRails;
+        const railW = tempRailWidth;
 
         const singleW = singleWidth;
         const singleH = singleHeight;
 
-        const totalW = (singleW * cols) + (colSpacingVal * (cols - 1)) + (railVal !== "No rails" ? 10 : 0);
-        const totalH = (singleH * rows) + (rowSpacingVal * (rows - 1)) + (railVal !== "No rails" ? 10 : 0);
+        // Calculate panel dimensions
+        let hasLeftRightRails = railVal === "On left and right sides" || railVal === "On four sides";
+        let hasTopBottomRails = railVal === "On top and bottom sides" || railVal === "On four sides";
+
+        const totalW = (singleW * cols) + (colSpacingVal * (cols - 1)) + (hasLeftRightRails ? railW * 2 : 0);
+        const totalH = (singleH * rows) + (rowSpacingVal * (rows - 1)) + (hasTopBottomRails ? railW * 2 : 0);
 
         // Calculate scale to fit canvas
-        const padding = 20;
+        const padding = 24;
         const scaleX = (canvas.width - padding * 2) / totalW;
         const scaleY = (canvas.height - padding * 2) / totalH;
-        const drawScale = Math.min(scaleX, scaleY, 2.5); // cap zoom
+        const drawScale = Math.min(scaleX, scaleY, 2.5); // limit scale
 
         const offsetLeft = (canvas.width - totalW * drawScale) / 2;
         const offsetTop = (canvas.height - totalH * drawScale) / 2;
@@ -183,14 +207,12 @@ export default function QuoteForm({
         ctx.translate(offsetLeft, offsetTop);
         ctx.scale(drawScale, drawScale);
 
-        // Pre-render the single PCB onto an offscreen canvas if 2D Preview is requested and parsed files exist
+        // Pre-render the single PCB onto an offscreen canvas if 2D Preview is requested
         let offscreenCanvas: HTMLCanvasElement | null = null;
         if (modalActiveTab === "preview" && parsedFiles && parsedFiles.length > 0) {
             offscreenCanvas = document.createElement("canvas");
             offscreenCanvas.width = 400;
             offscreenCanvas.height = Math.round(400 * (singleH / singleW));
-            
-            // Draw vector to offscreen canvas
             renderPCBVectorToCanvas(offscreenCanvas, parsedFiles, "top", formData.pcbColor, {
                 outline: true,
                 topCopper: true,
@@ -201,21 +223,72 @@ export default function QuoteForm({
             });
         }
 
-        // Draw Rails if active
-        if (railVal !== "No rails") {
-            ctx.fillStyle = "rgba(229, 193, 88, 0.15)";
-            ctx.fillRect(0, 0, totalW, totalH);
-            ctx.strokeStyle = "#e5c158"; // Golden rails
+        // Draw rail background and borders in green theme if 2D Preview is enabled
+        const greenBaseTheme = "#1F7A35";
+        const outlineTheme = "#C5C5C5";
+
+        if (modalActiveTab === "preview") {
+            ctx.fillStyle = greenBaseTheme;
+            ctx.strokeStyle = outlineTheme;
             ctx.lineWidth = 1 / drawScale;
-            // Draw left rail outline
-            ctx.strokeRect(0, 0, 5, totalH);
-            // Draw right rail outline
-            ctx.strokeRect(totalW - 5, 0, 5, totalH);
+            // Draw background rectangle for the entire panel board
+            ctx.beginPath();
+            ctx.rect(0, 0, totalW, totalH);
+            ctx.fill();
+            ctx.stroke();
         }
 
-        // Draw individual boards
-        const startX = railVal !== "No rails" ? 5 : 0;
-        const startY = railVal !== "No rails" ? 5 : 0;
+        // Draw Edge Rails outlines/rectangles
+        if (hasTopBottomRails) {
+            if (modalActiveTab === "outline") {
+                ctx.fillStyle = "rgba(229, 193, 88, 0.12)";
+                ctx.fillRect(0, 0, totalW, railW);
+                ctx.fillRect(0, totalH - railW, totalW, railW);
+
+                ctx.strokeStyle = "#e5c158";
+                ctx.lineWidth = 1 / drawScale;
+                ctx.strokeRect(0, 0, totalW, railW);
+                ctx.strokeRect(0, totalH - railW, totalW, railW);
+            } else {
+                // Overlay darker green separators or draw edge rails boundary
+                ctx.fillStyle = "#155D27";
+                ctx.fillRect(0, 0, totalW, railW);
+                ctx.fillRect(0, totalH - railW, totalW, railW);
+            }
+
+            // Draw drill holes on top/bottom rails
+            drawAlignmentHole(ctx, totalW * 0.15, railW / 2, drawScale);
+            drawAlignmentHole(ctx, totalW * 0.85, railW / 2, drawScale);
+            drawAlignmentHole(ctx, totalW * 0.15, totalH - railW / 2, drawScale);
+            drawAlignmentHole(ctx, totalW * 0.85, totalH - railW / 2, drawScale);
+        }
+
+        if (hasLeftRightRails) {
+            if (modalActiveTab === "outline") {
+                ctx.fillStyle = "rgba(229, 193, 88, 0.12)";
+                ctx.fillRect(0, 0, railW, totalH);
+                ctx.fillRect(totalW - railW, 0, railW, totalH);
+
+                ctx.strokeStyle = "#e5c158";
+                ctx.lineWidth = 1 / drawScale;
+                ctx.strokeRect(0, 0, railW, totalH);
+                ctx.strokeRect(totalW - railW, 0, railW, totalH);
+            } else {
+                ctx.fillStyle = "#155D27";
+                ctx.fillRect(0, 0, railW, totalH);
+                ctx.fillRect(totalW - railW, 0, railW, totalH);
+            }
+
+            // Draw drill holes on left/right rails
+            drawAlignmentHole(ctx, railW / 2, totalH * 0.15, drawScale);
+            drawAlignmentHole(ctx, railW / 2, totalH * 0.85, drawScale);
+            drawAlignmentHole(ctx, totalW - railW / 2, totalH * 0.15, drawScale);
+            drawAlignmentHole(ctx, totalW - railW / 2, totalH * 0.85, drawScale);
+        }
+
+        // Draw individual boards inside grid boundaries
+        const startX = hasLeftRightRails ? railW : 0;
+        const startY = hasTopBottomRails ? railW : 0;
 
         for (let c = 0; c < cols; c++) {
             for (let r = 0; r < rows; r++) {
@@ -223,16 +296,15 @@ export default function QuoteForm({
                 const by = startY + r * (singleH + rowSpacingVal);
 
                 if (modalActiveTab === "outline") {
-                    ctx.strokeStyle = "#ec4899"; // Pink outline matching screenshot
+                    ctx.strokeStyle = "#ec4899"; // Pink outline
                     ctx.lineWidth = 1.5 / drawScale;
                     ctx.strokeRect(bx, by, singleW, singleH);
                 } else {
                     if (offscreenCanvas) {
-                        // Draw the pre-rendered vector PCB image inside the bounds
                         ctx.drawImage(offscreenCanvas, bx, by, singleW, singleH);
                     } else {
-                        // Fallback solid green board representing 2D preview
-                        ctx.fillStyle = "#1F7A35"; 
+                        // Fallback green PCB
+                        ctx.fillStyle = greenBaseTheme; 
                         ctx.fillRect(bx, by, singleW, singleH);
                         ctx.strokeStyle = "#155D27";
                         ctx.lineWidth = 1 / drawScale;
@@ -243,7 +315,7 @@ export default function QuoteForm({
         }
 
         ctx.restore();
-    }, [showMegabytesModal, tempColumns, tempRows, tempColSpacing, tempRowSpacing, tempEdgeRails, modalActiveTab, singleWidth, singleHeight, parsedFiles, formData.pcbColor]);
+    }, [showMegabytesModal, tempColumns, tempRows, tempColSpacing, tempRowSpacing, tempEdgeRails, tempRailWidth, modalActiveTab, singleWidth, singleHeight, parsedFiles, formData.pcbColor]);
 
     const handleModalSubmit = () => {
         setPanelColumns(tempColumns);
@@ -251,6 +323,7 @@ export default function QuoteForm({
         setPanelColSpacing(tempColSpacing);
         setPanelRowSpacing(tempRowSpacing);
         setPanelEdgeRails(tempEdgeRails);
+        setPanelRailWidth(tempRailWidth);
         setShowMegabytesModal(false);
     };
 
@@ -260,6 +333,7 @@ export default function QuoteForm({
         setTempColSpacing(panelColSpacing);
         setTempRowSpacing(panelRowSpacing);
         setTempEdgeRails(panelEdgeRails);
+        setTempRailWidth(panelRailWidth);
         setShowMegabytesModal(false);
     };
 
@@ -466,7 +540,7 @@ export default function QuoteForm({
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Edge Rails:</span>
-                                            <span className="text-gray-900 font-bold">{panelEdgeRails}</span>
+                                            <span className="text-gray-900 font-bold">{panelEdgeRails} ({panelRailWidth}mm)</span>
                                         </div>
                                         <button
                                             type="button"
@@ -930,18 +1004,36 @@ export default function QuoteForm({
                                         <select
                                             value={tempEdgeRails}
                                             onChange={(e) => setTempEdgeRails(e.target.value)}
-                                            className="h-8 px-2 border border-gray-250 rounded text-xs outline-none bg-white font-semibold text-gray-700 w-36"
+                                            className="h-8 px-2 border border-gray-250 rounded text-xs outline-none bg-white font-semibold text-gray-700 w-44"
                                         >
                                             <option value="No rails">No rails</option>
-                                            <option value="5mm edge rails">5mm edge rails</option>
+                                            <option value="On top and bottom sides">On top and bottom sides</option>
+                                            <option value="On left and right sides">On left and right sides</option>
+                                            <option value="On four sides">On four sides</option>
                                         </select>
                                     </div>
+
+                                    {/* Rail Width (displayed only when rails are active) */}
+                                    {tempEdgeRails !== "No rails" && (
+                                        <div className="flex items-center justify-between gap-4 animate-in slide-in-from-top-1 duration-150">
+                                            <span className="font-semibold text-gray-600 text-xs">Rail Width</span>
+                                            <div className="flex items-center gap-1">
+                                                <input
+                                                    type="number"
+                                                    value={tempRailWidth}
+                                                    onChange={(e) => setTempRailWidth(Math.max(1, parseInt(e.target.value) || 1))}
+                                                    className="w-16 h-8 border border-gray-250 rounded text-center outline-none focus:border-primary font-bold"
+                                                />
+                                                <span className="text-gray-400 text-xs">mm</span>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Calculated Panel size */}
                                     <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-100">
                                         <span className="font-semibold text-gray-600 text-xs">Panel size</span>
                                         <div className="text-sm font-bold text-gray-800">
-                                            {calculatePanelWidth(tempColumns, tempColSpacing, tempEdgeRails)} mm × {calculatePanelHeight(tempRows, tempRowSpacing, tempEdgeRails)} mm
+                                            {calculatePanelWidth(tempColumns, tempColSpacing, tempEdgeRails, tempRailWidth)} mm × {calculatePanelHeight(tempRows, tempRowSpacing, tempEdgeRails, tempRailWidth)} mm
                                         </div>
                                     </div>
 
