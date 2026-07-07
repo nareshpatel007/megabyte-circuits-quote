@@ -75,9 +75,8 @@ const ColorCircle = ({ color, active, onClick, checkColor = "white" }: any) => (
     <button
         type="button"
         onClick={onClick}
-        className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${
-            active ? "border-primary scale-110 shadow-md" : "border-transparent shadow hover:scale-115"
-        }`}
+        className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${active ? "border-primary scale-110 shadow-md" : "border-transparent shadow hover:scale-115"
+            }`}
         style={{ backgroundColor: color }}
     >
         {active && <Check className="w-4 h-4" style={{ color: checkColor }} />}

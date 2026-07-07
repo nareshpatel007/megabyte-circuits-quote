@@ -46,7 +46,7 @@ export default function PCBSpecification() {
     const [gerberFiles, setGerberFiles] = useState<GerberFile[]>([]);
     const [parsedGerberFiles, setParsedGerberFiles] = useState<ParsedGerberFile[]>([]);
     const [pcbInfo, setPcbInfo] = useState<PCBInfo | null>(null);
-    
+
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
     const [specsOpen, setSpecsOpen] = useState(true);
     const [highSpecsOpen, setHighSpecsOpen] = useState(false);
@@ -89,7 +89,7 @@ export default function PCBSpecification() {
 
     const handleUploadSuccess = (res: UploadResponse, file: File) => {
         setUploadedFile(file);
-        
+
         // Match response to mock format or parsed Gerber Files array
         if (res.info) {
             setPcbInfo(res.info);
@@ -152,7 +152,7 @@ export default function PCBSpecification() {
             {/* Main grid */}
             <main className="max-w-[1400px] mx-auto px-6 py-8">
                 <div className="flex flex-col lg:flex-row gap-8">
-                    
+
                     {/* Left Quote Section */}
                     <div className="flex-1 space-y-6">
                         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6 space-y-6">
@@ -212,11 +212,10 @@ export default function PCBSpecification() {
                                         {["2 days", "24 hours"].map(time => (
                                             <label
                                                 key={time}
-                                                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${
-                                                    formData.buildTime === time
+                                                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${formData.buildTime === time
                                                         ? "border-primary bg-primary/5 text-primary"
                                                         : "border-slate-200 hover:border-primary/50 text-slate-700"
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <input
