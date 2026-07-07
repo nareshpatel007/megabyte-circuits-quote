@@ -12,6 +12,7 @@ interface QuoteFormProps {
     setSpecsOpen: (val: boolean) => void;
     highSpecsOpen: boolean;
     setHighSpecsOpen: (val: boolean) => void;
+    isUploaded: boolean;
 }
 
 const Pill = ({
@@ -89,7 +90,8 @@ export default function QuoteForm({
     specsOpen,
     setSpecsOpen,
     highSpecsOpen,
-    setHighSpecsOpen
+    setHighSpecsOpen,
+    isUploaded
 }: QuoteFormProps) {
     const updateField = (field: keyof QuoteFormData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -149,7 +151,10 @@ export default function QuoteForm({
                             value={formData.width}
                             onChange={(e) => updateField("width", e.target.value)}
                             placeholder="100"
-                            className="w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all"
+                            readOnly={isUploaded}
+                            className={`w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all ${
+                                isUploaded ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-100" : ""
+                            }`}
                         />
                         <span className="text-gray-400 font-semibold">×</span>
                         <input
@@ -157,12 +162,18 @@ export default function QuoteForm({
                             value={formData.height}
                             onChange={(e) => updateField("height", e.target.value)}
                             placeholder="100"
-                            className="w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all"
+                            readOnly={isUploaded}
+                            className={`w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all ${
+                                isUploaded ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-100" : ""
+                            }`}
                         />
                         <select
                             value={formData.unit}
                             onChange={(e) => updateField("unit", e.target.value)}
-                            className="h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary outline-none bg-white shadow-sm font-semibold text-gray-700"
+                            disabled={isUploaded}
+                            className={`h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary outline-none bg-white shadow-sm font-semibold text-gray-700 ${
+                                isUploaded ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100" : ""
+                            }`}
                         >
                             <option value="mm">mm</option>
                             <option value="inches">inches</option>
