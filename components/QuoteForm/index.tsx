@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
-import { Info, Check, ChevronUp, ChevronDown } from "lucide-react";
-import { QuoteFormData } from "../../lib/gerber/types";
+import React, { useState, useRef, useEffect } from "react";
+import { Info, Check, ChevronUp, ChevronDown, X } from "lucide-react";
+import { QuoteFormData, ParsedGerberFile } from "../../lib/gerber/types";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { renderPCBVectorToCanvas } from "../../lib/gerber/renderer";
 
 interface QuoteFormProps {
     formData: QuoteFormData;
@@ -13,6 +14,7 @@ interface QuoteFormProps {
     highSpecsOpen: boolean;
     setHighSpecsOpen: (val: boolean) => void;
     isUploaded: boolean;
+    parsedFiles: ParsedGerberFile[];
 }
 
 const Pill = ({
@@ -97,14 +99,169 @@ export default function QuoteForm({
     setSpecsOpen,
     highSpecsOpen,
     setHighSpecsOpen,
-    isUploaded
+    isUploaded,
+    parsedFiles
 }: QuoteFormProps) {
     const updateField = (field: keyof QuoteFormData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
     // Keep state track for advanced options accordion
-    const [advancedOpen, setAdvancedOpen] = React.useState(true);
+    const [advancedOpen, setAdvancedOpen] = useState(true);
+
+    // Panel by Megabytes options and states
+    const [panelColumns, setPanelColumns] = useState(2);
+    const [panelRows, setPanelRows] = useState(2);
+    const [panelColSpacing, setPanelColSpacing] = useState(0);
+    const [panelRowSpacing, setPanelRowSpacing] = useState(0);
+    const [panelEdgeRails, setPanelEdgeRails] = useState("No rails");
+
+    const [showMegabytesModal, setShowMegabytesModal] = useState(false);
+    const [tempColumns, setTempColumns] = useState(2);
+    const [tempRows, setTempRows] = useState(2);
+    const [tempColSpacing, setTempColSpacing] = useState(0);
+    const [tempRowSpacing, setTempRowSpacing] = useState(0);
+    const [tempEdgeRails, setTempEdgeRails] = useState("No rails");
+    const [modalActiveTab, setModalActiveTab] = useState<"outline" | "preview">("outline");
+
+    const panelCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    const singleWidth = parseFloat(formData.width) || 100;
+    const singleHeight = parseFloat(formData.height) || 100;
+
+    const calculatePanelWidth = (cols: number, colSpacing: number, rails: string) => {
+        let w = (singleWidth * cols) + (colSpacing * (cols - 1));
+        if (rails !== "No rails") {
+            w += 10; // 5mm rails on both sides
+        }
+        return w.toFixed(2);
+    };
+
+    const calculatePanelHeight = (rows: number, rowSpacing: number, rails: string) => {
+        let h = (singleHeight * rows) + (rowSpacing * (rows - 1));
+        if (rails !== "No rails") {
+            h += 10; // 5mm rails on both sides
+        }
+        return h.toFixed(2);
+    };
+
+    // Draw dynamic panel simulation
+    useEffect(() => {
+        if (!showMegabytesModal) return;
+        const canvas = panelCanvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#1E293B"; // Dark slate background matching the screenshot theme
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw panel grid
+        const cols = tempColumns;
+        const rows = tempRows;
+        const colSpacingVal = tempColSpacing;
+        const rowSpacingVal = tempRowSpacing;
+        const railVal = tempEdgeRails;
+
+        const singleW = singleWidth;
+        const singleH = singleHeight;
+
+        const totalW = (singleW * cols) + (colSpacingVal * (cols - 1)) + (railVal !== "No rails" ? 10 : 0);
+        const totalH = (singleH * rows) + (rowSpacingVal * (rows - 1)) + (railVal !== "No rails" ? 10 : 0);
+
+        // Calculate scale to fit canvas
+        const padding = 20;
+        const scaleX = (canvas.width - padding * 2) / totalW;
+        const scaleY = (canvas.height - padding * 2) / totalH;
+        const drawScale = Math.min(scaleX, scaleY, 2.5); // cap zoom
+
+        const offsetLeft = (canvas.width - totalW * drawScale) / 2;
+        const offsetTop = (canvas.height - totalH * drawScale) / 2;
+
+        ctx.save();
+        ctx.translate(offsetLeft, offsetTop);
+        ctx.scale(drawScale, drawScale);
+
+        // Pre-render the single PCB onto an offscreen canvas if 2D Preview is requested and parsed files exist
+        let offscreenCanvas: HTMLCanvasElement | null = null;
+        if (modalActiveTab === "preview" && parsedFiles && parsedFiles.length > 0) {
+            offscreenCanvas = document.createElement("canvas");
+            offscreenCanvas.width = 400;
+            offscreenCanvas.height = Math.round(400 * (singleH / singleW));
+            
+            // Draw vector to offscreen canvas
+            renderPCBVectorToCanvas(offscreenCanvas, parsedFiles, "top", formData.pcbColor, {
+                outline: true,
+                topCopper: true,
+                bottomCopper: false,
+                solderMask: true,
+                silkscreen: true,
+                drills: true
+            });
+        }
+
+        // Draw Rails if active
+        if (railVal !== "No rails") {
+            ctx.fillStyle = "rgba(229, 193, 88, 0.15)";
+            ctx.fillRect(0, 0, totalW, totalH);
+            ctx.strokeStyle = "#e5c158"; // Golden rails
+            ctx.lineWidth = 1 / drawScale;
+            // Draw left rail outline
+            ctx.strokeRect(0, 0, 5, totalH);
+            // Draw right rail outline
+            ctx.strokeRect(totalW - 5, 0, 5, totalH);
+        }
+
+        // Draw individual boards
+        const startX = railVal !== "No rails" ? 5 : 0;
+        const startY = railVal !== "No rails" ? 5 : 0;
+
+        for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+                const bx = startX + c * (singleW + colSpacingVal);
+                const by = startY + r * (singleH + rowSpacingVal);
+
+                if (modalActiveTab === "outline") {
+                    ctx.strokeStyle = "#ec4899"; // Pink outline matching screenshot
+                    ctx.lineWidth = 1.5 / drawScale;
+                    ctx.strokeRect(bx, by, singleW, singleH);
+                } else {
+                    if (offscreenCanvas) {
+                        // Draw the pre-rendered vector PCB image inside the bounds
+                        ctx.drawImage(offscreenCanvas, bx, by, singleW, singleH);
+                    } else {
+                        // Fallback solid green board representing 2D preview
+                        ctx.fillStyle = "#1F7A35"; 
+                        ctx.fillRect(bx, by, singleW, singleH);
+                        ctx.strokeStyle = "#155D27";
+                        ctx.lineWidth = 1 / drawScale;
+                        ctx.strokeRect(bx, by, singleW, singleH);
+                    }
+                }
+            }
+        }
+
+        ctx.restore();
+    }, [showMegabytesModal, tempColumns, tempRows, tempColSpacing, tempRowSpacing, tempEdgeRails, modalActiveTab, singleWidth, singleHeight, parsedFiles, formData.pcbColor]);
+
+    const handleModalSubmit = () => {
+        setPanelColumns(tempColumns);
+        setPanelRows(tempRows);
+        setPanelColSpacing(tempColSpacing);
+        setPanelRowSpacing(tempRowSpacing);
+        setPanelEdgeRails(tempEdgeRails);
+        setShowMegabytesModal(false);
+    };
+
+    const handleModalCancel = () => {
+        setTempColumns(panelColumns);
+        setTempRows(panelRows);
+        setTempColSpacing(panelColSpacing);
+        setTempRowSpacing(panelRowSpacing);
+        setTempEdgeRails(panelEdgeRails);
+        setShowMegabytesModal(false);
+    };
 
     return (
         <TooltipProvider>
@@ -239,29 +396,88 @@ export default function QuoteForm({
                             </ConfigRow>
 
                             <ConfigRow label="Delivery Format">
-                                {["Single PCB", "Panel by Customer", "Panel by JLCPCB"].map(d => (
+                                {["Single PCB", "Panel by Customer", "Panel by Megabytes"].map(d => (
                                     <Pill
                                         key={d}
                                         active={formData.deliveryFormat === d}
-                                        onClick={() => updateField("deliveryFormat", d)}
+                                        onClick={() => {
+                                            updateField("deliveryFormat", d);
+                                            if (d === "Panel by Megabytes") {
+                                                setShowMegabytesModal(true);
+                                            }
+                                        }}
                                     >
                                         {d}
                                     </Pill>
                                 ))}
                             </ConfigRow>
 
-                            <ConfigRow label="PCB Thickness">
-                                {["0.4mm", "0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(t => (
-                                    <Pill
-                                        key={t}
-                                        disabled={t === "0.6mm"}
-                                        active={formData.thickness === t}
-                                        onClick={() => updateField("thickness", t)}
-                                    >
-                                        {t}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
+                            {formData.deliveryFormat === "Single PCB" && (
+                                <ConfigRow label="PCB Thickness">
+                                    {["0.4mm", "0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(t => (
+                                        <Pill
+                                            key={t}
+                                            disabled={t === "0.6mm"}
+                                            active={formData.thickness === t}
+                                            onClick={() => updateField("thickness", t)}
+                                        >
+                                            {t}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
+
+                            {formData.deliveryFormat === "Panel by Customer" && (
+                                <ConfigRow label="Panel Format">
+                                    <div className="w-full flex flex-col gap-2">
+                                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                                            <span className="font-semibold">Column:</span>
+                                            <input
+                                                type="number"
+                                                value={panelColumns}
+                                                onChange={(e) => setPanelColumns(parseInt(e.target.value) || 1)}
+                                                className="w-16 h-8 px-2 border border-gray-200 rounded text-center outline-none focus:border-primary font-bold"
+                                            />
+                                            <span className="ml-4 font-semibold">Row:</span>
+                                            <input
+                                                type="number"
+                                                value={panelRows}
+                                                onChange={(e) => setPanelRows(parseInt(e.target.value) || 1)}
+                                                className="w-16 h-8 px-2 border border-gray-200 rounded text-center outline-none focus:border-primary font-bold"
+                                            />
+                                        </div>
+                                        <div className="text-xs text-red-500 font-bold mt-1.5">
+                                            *You supply the panel data. If need us to panelize your board, pls select "Panel by Megabytes" option.
+                                        </div>
+                                    </div>
+                                </ConfigRow>
+                            )}
+
+                            {formData.deliveryFormat === "Panel by Megabytes" && (
+                                <ConfigRow label="Panel Configuration">
+                                    <div className="flex flex-col gap-2 text-xs text-gray-600 font-semibold bg-blue-50/50 border border-blue-100 rounded-xl p-3">
+                                        <div className="flex justify-between">
+                                            <span>Panel Format:</span>
+                                            <span className="text-gray-900 font-bold">{panelColumns} Columns × {panelRows} Rows</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Panel Spacing:</span>
+                                            <span className="text-gray-900 font-bold">{panelColSpacing}mm × {panelRowSpacing}mm</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Edge Rails:</span>
+                                            <span className="text-gray-900 font-bold">{panelEdgeRails}</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowMegabytesModal(true)}
+                                            className="text-primary hover:underline text-[10px] font-bold self-start mt-1 cursor-pointer"
+                                        >
+                                            Edit Panelization Setup &gt;
+                                        </button>
+                                    </div>
+                                </ConfigRow>
+                            )}
 
                             <ConfigRow label="PCB Color">
                                 <div className="flex flex-wrap gap-2.5">
@@ -607,6 +823,188 @@ export default function QuoteForm({
                         </div>
                     )}
                 </div>
+
+                {/* Panel by Megabytes Configuration Modal Popup */}
+                {showMegabytesModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-2xl w-full max-w-[1000px] overflow-hidden shadow-2xl flex flex-col md:flex-row border border-gray-150 animate-in fade-in zoom-in duration-200">
+                            {/* Left Controls Column */}
+                            <div className="flex-1 p-6 overflow-y-auto max-h-[90vh] md:max-h-[600px] space-y-6">
+                                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                                    <h3 className="text-base font-bold text-gray-900">Panel by Megabytes</h3>
+                                    <button
+                                        type="button"
+                                        onClick={handleModalCancel}
+                                        className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-slate-100 cursor-pointer"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4 text-sm">
+                                    {/* Single Piece Size */}
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span className="font-semibold text-gray-600 text-xs">Size(Single piece)</span>
+                                        <div className="flex items-center gap-1">
+                                            <input
+                                                type="number"
+                                                disabled
+                                                value={singleWidth}
+                                                className="w-16 h-8 border border-gray-200 rounded text-center bg-slate-50 text-gray-500 font-semibold"
+                                            />
+                                            <span className="text-gray-400 text-xs">mm</span>
+                                            <span className="text-gray-400 mx-1">*</span>
+                                            <input
+                                                type="number"
+                                                disabled
+                                                value={singleHeight}
+                                                className="w-16 h-8 border border-gray-200 rounded text-center bg-slate-50 text-gray-500 font-semibold"
+                                            />
+                                            <span className="text-gray-400 text-xs">mm</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Panel Type */}
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span className="font-semibold text-gray-600 text-xs">Panel Type</span>
+                                        <span className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-600 font-bold text-xs rounded uppercase">
+                                            V-CUT
+                                        </span>
+                                    </div>
+
+                                    {/* Panel Format (Col x Row) */}
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span className="font-semibold text-gray-600 text-xs">Panel Format</span>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-xs text-gray-500">Column</span>
+                                                <input
+                                                    type="number"
+                                                    value={tempColumns}
+                                                    onChange={(e) => setTempColumns(Math.max(1, parseInt(e.target.value) || 1))}
+                                                    className="w-12 h-8 border border-gray-250 rounded text-center outline-none focus:border-primary font-bold"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-xs text-gray-500">Row</span>
+                                                <input
+                                                    type="number"
+                                                    value={tempRows}
+                                                    onChange={(e) => setTempRows(Math.max(1, parseInt(e.target.value) || 1))}
+                                                    className="w-12 h-8 border border-gray-250 rounded text-center outline-none focus:border-primary font-bold"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Spacing (Col & Row spacing) */}
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span className="font-semibold text-gray-600 text-xs">Panel Spacing</span>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-xs text-gray-500">Col Space</span>
+                                                <input
+                                                    type="number"
+                                                    value={tempColSpacing}
+                                                    onChange={(e) => setTempColSpacing(Math.max(0, parseFloat(e.target.value) || 0))}
+                                                    className="w-12 h-8 border border-gray-250 rounded text-center outline-none focus:border-primary font-bold"
+                                                />
+                                                <span className="text-gray-400 text-[10px]">mm</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-xs text-gray-500">Row Space</span>
+                                                <input
+                                                    type="number"
+                                                    value={tempRowSpacing}
+                                                    onChange={(e) => setTempRowSpacing(Math.max(0, parseFloat(e.target.value) || 0))}
+                                                    className="w-12 h-8 border border-gray-250 rounded text-center outline-none focus:border-primary font-bold"
+                                                />
+                                                <span className="text-gray-400 text-[10px]">mm</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Edge Rails */}
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span className="font-semibold text-gray-600 text-xs">Edge Rails</span>
+                                        <select
+                                            value={tempEdgeRails}
+                                            onChange={(e) => setTempEdgeRails(e.target.value)}
+                                            className="h-8 px-2 border border-gray-250 rounded text-xs outline-none bg-white font-semibold text-gray-700 w-36"
+                                        >
+                                            <option value="No rails">No rails</option>
+                                            <option value="5mm edge rails">5mm edge rails</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Calculated Panel size */}
+                                    <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-100">
+                                        <span className="font-semibold text-gray-600 text-xs">Panel size</span>
+                                        <div className="text-sm font-bold text-gray-800">
+                                            {calculatePanelWidth(tempColumns, tempColSpacing, tempEdgeRails)} mm × {calculatePanelHeight(tempRows, tempRowSpacing, tempEdgeRails)} mm
+                                        </div>
+                                    </div>
+
+                                    <div className="text-[10px] text-red-500 font-bold leading-normal pt-1">
+                                        The panel size should be at least 70x70mm and cannot exceed 475x475mm.
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={handleModalSubmit}
+                                        className="flex-1 py-2 bg-primary hover:bg-secondary text-white font-bold rounded-lg text-xs shadow transition-all active:scale-[0.98] cursor-pointer"
+                                    >
+                                        Submit
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleModalCancel}
+                                        className="flex-1 py-2 bg-white hover:bg-slate-50 text-gray-600 border border-gray-250 font-bold rounded-lg text-xs transition-all active:scale-[0.98] cursor-pointer"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Right Visualization Diagram Column */}
+                            <div className="w-full md:w-[480px] bg-[#1E293B] flex flex-col p-4 shrink-0 justify-between">
+                                {/* Tab switch */}
+                                <div className="flex gap-2 mb-3 bg-slate-800 p-1 rounded-lg self-start">
+                                    <button
+                                        type="button"
+                                        onClick={() => setModalActiveTab("outline")}
+                                        className={`px-3 py-1 text-[11px] font-bold rounded transition-all cursor-pointer ${
+                                            modalActiveTab === "outline" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-200"
+                                        }`}
+                                    >
+                                        Board Outline
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setModalActiveTab("preview")}
+                                        className={`px-3 py-1 text-[11px] font-bold rounded transition-all cursor-pointer ${
+                                            modalActiveTab === "preview" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-200"
+                                        }`}
+                                    >
+                                        2D Preview
+                                    </button>
+                                </div>
+
+                                {/* Vector Canvas */}
+                                <div className="flex-1 flex items-center justify-center">
+                                    <canvas
+                                        ref={panelCanvasRef}
+                                        width={400}
+                                        height={320}
+                                        className="max-w-full h-auto rounded-lg shadow-inner bg-slate-950 border border-slate-800"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </TooltipProvider>
     );

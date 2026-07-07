@@ -202,6 +202,7 @@ export default function PCBSpecification() {
                                 highSpecsOpen={highSpecsOpen}
                                 setHighSpecsOpen={setHighSpecsOpen}
                                 isUploaded={!!uploadedFile}
+                                parsedFiles={parsedGerberFiles}
                             />
                         </div>
                     </div>
