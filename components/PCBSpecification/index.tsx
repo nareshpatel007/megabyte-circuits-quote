@@ -194,6 +194,7 @@ export default function PCBSpecification() {
                                 setSpecsOpen={setSpecsOpen}
                                 highSpecsOpen={highSpecsOpen}
                                 setHighSpecsOpen={setHighSpecsOpen}
+                                isUploaded={!!uploadedFile}
                             />
                         </div>
                     </div>
