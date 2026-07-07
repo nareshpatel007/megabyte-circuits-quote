@@ -125,6 +125,7 @@ export default function QuoteForm({
     const [tempEdgeRails, setTempEdgeRails] = useState("No rails");
     const [tempRailWidth, setTempRailWidth] = useState(5);
     const [modalActiveTab, setModalActiveTab] = useState<"outline" | "preview">("outline");
+    const [tempModalSide, setTempModalSide] = useState<"top" | "bottom">("top");
 
     const panelCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -147,20 +148,31 @@ export default function QuoteForm({
         return h.toFixed(2);
     };
 
-    // Helper to draw drill alignment holes inside rails
-    const drawAlignmentHole = (ctx: CanvasRenderingContext2D, x: number, y: number, drawScale: number) => {
+    // Helper to draw hollow tool holes and solid fiducial markers inside edge rails
+    const drawRailMarkers = (
+        ctx: CanvasRenderingContext2D,
+        x: number,
+        y: number,
+        type: "tool-hole" | "fiducial",
+        drawScale: number
+    ) => {
         ctx.save();
-        // Hole ring
-        ctx.fillStyle = "#D9D9D9";
-        ctx.beginPath();
-        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Inner dark hole
-        ctx.fillStyle = "#1B1B1B";
-        ctx.beginPath();
-        ctx.arc(x, y, 0.95, 0, Math.PI * 2);
-        ctx.fill();
+        if (type === "tool-hole") {
+            // Hollow drill hole
+            ctx.fillStyle = "#111827"; // Dark center matching background
+            ctx.strokeStyle = "#808080";
+            ctx.lineWidth = 0.5 / drawScale;
+            ctx.beginPath();
+            ctx.arc(x, y, 1.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            // Solid silver fiducial marker
+            ctx.fillStyle = "#D9D9D9";
+            ctx.beginPath();
+            ctx.arc(x, y, 0.7, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
     };
 
@@ -213,10 +225,10 @@ export default function QuoteForm({
             offscreenCanvas = document.createElement("canvas");
             offscreenCanvas.width = 400;
             offscreenCanvas.height = Math.round(400 * (singleH / singleW));
-            renderPCBVectorToCanvas(offscreenCanvas, parsedFiles, "top", formData.pcbColor, {
+            renderPCBVectorToCanvas(offscreenCanvas, parsedFiles, tempModalSide, formData.pcbColor, {
                 outline: true,
-                topCopper: true,
-                bottomCopper: false,
+                topCopper: tempModalSide === "top",
+                bottomCopper: tempModalSide === "bottom",
                 solderMask: true,
                 silkscreen: true,
                 drills: true
@@ -256,11 +268,20 @@ export default function QuoteForm({
                 ctx.fillRect(0, totalH - railW, totalW, railW);
             }
 
-            // Draw drill holes on top/bottom rails
-            drawAlignmentHole(ctx, totalW * 0.15, railW / 2, drawScale);
-            drawAlignmentHole(ctx, totalW * 0.85, railW / 2, drawScale);
-            drawAlignmentHole(ctx, totalW * 0.15, totalH - railW / 2, drawScale);
-            drawAlignmentHole(ctx, totalW * 0.85, totalH - railW / 2, drawScale);
+            const topY = railW / 2;
+            const bottomY = totalH - railW / 2;
+
+            // Draw top rail markers (hollow drill + solid fiducial)
+            drawRailMarkers(ctx, totalW * 0.15, topY, "tool-hole", drawScale);
+            drawRailMarkers(ctx, totalW * 0.15 + 5, topY, "fiducial", drawScale);
+            drawRailMarkers(ctx, totalW * 0.85 - 5, topY, "fiducial", drawScale);
+            drawRailMarkers(ctx, totalW * 0.85, topY, "tool-hole", drawScale);
+
+            // Draw bottom rail markers (solid fiducial + hollow drill)
+            drawRailMarkers(ctx, totalW * 0.15, bottomY, "tool-hole", drawScale);
+            drawRailMarkers(ctx, totalW * 0.15 + 5, bottomY, "fiducial", drawScale);
+            drawRailMarkers(ctx, totalW * 0.85 - 5, bottomY, "fiducial", drawScale);
+            drawRailMarkers(ctx, totalW * 0.85, bottomY, "tool-hole", drawScale);
         }
 
         if (hasLeftRightRails) {
@@ -279,11 +300,20 @@ export default function QuoteForm({
                 ctx.fillRect(totalW - railW, 0, railW, totalH);
             }
 
-            // Draw drill holes on left/right rails
-            drawAlignmentHole(ctx, railW / 2, totalH * 0.15, drawScale);
-            drawAlignmentHole(ctx, railW / 2, totalH * 0.85, drawScale);
-            drawAlignmentHole(ctx, totalW - railW / 2, totalH * 0.15, drawScale);
-            drawAlignmentHole(ctx, totalW - railW / 2, totalH * 0.85, drawScale);
+            const leftX = railW / 2;
+            const rightX = totalW - railW / 2;
+
+            // Draw left rail markers
+            drawRailMarkers(ctx, leftX, totalH * 0.15, "tool-hole", drawScale);
+            drawRailMarkers(ctx, leftX, totalH * 0.15 + 5, "fiducial", drawScale);
+            drawRailMarkers(ctx, leftX, totalH * 0.85 - 5, "fiducial", drawScale);
+            drawRailMarkers(ctx, leftX, totalH * 0.85, "tool-hole", drawScale);
+
+            // Draw right rail markers
+            drawRailMarkers(ctx, rightX, totalH * 0.15, "tool-hole", drawScale);
+            drawRailMarkers(ctx, rightX, totalH * 0.15 + 5, "fiducial", drawScale);
+            drawRailMarkers(ctx, rightX, totalH * 0.85 - 5, "fiducial", drawScale);
+            drawRailMarkers(ctx, rightX, totalH * 0.85, "tool-hole", drawScale);
         }
 
         // Draw individual boards inside grid boundaries
@@ -315,7 +345,7 @@ export default function QuoteForm({
         }
 
         ctx.restore();
-    }, [showMegabytesModal, tempColumns, tempRows, tempColSpacing, tempRowSpacing, tempEdgeRails, tempRailWidth, modalActiveTab, singleWidth, singleHeight, parsedFiles, formData.pcbColor]);
+    }, [showMegabytesModal, tempColumns, tempRows, tempColSpacing, tempRowSpacing, tempEdgeRails, tempRailWidth, modalActiveTab, tempModalSide, singleWidth, singleHeight, parsedFiles, formData.pcbColor]);
 
     const handleModalSubmit = () => {
         setPanelColumns(tempColumns);
@@ -1063,25 +1093,47 @@ export default function QuoteForm({
                             {/* Right Visualization Diagram Column */}
                             <div className="w-full md:w-[480px] bg-[#1E293B] flex flex-col p-4 shrink-0 justify-between">
                                 {/* Tab switch */}
-                                <div className="flex gap-2 mb-3 bg-slate-800 p-1 rounded-lg self-start">
-                                    <button
-                                        type="button"
-                                        onClick={() => setModalActiveTab("outline")}
-                                        className={`px-3 py-1 text-[11px] font-bold rounded transition-all cursor-pointer ${
-                                            modalActiveTab === "outline" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-200"
-                                        }`}
-                                    >
-                                        Board Outline
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setModalActiveTab("preview")}
-                                        className={`px-3 py-1 text-[11px] font-bold rounded transition-all cursor-pointer ${
-                                            modalActiveTab === "preview" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-200"
-                                        }`}
-                                    >
-                                        2D Preview
-                                    </button>
+                                <div className="flex justify-between items-center mb-3 w-full bg-slate-800 p-1 rounded-lg">
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setModalActiveTab("outline")}
+                                            className={`px-3 py-1 text-[11px] font-bold rounded transition-all cursor-pointer ${
+                                                modalActiveTab === "outline" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-200"
+                                            }`}
+                                        >
+                                            Board Outline
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setModalActiveTab("preview")}
+                                            className={`px-3 py-1 text-[11px] font-bold rounded transition-all cursor-pointer ${
+                                                modalActiveTab === "preview" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-200"
+                                            }`}
+                                        >
+                                            2D Preview
+                                        </button>
+                                    </div>
+                                    <div className="flex gap-1 border border-slate-700 bg-slate-900/60 p-0.5 rounded-md mr-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setTempModalSide("top")}
+                                            className={`px-2.5 py-0.5 text-[9px] font-bold rounded transition-all cursor-pointer ${
+                                                tempModalSide === "top" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-200"
+                                            }`}
+                                        >
+                                            Top
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTempModalSide("bottom")}
+                                            className={`px-2.5 py-0.5 text-[9px] font-bold rounded transition-all cursor-pointer ${
+                                                tempModalSide === "bottom" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-200"
+                                            }`}
+                                        >
+                                            Bottom
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Vector Canvas */}
