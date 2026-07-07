@@ -112,16 +112,34 @@ export default function QuoteForm({
                 </ConfigRow>
 
                 <ConfigRow label="Layers" tooltip="Total layers count. Matches coordinates in drill outline files.">
-                    {["1", "2", "4", "6", "8", "10", "12", "14", "16"].map(l => (
-                        <Pill
-                            key={l}
-                            active={formData.layers === l}
-                            onClick={() => updateField("layers", l)}
-                            badge={l === "4" ? "High Precision" : undefined}
-                        >
-                            {l}
-                        </Pill>
-                    ))}
+                    <div className="flex items-center gap-2">
+                        {["1", "2"].map(l => (
+                            <Pill
+                                key={l}
+                                active={formData.layers === l}
+                                onClick={() => updateField("layers", l)}
+                            >
+                                {l}
+                            </Pill>
+                        ))}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5 px-3 py-1.5 bg-[#fefce8]/60 border border-yellow-400 rounded-lg shadow-sm">
+                        <span className="text-xs font-bold text-amber-700 flex items-center gap-1">
+                            ✨ High Precision PCB
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                            {["4", "6", "8", "10", "12", "14", "16"].map(l => (
+                                <Pill
+                                    key={l}
+                                    active={formData.layers === l}
+                                    onClick={() => updateField("layers", l)}
+                                >
+                                    <span className="flex items-center gap-0.5">{l}</span>
+                                </Pill>
+                            ))}
+                        </div>
+                    </div>
                 </ConfigRow>
 
                 <ConfigRow label="Dimensions" tooltip="Input custom board dimensions in millimeters or inches.">
