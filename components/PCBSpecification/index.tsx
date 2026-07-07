@@ -233,8 +233,8 @@ export default function PCBSpecification() {
                                             <label
                                                 key={time}
                                                 className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${formData.buildTime === time
-                                                        ? "border-primary bg-primary/5 text-primary"
-                                                        : "border-slate-200 hover:border-primary/50 text-slate-700"
+                                                    ? "border-primary bg-primary/5 text-primary"
+                                                    : "border-slate-200 hover:border-primary/50 text-slate-700"
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-2">
