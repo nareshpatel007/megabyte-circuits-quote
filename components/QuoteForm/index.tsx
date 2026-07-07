@@ -20,26 +20,31 @@ const Pill = ({
     children,
     onClick,
     activeColor = "blue",
-    badge
+    badge,
+    disabled = false
 }: {
     active: boolean;
     children: React.ReactNode;
     onClick: () => void;
     activeColor?: "blue" | "orange" | "green";
     badge?: string;
+    disabled?: boolean;
 }) => {
-    const baseClasses = "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all relative border cursor-pointer";
+    const baseClasses = "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all relative border";
     const colors = {
         blue: "border-primary bg-primary/10 text-primary",
         orange: "border-[#f5821f] bg-[#fff5eb] text-[#f5821f]",
         green: "border-[#52c41a] bg-[#f6ffed] text-[#52c41a]"
     };
-    const inactiveClasses = "border-gray-200 bg-white text-gray-700 hover:border-primary/50 hover:text-primary";
+    const inactiveClasses = "border-gray-200 bg-white text-gray-700 hover:border-primary/50 hover:text-primary cursor-pointer";
+    const disabledClasses = "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed";
+
     return (
         <button
             type="button"
-            onClick={onClick}
-            className={`${baseClasses} ${active ? colors[activeColor] : inactiveClasses}`}
+            disabled={disabled}
+            onClick={disabled ? undefined : onClick}
+            className={`${baseClasses} ${disabled ? disabledClasses : (active ? colors[activeColor] : inactiveClasses)}`}
         >
             {children}
             {badge && (
@@ -50,6 +55,19 @@ const Pill = ({
         </button>
     );
 };
+
+const ColorCirclePill = ({ color, name, active, onClick }: { color: string; name: string; active: boolean; onClick: () => void }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        className={`px-3 py-1.5 rounded-lg text-sm font-semibold border flex items-center gap-2 cursor-pointer transition-all ${
+            active ? "border-primary bg-primary/10 text-primary" : "border-gray-200 bg-white text-gray-700 hover:border-primary/50"
+        }`}
+    >
+        <span className="w-3.5 h-3.5 rounded-full border border-gray-300" style={{ backgroundColor: color }} />
+        {name}
+    </button>
+);
 
 const ConfigRow = ({ label, children, tooltip }: { label: string; children: React.ReactNode; tooltip?: string }) => (
     <div className="flex flex-col sm:flex-row py-4 border-b border-slate-100 gap-4 sm:gap-0">
@@ -72,18 +90,6 @@ const ConfigRow = ({ label, children, tooltip }: { label: string; children: Reac
     </div>
 );
 
-const ColorCircle = ({ color, active, onClick, checkColor = "white" }: any) => (
-    <button
-        type="button"
-        onClick={onClick}
-        className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${active ? "border-primary scale-110 shadow-md" : "border-transparent shadow hover:scale-115"
-            }`}
-        style={{ backgroundColor: color }}
-    >
-        {active && <Check className="w-4 h-4" style={{ color: checkColor }} />}
-    </button>
-);
-
 export default function QuoteForm({
     formData,
     setFormData,
@@ -96,6 +102,9 @@ export default function QuoteForm({
     const updateField = (field: keyof QuoteFormData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
+
+    // Keep state track for advanced options accordion
+    const [advancedOpen, setAdvancedOpen] = React.useState(true);
 
     return (
         <TooltipProvider>
@@ -230,7 +239,7 @@ export default function QuoteForm({
                             </ConfigRow>
 
                             <ConfigRow label="Delivery Format">
-                                {["Single PCB", "Panel by Customer", "Panel by Megabyte"].map(d => (
+                                {["Single PCB", "Panel by Customer", "Panel by JLCPCB"].map(d => (
                                     <Pill
                                         key={d}
                                         active={formData.deliveryFormat === d}
@@ -245,6 +254,7 @@ export default function QuoteForm({
                                 {["0.4mm", "0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(t => (
                                     <Pill
                                         key={t}
+                                        disabled={t === "0.6mm"}
                                         active={formData.thickness === t}
                                         onClick={() => updateField("thickness", t)}
                                     >
@@ -254,14 +264,14 @@ export default function QuoteForm({
                             </ConfigRow>
 
                             <ConfigRow label="PCB Color">
-                                <div className="flex gap-3">
-                                    <ColorCircle color="#52c41a" active={formData.pcbColor === "#52c41a"} onClick={() => updateField("pcbColor", "#52c41a")} />
-                                    <ColorCircle color="#722ed1" active={formData.pcbColor === "#722ed1"} onClick={() => updateField("pcbColor", "#722ed1")} />
-                                    <ColorCircle color="#f5222d" active={formData.pcbColor === "#f5222d"} onClick={() => updateField("pcbColor", "#f5222d")} />
-                                    <ColorCircle color="#fadb14" active={formData.pcbColor === "#fadb14"} onClick={() => updateField("pcbColor", "#fadb14")} checkColor="black" />
-                                    <ColorCircle color="#1677ff" active={formData.pcbColor === "#1677ff"} onClick={() => updateField("pcbColor", "#1677ff")} />
-                                    <ColorCircle color="#ffffff" active={formData.pcbColor === "#ffffff"} onClick={() => updateField("pcbColor", "#ffffff")} checkColor="black" />
-                                    <ColorCircle color="#000000" active={formData.pcbColor === "#000000"} onClick={() => updateField("pcbColor", "#000000")} />
+                                <div className="flex flex-wrap gap-2.5">
+                                    <ColorCirclePill color="#52c41a" name="Green" active={formData.pcbColor === "#52c41a"} onClick={() => updateField("pcbColor", "#52c41a")} />
+                                    <ColorCirclePill color="#722ed1" name="Purple" active={formData.pcbColor === "#722ed1"} onClick={() => updateField("pcbColor", "#722ed1")} />
+                                    <ColorCirclePill color="#f5222d" name="Red" active={formData.pcbColor === "#f5222d"} onClick={() => updateField("pcbColor", "#f5222d")} />
+                                    <ColorCirclePill color="#fadb14" name="Yellow" active={formData.pcbColor === "#fadb14"} onClick={() => updateField("pcbColor", "#fadb14")} />
+                                    <ColorCirclePill color="#1677ff" name="Blue" active={formData.pcbColor === "#1677ff"} onClick={() => updateField("pcbColor", "#1677ff")} />
+                                    <ColorCirclePill color="#ffffff" name="White" active={formData.pcbColor === "#ffffff"} onClick={() => updateField("pcbColor", "#ffffff")} />
+                                    <ColorCirclePill color="#000000" name="Black" active={formData.pcbColor === "#000000"} onClick={() => updateField("pcbColor", "#000000")} />
                                 </div>
                             </ConfigRow>
 
@@ -275,7 +285,7 @@ export default function QuoteForm({
                             </ConfigRow>
 
                             <ConfigRow label="Material Type">
-                                {["FR4-TG135", "KB6164-TG135", "Nan Ya NP-140F", "S1141-TG140", "S1000H-TG155"].map(m => (
+                                {["FR4 TG135", "KB6164 - TG135", "Nan Ya NP-140F", "S1141 TG140", "S1000H TG155"].map(m => (
                                     <Pill
                                         key={m}
                                         active={formData.materialType === m}
@@ -315,9 +325,10 @@ export default function QuoteForm({
                     {highSpecsOpen && (
                         <div className="p-6 pt-2 space-y-1">
                             <ConfigRow label="Outer Copper Weight">
-                                {["1oz", "2oz", "3oz", "4oz"].map(w => (
+                                {["1 oz", "2 oz", "2.5 oz", "3.5 oz", "4.5 oz"].map(w => (
                                     <Pill
                                         key={w}
+                                        disabled={w === "2.5 oz" || w === "3.5 oz" || w === "4.5 oz"}
                                         active={formData.copperWeight === w}
                                         onClick={() => updateField("copperWeight", w)}
                                     >
@@ -327,9 +338,10 @@ export default function QuoteForm({
                             </ConfigRow>
 
                             <ConfigRow label="Via Covering">
-                                {["Not Specified", "Tented", "Untented", "Plugged", "Epoxy Filled & Capped"].map(v => (
+                                {["Tented", "Untented", "Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map(v => (
                                     <Pill
                                         key={v}
+                                        disabled={v === "Copper paste Filled & Capped"}
                                         active={formData.viaCovering === v}
                                         onClick={() => updateField("viaCovering", v)}
                                     >
@@ -339,27 +351,80 @@ export default function QuoteForm({
                             </ConfigRow>
 
                             <ConfigRow label="Via Plating Method">
-                                {["Not Specified", "Conductive Adhesive", "Horizontal Electroless Copper"].map(v => (
+                                <div className="w-full flex flex-col gap-2">
+                                    <div className="flex flex-wrap gap-2.5">
+                                        {["Not Specified", "Conductive Adhesive", "Horizontal Electroless Copper Plating"].map(v => (
+                                            <Pill
+                                                key={v}
+                                                active={formData.viaPlating === v}
+                                                onClick={() => updateField("viaPlating", v)}
+                                            >
+                                                {v}
+                                            </Pill>
+                                        ))}
+                                    </div>
+                                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-gray-500 flex items-center justify-between">
+                                        <span>Epoxy-filled or copper-paste-filled vias require Horizontal Electroless Copper Plating.</span>
+                                        <button type="button" className="text-gray-400 hover:text-gray-600 text-sm font-bold">×</button>
+                                    </div>
+                                </div>
+                            </ConfigRow>
+
+                            <ConfigRow label="Min via hole size/diameter">
+                                {["0.3mm/(0.4/0.45mm)", "0.25mm/(0.35/0.4mm)", "0.2mm/(0.3/0.35mm)", "0.15mm/(0.25/0.3mm)"].map(h => (
                                     <Pill
-                                        key={v}
-                                        active={formData.viaPlating === v}
-                                        onClick={() => updateField("viaPlating", v)}
+                                        key={h}
+                                        active={formData.minHole === h}
+                                        onClick={() => updateField("minHole", h)}
                                     >
-                                        {v}
+                                        {h}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Board Outline Tolerance">
+                                {["±0.2mm(Regular)", "±0.1mm(Precision)"].map(t => (
+                                    <Pill
+                                        key={t}
+                                        active={formData.tolerance === t}
+                                        onClick={() => updateField("tolerance", t)}
+                                    >
+                                        {t}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Confirm Production file">
+                                {["No", "Yes"].map(c => (
+                                    <Pill
+                                        key={c}
+                                        active={formData.confirmFile === c}
+                                        onClick={() => updateField("confirmFile", c)}
+                                    >
+                                        {c}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Mark on PCB">
+                                {["Remove Mark", "2D barcode (Serial Number)"].map(m => (
+                                    <Pill
+                                        key={m}
+                                        active={formData.markOnPcb === m}
+                                        onClick={() => updateField("markOnPcb", m)}
+                                    >
+                                        {m}
                                     </Pill>
                                 ))}
                             </ConfigRow>
 
                             <ConfigRow label="Electrical Test">
-                                {["Flying Probe Fully Test", "Not Tested"].map(t => (
-                                    <Pill
-                                        key={t}
-                                        active={formData.elecTest === t}
-                                        onClick={() => updateField("elecTest", t)}
-                                    >
-                                        {t}
-                                    </Pill>
-                                ))}
+                                <Pill
+                                    active={formData.elecTest === "Flying Probe Fully Test"}
+                                    onClick={() => updateField("elecTest", "Flying Probe Fully Test")}
+                                >
+                                    Flying Probe Fully Test
+                                </Pill>
                             </ConfigRow>
 
                             <ConfigRow label="Gold Fingers">
@@ -373,6 +438,172 @@ export default function QuoteForm({
                                     </Pill>
                                 ))}
                             </ConfigRow>
+
+                            <ConfigRow label="Castellated Holes">
+                                {["No", "Yes"].map(c => (
+                                    <Pill
+                                        key={c}
+                                        active={formData.castellated === c}
+                                        onClick={() => updateField("castellated", c)}
+                                    >
+                                        {c}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Edge Plating">
+                                {["No", "Yes"].map(e => (
+                                    <Pill
+                                        key={e}
+                                        disabled={e === "Yes"}
+                                        active={formData.edgePlating === e}
+                                        onClick={() => updateField("edgePlating", e)}
+                                    >
+                                        {e}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Blind Slots">
+                                {["No", "Yes"].map(b => (
+                                    <Pill
+                                        key={b}
+                                        active={formData.blindSlots === b}
+                                        onClick={() => updateField("blindSlots", b)}
+                                    >
+                                        {b}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="UL Marking">
+                                {["No", "Yes (Any Position)", "Yes (Specify Position)"].map(u => (
+                                    <Pill
+                                        key={u}
+                                        disabled={u === "Yes (Any Position)" || u === "Yes (Specify Position)"}
+                                        active={formData.ulMarking === u}
+                                        onClick={() => updateField("ulMarking", u)}
+                                    >
+                                        {u}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Humidity Indicator Card">
+                                {["No", "Yes"].map(h => (
+                                    <Pill
+                                        key={h}
+                                        active={formData.humidity === h}
+                                        onClick={() => updateField("humidity", h)}
+                                    >
+                                        {h}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+                        </div>
+                    )}
+                </div>
+
+                {/* Advanced Options Accordion */}
+                <div className="mt-4 border border-gray-200/80 rounded-2xl overflow-hidden bg-white shadow-sm">
+                    <button
+                        type="button"
+                        onClick={() => setAdvancedOpen(!advancedOpen)}
+                        className="w-full flex items-center justify-between px-6 py-4.5 bg-slate-50/60 hover:bg-slate-50 transition-colors border-b border-gray-200/80 cursor-pointer"
+                    >
+                        <span className="text-sm font-bold text-slate-800">Advanced Options</span>
+                        {advancedOpen ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
+                    </button>
+
+                    {advancedOpen && (
+                        <div className="p-6 pt-2 space-y-1">
+                            <ConfigRow label="4-Wire Kelvin Test">
+                                {["No", "Yes"].map(k => (
+                                    <Pill
+                                        key={k}
+                                        active={formData.kelvinTest === k}
+                                        onClick={() => updateField("kelvinTest", k)}
+                                    >
+                                        {k}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Paper between PCBs">
+                                {["No", "Yes"].map(p => (
+                                    <Pill
+                                        key={p}
+                                        active={formData.paperBetween === p}
+                                        onClick={() => updateField("paperBetween", p)}
+                                    >
+                                        {p}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Appearance Quality">
+                                {["IPC Class 2 Standard", "Superb Quality"].map(q => (
+                                    <Pill
+                                        key={q}
+                                        disabled={q === "Superb Quality"}
+                                        active={formData.appearanceQuality === q}
+                                        onClick={() => updateField("appearanceQuality", q)}
+                                    >
+                                        {q}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Silkscreen Technology">
+                                {["Ink-jet Printing Silkscreen", "High-precision Printing Silkscreen", "EasyEDA multi-color silkscreen", "High-definition Exposure Silkscreen"].map(s => (
+                                    <Pill
+                                        key={s}
+                                        disabled={s === "EasyEDA multi-color silkscreen" || s === "High-definition Exposure Silkscreen"}
+                                        active={formData.silkscreenTech === s}
+                                        onClick={() => updateField("silkscreenTech", s)}
+                                    >
+                                        {s}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Package Box">
+                                {["With JLCPCB logo", "Blank box"].map(p => (
+                                    <Pill
+                                        key={p}
+                                        active={formData.packageBox === p}
+                                        onClick={() => updateField("packageBox", p)}
+                                    >
+                                        {p}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Inspection Report">
+                                {["No", "Final Inspection Report", "Electrical Test Report", "ROHS Test Report"].map(i => (
+                                    <Pill
+                                        key={i}
+                                        disabled={i === "ROHS Test Report"}
+                                        active={formData.inspectionReport === i}
+                                        onClick={() => updateField("inspectionReport", i)}
+                                    >
+                                        {i}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <div className="flex flex-col py-4 gap-2">
+                                <label className="text-sm text-gray-600 font-semibold flex items-center gap-1">
+                                    PCB Remark 📝
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    value={formData.pcbRemark}
+                                    onChange={(e) => updateField("pcbRemark", e.target.value)}
+                                    placeholder="Enter additional remarks or request special design specifications here..."
+                                    className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all"
+                                />
+                            </div>
                         </div>
                     )}
                 </div>

@@ -76,6 +76,13 @@ export interface QuoteFormData {
     blindSlots: string;
     ulMarking: string;
     humidity: string;
+    kelvinTest: string;
+    paperBetween: string;
+    appearanceQuality: string;
+    silkscreenTech: string;
+    packageBox: string;
+    inspectionReport: string;
+    pcbRemark: string;
     assemblyOn: boolean;
     stencilOn: boolean;
     buildTime: string;

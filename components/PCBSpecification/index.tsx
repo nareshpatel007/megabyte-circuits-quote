@@ -37,6 +37,13 @@ const INITIAL_FORM_DATA: QuoteFormData = {
     blindSlots: "No",
     ulMarking: "No",
     humidity: "No",
+    kelvinTest: "No",
+    paperBetween: "No",
+    appearanceQuality: "IPC Class 2 Standard",
+    silkscreenTech: "Ink-jet Printing Silkscreen",
+    packageBox: "With JLCPCB logo",
+    inspectionReport: "No",
+    pcbRemark: "",
     assemblyOn: false,
     stencilOn: false,
     buildTime: "2 days"
