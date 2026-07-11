@@ -11,58 +11,58 @@ interface SolderMaskTheme {
 const PCB_COLOR_THEMES: Record<string, SolderMaskTheme> = {
     // Green (default)
     "#52c41a": {
-        baseColor: "#134A23",
-        maskColor: "#1F7A35",
-        copperColor: "#C4927C", // Raw copper
+        baseColor: "#195628",
+        maskColor: "#2d7834",
+        copperColor: "#c49486", // Raw copper
         silkscreenColor: "#FFFFFF"
     },
     // Purple
     "#722ed1": {
         baseColor: "#2E0854",
         maskColor: "#5B21B6",
-        copperColor: "#C4927C",
+        copperColor: "#c49486",
         silkscreenColor: "#FFFFFF"
     },
     // Red
     "#f5222d": {
         baseColor: "#4A0E0E",
         maskColor: "#991B1B",
-        copperColor: "#C4927C",
+        copperColor: "#c49486",
         silkscreenColor: "#FFFFFF"
     },
     // Yellow
     "#fadb14": {
         baseColor: "#5C3E00",
         maskColor: "#D97706",
-        copperColor: "#C4927C",
+        copperColor: "#c49486",
         silkscreenColor: "#0F172A"
     },
     // Blue
     "#1677ff": {
         baseColor: "#0A2540",
         maskColor: "#1E3A8A",
-        copperColor: "#C4927C",
+        copperColor: "#c49486",
         silkscreenColor: "#FFFFFF"
     },
     // White
     "#ffffff": {
         baseColor: "#D1D5DB",
         maskColor: "#F3F4F6",
-        copperColor: "#C4927C",
+        copperColor: "#c49486",
         silkscreenColor: "#1F2937"
     },
     // Black
     "#000000": {
         baseColor: "#111827",
         maskColor: "#1F2937",
-        copperColor: "#C4927C",
+        copperColor: "#c49486",
         silkscreenColor: "#F3F4F6"
     },
     // Matte Black
     "#18181b": {
         baseColor: "#09090B",
         maskColor: "#18181B",
-        copperColor: "#C4927C",
+        copperColor: "#c49486",
         silkscreenColor: "#F3F4F6"
     }
 };
@@ -77,7 +77,7 @@ export function renderPCBToSVG(
     dimensions: { width: number; height: number; minX: number; maxX: number; minY: number; maxY: number }
 ): string {
     const { width, height, minX, maxX, minY, maxY } = dimensions;
-    const theme = PCB_COLOR_THEMES[pcbColor.toLowerCase()] || PCB_COLOR_THEMES["#52c41a"];
+    const theme = PCB_COLOR_THEMES[pcbColor.toLowerCase()] || PCB_COLOR_THEMES["#2d7834"];
 
     const viewW = width > 0 ? width : 100;
     const viewH = height > 0 ? height : 100;
@@ -141,10 +141,10 @@ export function renderPCBToSVG(
     svgElements.push(`<path d="${substratePath}" fill="url(#shine)" />`);
     svgElements.push(`<path d="${substratePath}" fill="url(#vignette)" />`);
 
-    // 4. Exposed Pads (rendered in tinned silver `#E5E7EB` above the solder mask)
+    // 4. Exposed Pads (rendered in gold/copper `#c49486` above the solder mask)
     const renderSourceFile = maskFile || copperFile;
     if (renderSourceFile) {
-        svgElements.push(`<g fill="#E5E7EB" stroke="#E5E7EB">`);
+        svgElements.push(`<g fill="#c49486" stroke="#c49486">`);
         renderLayerContent(renderSourceFile, maskFile ? "all" : "flash-only");
         svgElements.push(`</g>`);
     }
@@ -156,9 +156,9 @@ export function renderPCBToSVG(
         svgElements.push(`</g>`);
     }
 
-    // 6. Drill Plated Rings (rendered in silver `#E5E7EB` above mask)
+    // 6. Drill Plated Rings (rendered in gold/copper `#c49486` above mask)
     if (drillFile) {
-        svgElements.push(`<g fill="#E5E7EB">`);
+        svgElements.push(`<g fill="#c49486">`);
         drillFile.imageTree.children.forEach(child => {
             if (child.type === "imageShape" && child.shape?.type === "circle") {
                 const shape = child.shape as any;
@@ -267,12 +267,12 @@ export function renderPCBToSVG(
             const cy = mapY(shape.cy ?? shape.y ?? 0, fileUnits);
             if (shape.type === "circle") {
                 const r = mapDim(shape.r, fileUnits);
-                d += ` M ${cx} ${cy} m -${r},0 a ${r},${r} 0 1,0 ${(r*2)},0 a ${r},${r} 0 1,0 -${(r*2)},0`;
+                d += ` M ${cx} ${cy} m -${r},0 a ${r},${r} 0 1,0 ${(r * 2)},0 a ${r},${r} 0 1,0 -${(r * 2)},0`;
             } else if (shape.type === "rectangle") {
                 const w = mapDim(shape.xSize, fileUnits);
                 const h = mapDim(shape.ySize, fileUnits);
-                const rx = cx - w/2;
-                const ry = cy - h/2;
+                const rx = cx - w / 2;
+                const ry = cy - h / 2;
                 d += ` M ${rx} ${ry} h ${w} v ${h} h -${w} Z`;
             } else if (shape.type === "polygon" && shape.points) {
                 const pts = shape.points.map((p: any) => `${mapX(p[0], fileUnits).toFixed(3)} ${mapY(p[1], fileUnits).toFixed(3)}`).join(" L ");
