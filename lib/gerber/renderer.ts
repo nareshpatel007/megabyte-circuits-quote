@@ -11,8 +11,8 @@ interface SolderMaskTheme {
 const COLOR_THEMES: { [key: string]: SolderMaskTheme } = {
     // Green (default)
     "#52c41a": {
-        baseColor: "#134A23",
-        maskColor: "#1F7A35",
+        baseColor: "#195628",
+        maskColor: "#2d7834",
         copperColor: "#c49486", // Raw copper
         silkscreenColor: "#FFFFFF"
     },
@@ -93,7 +93,7 @@ export function renderPCBVectorToCanvas(
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Get color theme
-    const theme = COLOR_THEMES[pcbColor.toLowerCase()] || COLOR_THEMES["#195628"];
+    const theme = COLOR_THEMES[pcbColor.toLowerCase()] || COLOR_THEMES["#52c41a"];
 
     // Calculate Bounding Box
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;

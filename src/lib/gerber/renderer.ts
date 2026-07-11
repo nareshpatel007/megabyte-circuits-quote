@@ -77,7 +77,7 @@ export function renderPCBToSVG(
     dimensions: { width: number; height: number; minX: number; maxX: number; minY: number; maxY: number }
 ): string {
     const { width, height, minX, maxX, minY, maxY } = dimensions;
-    const theme = PCB_COLOR_THEMES[pcbColor.toLowerCase()] || PCB_COLOR_THEMES["#2d7834"];
+    const theme = PCB_COLOR_THEMES[pcbColor.toLowerCase()] || PCB_COLOR_THEMES["#52c41a"];
 
     const viewW = width > 0 ? width : 100;
     const viewH = height > 0 ? height : 100;
