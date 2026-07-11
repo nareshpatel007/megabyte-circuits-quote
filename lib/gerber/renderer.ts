@@ -13,7 +13,7 @@ const COLOR_THEMES: { [key: string]: SolderMaskTheme } = {
     "#52c41a": {
         baseColor: "#134A23",
         maskColor: "#1F7A35",
-        copperColor: "#C4927C", // Raw copper
+        copperColor: "#c49486", // Raw copper
         silkscreenColor: "#FFFFFF"
     },
     // Purple
@@ -93,7 +93,7 @@ export function renderPCBVectorToCanvas(
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Get color theme
-    const theme = COLOR_THEMES[pcbColor.toLowerCase()] || COLOR_THEMES["#52c41a"];
+    const theme = COLOR_THEMES[pcbColor.toLowerCase()] || COLOR_THEMES["#195628"];
 
     // Calculate Bounding Box
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -277,11 +277,11 @@ export function renderPCBVectorToCanvas(
         ctx.restore();
     }
 
-    // 5. Draw Exposed Pads (Above Solder Mask, Tinned Silver/White #E5E7EB)
+    // 5. Draw Exposed Pads (Above Solder Mask, Gold/Copper #C4927C)
     if (copperFile && activeLayers.solderMask) {
         ctx.save();
-        ctx.fillStyle = "#E5E7EB";
-        ctx.strokeStyle = "#E5E7EB";
+        ctx.fillStyle = "#C4927C";
+        ctx.strokeStyle = "#C4927C";
 
         copperFile.commands.forEach(cmd => {
             if (cmd.op === "flash") {
@@ -341,9 +341,9 @@ export function renderPCBVectorToCanvas(
     const drillFile = parsedFiles.find(f => f.type === "drill");
     if (drillFile && activeLayers.drills) {
         ctx.save();
-        
-        // 1. Draw silver plated rings
-        ctx.fillStyle = "#E5E7EB";
+
+        // 1. Draw gold plated rings
+        ctx.fillStyle = "#C4927C";
         drillFile.commands.forEach(cmd => {
             if (cmd.op === "flash") {
                 const ap = cmd.apertureId ? drillFile.apertures[cmd.apertureId] : null;
