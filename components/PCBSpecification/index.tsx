@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ShoppingCart, ChevronDown, ChevronUp, Cpu, Layers, Search, Menu } from "lucide-react";
+import { ShoppingCart, ChevronDown, ChevronUp, Cpu, Layers, Search, Menu, X } from "lucide-react";
 import Link from "next/link";
 import GerberUploader from "../GerberUploader";
 import GerberPreview from "../GerberPreview";
@@ -476,6 +476,8 @@ export default function PCBSpecification() {
     // Sticky Notes Calendar states
     const [calendarViewDate, setCalendarViewDate] = useState(new Date());
     const [selectedDay, setSelectedDay] = useState<number | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [checkoutData, setCheckoutData] = useState<{ day: number; unitPrice: string; orderValue: string; dateStr: string } | null>(null);
 
     // Dynamic lead time-based pricing calculation
     const getLeadTimePricing = () => {
@@ -884,8 +886,16 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                                         </div>
                                                         <button
                                                             type="button"
-                                                            onClick={() => handleOrderSubmit(selectedDayData.day, selectedDayData.unitPrice, selectedDayData.orderValue)}
-                                                            className="w-full h-10 bg-primary hover:bg-secondary text-white font-extrabold rounded-lg shadow-sm transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-1.5"
+                                                            onClick={() => {
+                                                                setCheckoutData({
+                                                                    day: selectedDayData.day,
+                                                                    unitPrice: selectedDayData.unitPrice,
+                                                                    orderValue: selectedDayData.orderValue,
+                                                                    dateStr: selectedDayData.formattedDate
+                                                                });
+                                                                setIsModalOpen(true);
+                                                            }}
+                                                            className="w-full h-10 bg-primary hover:bg-secondary text-white font-extrabold rounded-lg shadow-sm transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                                                         >
                                                             Confirm and Submit Order
                                                         </button>
@@ -910,58 +920,11 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                         })()} m²
                                     </span>
                                 </div>
-
-                                {/* Customer Details Forms */}
-                                <div className="pt-4 border-t border-slate-100 space-y-3.5">
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Customer Details</h3>
-                                    <div className="space-y-3">
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-[11px] font-bold text-slate-600">Customer Name</label>
-                                            <input
-                                                type="text"
-                                                value={formData.customerName || ""}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
-                                                placeholder="Enter Customer Name"
-                                                className="h-9 px-3 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-[11px] font-bold text-slate-600">GST Number</label>
-                                            <input
-                                                type="text"
-                                                value={formData.gstNumber || ""}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, gstNumber: e.target.value }))}
-                                                placeholder="Enter GST Number"
-                                                className="h-9 px-3 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-[11px] font-bold text-slate-600">Billing Address</label>
-                                            <textarea
-                                                rows={2}
-                                                value={formData.billingAddress || ""}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, billingAddress: e.target.value }))}
-                                                placeholder="Enter Billing Address"
-                                                className="p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850 resize-none"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-[11px] font-bold text-slate-600">Shipping Address</label>
-                                            <textarea
-                                                rows={2}
-                                                value={formData.shippingAddress || ""}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, shippingAddress: e.target.value }))}
-                                                placeholder="Enter Shipping Address"
-                                                className="p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850 resize-none"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </main>
+            </main>
 
             {/* Footer */}
             <footer className="bg-[#0f1729] text-gray-300 pt-16 pb-8 mt-12 border-t-4 border-primary">
@@ -1020,6 +983,144 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                     </div>
                 </div>
             </footer>
+
+            {/* Checkout details Modal Popup */}
+            {isModalOpen && checkoutData && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+                        {/* Modal Header */}
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div>
+                                <h2 className="text-lg font-black text-slate-800">Complete Your Order</h2>
+                                <p className="text-xs font-bold text-slate-400 mt-0.5">Please provide delivery and contact details</p>
+                            </div>
+                            <button 
+                                onClick={() => setIsModalOpen(false)}
+                                className="p-1.5 hover:bg-slate-200/60 rounded-full transition-colors text-slate-400 hover:text-slate-600 cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-bold text-slate-600">Board Name <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={formData.boardName || ""}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, boardName: e.target.value }))}
+                                        placeholder="Enter Board Name"
+                                        className="h-10 px-3 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-800 transition-all focus:ring-1 focus:ring-primary"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-bold text-slate-600">Mobile Number <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="tel"
+                                        value={formData.userMobile || ""}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, userMobile: e.target.value }))}
+                                        placeholder="10-digit Mobile Number"
+                                        maxLength={10}
+                                        className="h-10 px-3 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-800 transition-all focus:ring-1 focus:ring-primary"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-bold text-slate-600">Email Address <span className="text-red-500">*</span></label>
+                                <input
+                                    type="email"
+                                    value={formData.userEmail || ""}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, userEmail: e.target.value }))}
+                                    placeholder="Enter Email Address"
+                                    className="h-10 px-3 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850 transition-all focus:ring-1 focus:ring-primary"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-bold text-slate-600">Customer Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.customerName || ""}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
+                                        placeholder="Enter Customer Name"
+                                        className="h-10 px-3 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850 transition-all focus:ring-1 focus:ring-primary"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-bold text-slate-600">GST Number</label>
+                                    <input
+                                        type="text"
+                                        value={formData.gstNumber || ""}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, gstNumber: e.target.value }))}
+                                        placeholder="Enter GST Number"
+                                        className="h-10 px-3 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850 transition-all focus:ring-1 focus:ring-primary"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-bold text-slate-600">Billing Address</label>
+                                <textarea
+                                    rows={2}
+                                    value={formData.billingAddress || ""}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, billingAddress: e.target.value }))}
+                                    placeholder="Enter Billing Address"
+                                    className="p-3 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850 resize-none transition-all focus:ring-1 focus:ring-primary"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="text-xs font-bold text-slate-600">Shipping Address</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, shippingAddress: prev.billingAddress }))}
+                                        className="text-[10px] text-primary font-black hover:underline cursor-pointer"
+                                    >
+                                        Same as Billing Address
+                                    </button>
+                                </div>
+                                <textarea
+                                    rows={2}
+                                    value={formData.shippingAddress || ""}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, shippingAddress: e.target.value }))}
+                                    placeholder="Enter Shipping Address"
+                                    className="p-3 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850 resize-none transition-all focus:ring-1 focus:ring-primary"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-6 border-t border-slate-100 bg-slate-50/50 space-y-4">
+                            <div className="flex justify-between items-center bg-amber-50/60 border border-amber-100/50 rounded-xl p-3.5">
+                                <div>
+                                    <span className="text-[10px] text-amber-800 font-bold block uppercase tracking-wider">Estimated Delivery</span>
+                                    <span className="text-sm font-black text-slate-800 mt-0.5 block">{checkoutData.dateStr}</span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider">Total Value</span>
+                                    <span className="text-lg font-black text-primary block">₹{checkoutData.orderValue}</span>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    handleOrderSubmit(checkoutData.day, checkoutData.unitPrice, checkoutData.orderValue);
+                                    setIsModalOpen(false);
+                                }}
+                                className="w-full h-11 bg-primary hover:bg-secondary text-white font-extrabold rounded-xl shadow-md transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                                Confirm and Place Order
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

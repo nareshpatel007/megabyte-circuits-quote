@@ -415,40 +415,6 @@ export default function QuoteForm({
     return (
         <TooltipProvider>
             <div className="space-y-4">
-                {/* Contact & Board Info */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4 border-b border-slate-100">
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700">Board Name</label>
-                        <input
-                            type="text"
-                            value={formData.boardName || ""}
-                            onChange={(e) => updateField("boardName", e.target.value)}
-                            placeholder="Enter Board Name"
-                            className="h-10 px-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-primary transition-all font-semibold text-slate-800"
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700">Mobile</label>
-                        <input
-                            type="tel"
-                            value={formData.userMobile || ""}
-                            onChange={(e) => updateField("userMobile", e.target.value)}
-                            placeholder="10-digit number"
-                            maxLength={10}
-                            className="h-10 px-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-primary transition-all font-semibold text-slate-800"
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-bold text-slate-700">User Email</label>
-                        <input
-                            type="email"
-                            value={formData.userEmail || ""}
-                            onChange={(e) => updateField("userEmail", e.target.value)}
-                            placeholder="Enter Email Address"
-                            className="h-10 px-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-primary transition-all font-semibold text-slate-800"
-                        />
-                    </div>
-                </div>
 
                 {/* Basic specs */}
                 <ConfigRow label="Base Material" tooltip="Standard FR-4 is recommended for most digital circuit designs.">
