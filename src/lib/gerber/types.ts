@@ -1,53 +1,30 @@
-import { ParsedGerberFile as TracespaceParsedFile } from "../../src/lib/gerber/types";
+import type { ImageTree } from "@tracespace/plotter";
 
-export interface Aperture {
-    id: string;
-    shape: "C" | "R" | "O" | "P" | "T" | "unknown"; // Circle, Rectangle, Oval, Polygon, Thermal Relief
-    dimensions: number[]; // [diameter] or [width, height] or [outer, inner, gap]
-}
-
-export interface GerberDrawCommand {
-    op: "draw" | "move" | "flash" | "poly" | "arc";
-    x: number;
-    y: number;
-    startX?: number;
-    startY?: number;
-    apertureId?: string;
-    region?: boolean;
-    polyPoints?: { x: number; y: number }[];
-    arcDir?: "cw" | "ccw";
-    i?: number; // Arc center offset
-    j?: number;
-}
+export type GerberLayerType =
+    | "copper_top"
+    | "copper_bottom"
+    | "solder_mask_top"
+    | "solder_mask_bottom"
+    | "silkscreen_top"
+    | "silkscreen_bottom"
+    | "outline"
+    | "drill"
+    | "mechanical"
+    | "inner"
+    | "unknown";
 
 export interface ParsedGerberFile {
     name: string;
-    type: "copper_top" | "copper_bottom" | "solder_mask_top" | "solder_mask_bottom" | "silkscreen_top" | "silkscreen_bottom" | "drill" | "outline" | "unknown";
-    commands: GerberDrawCommand[];
-    apertures: { [id: string]: Aperture };
-    bounds: { minX: number; maxX: number; minY: number; maxY: number };
+    type: GerberLayerType;
     units: "mm" | "in";
+    bounds: { minX: number; maxX: number; minY: number; maxY: number };
+    imageTree: ImageTree; // From @tracespace/plotter
 }
 
 export interface GerberFile {
     name: string;
-    type: ParsedGerberFile["type"];
+    type: GerberLayerType;
     content?: string;
-}
-
-export interface PCBInfo {
-    width: number;
-    height: number;
-    layers: number;
-    detectedFiles: { name: string; type: string; found: boolean }[];
-    drillFileDetected: boolean;
-    outlineFileDetected: boolean;
-    debugInfo?: string;
-}
-
-export interface PCBPreview {
-    topPreviewUrl: string;
-    bottomPreviewUrl: string;
 }
 
 export interface QuoteFormData {
@@ -98,14 +75,42 @@ export interface QuoteFormData {
     shippingAddress: string;
 }
 
+export interface PCBInfo {
+    width: number;
+    height: number;
+    layers: number;
+    detectedFiles: { name: string; type: string; found: boolean }[];
+    drillFileDetected: boolean;
+    outlineFileDetected: boolean;
+    debugInfo?: string;
+    warnings: string[];
+    boardShape: "Rectangle" | "Square" | "Circular" | "Custom";
+    outlineType: "Outline Layer" | "Computed Bounding Box";
+    drillCount: number;
+}
+
 export interface UploadResponse {
     success: boolean;
     folder?: string;
     files?: { name: string; type: string }[];
-    info?: any;
+    info?: PCBInfo;
     parsedGerberFiles?: ParsedGerberFile[];
-    tracespaceFiles?: TracespaceParsedFile[];
+    error?: string;
+
+    // Exact requested output fields
+    width_mm?: number;
+    height_mm?: number;
+    boardShape?: string;
+    layerCount?: number;
+    drillCount?: number;
+    topCopper?: boolean;
+    bottomCopper?: boolean;
+    topMask?: boolean;
+    bottomMask?: boolean;
+    topSilk?: boolean;
+    bottomSilk?: boolean;
+    outline?: boolean;
+    warnings?: string[];
     previewFront?: string;
     previewBack?: string;
-    error?: string;
 }

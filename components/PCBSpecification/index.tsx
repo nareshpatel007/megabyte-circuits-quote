@@ -7,6 +7,7 @@ import GerberUploader from "../GerberUploader";
 import GerberPreview from "../GerberPreview";
 import QuoteForm from "../QuoteForm";
 import { GerberFile, PCBInfo, QuoteFormData, UploadResponse, ParsedGerberFile } from "../../lib/gerber/types";
+import { ParsedGerberFile as TracespaceParsedFile, PCBInfo as TracespacePCBInfo } from "../../src/lib/gerber/types";
 
 const INITIAL_FORM_DATA: QuoteFormData = {
     baseMaterial: "FR-4",
@@ -467,7 +468,8 @@ export default function PCBSpecification() {
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [gerberFiles, setGerberFiles] = useState<GerberFile[]>([]);
     const [parsedGerberFiles, setParsedGerberFiles] = useState<ParsedGerberFile[]>([]);
-    const [pcbInfo, setPcbInfo] = useState<PCBInfo | null>(null);
+    const [tracespaceFiles, setTracespaceFiles] = useState<TracespaceParsedFile[]>([]);
+    const [pcbInfo, setPcbInfo] = useState<TracespacePCBInfo | null>(null);
 
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
     const [specsOpen, setSpecsOpen] = useState(true);
@@ -628,12 +630,17 @@ export default function PCBSpecification() {
         if (res.parsedGerberFiles) {
             setParsedGerberFiles(res.parsedGerberFiles);
         }
+
+        if (res.tracespaceFiles) {
+            setTracespaceFiles(res.tracespaceFiles);
+        }
     };
 
     const handleReset = () => {
         setUploadedFile(null);
         setGerberFiles([]);
         setParsedGerberFiles([]);
+        setTracespaceFiles([]);
         setPcbInfo(null);
         setFormData(INITIAL_FORM_DATA);
         setSelectedDay(null);
@@ -754,7 +761,7 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                             <GerberUploader onUploadSuccess={handleUploadSuccess} onReset={handleReset} />
 
                             {uploadedFile && pcbInfo && (
-                                <GerberPreview parsedFiles={parsedGerberFiles} info={pcbInfo} pcbColor={formData.pcbColor} />
+                                <GerberPreview parsedFiles={tracespaceFiles} info={pcbInfo} pcbColor={formData.pcbColor} />
                             )}
 
                             <QuoteForm

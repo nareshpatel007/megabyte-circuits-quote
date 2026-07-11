@@ -1,67 +1,68 @@
 import { ParsedGerberFile, GerberDrawCommand, Aperture } from "./types";
 
 interface SolderMaskTheme {
-    baseColor: string;
-    darkColor: string;
-    copperColor: string;
-    silkscreenColor: string;
+    baseColor: string;       // FR4 substrate
+    maskColor: string;       // Solder mask color
+    copperColor: string;     // Copper under mask
+    silkscreenColor: string; // Silkscreen color
 }
 
+// Visual themes matching different solder mask colors
 const COLOR_THEMES: { [key: string]: SolderMaskTheme } = {
-    // Green
+    // Green (default)
     "#52c41a": {
-        baseColor: "#1F7A35",
-        darkColor: "#155D27",
-        copperColor: "#2C8A3E",
+        baseColor: "#134A23",
+        maskColor: "#1F7A35",
+        copperColor: "#C4927C", // Raw copper
         silkscreenColor: "#FFFFFF"
     },
     // Purple
     "#722ed1": {
-        baseColor: "#5B21B6",
-        darkColor: "#4C1D95",
-        copperColor: "#7C3AED",
+        baseColor: "#2E0854",
+        maskColor: "#5B21B6",
+        copperColor: "#C4927C",
         silkscreenColor: "#FFFFFF"
     },
     // Red
     "#f5222d": {
-        baseColor: "#991B1B",
-        darkColor: "#7F1D1D",
-        copperColor: "#B91C1C",
+        baseColor: "#4A0E0E",
+        maskColor: "#991B1B",
+        copperColor: "#C4927C",
         silkscreenColor: "#FFFFFF"
     },
     // Yellow
     "#fadb14": {
-        baseColor: "#D97706",
-        darkColor: "#B45309",
-        copperColor: "#F59E0B",
+        baseColor: "#5C3E00",
+        maskColor: "#D97706",
+        copperColor: "#C4927C",
         silkscreenColor: "#0F172A"
     },
     // Blue
     "#1677ff": {
-        baseColor: "#1E3A8A",
-        darkColor: "#1E1B4B",
-        copperColor: "#2563EB",
+        baseColor: "#0A2540",
+        maskColor: "#1E3A8A",
+        copperColor: "#C4927C",
         silkscreenColor: "#FFFFFF"
     },
     // White
     "#ffffff": {
-        baseColor: "#F3F4F6",
-        darkColor: "#E5E7EB",
-        copperColor: "#D1D5DB",
+        baseColor: "#D1D5DB",
+        maskColor: "#F3F4F6",
+        copperColor: "#C4927C",
         silkscreenColor: "#1F2937"
     },
     // Black
     "#000000": {
-        baseColor: "#18181B",
-        darkColor: "#09090B",
-        copperColor: "#27272A",
+        baseColor: "#111827",
+        maskColor: "#1F2937",
+        copperColor: "#C4927C",
         silkscreenColor: "#F3F4F6"
     },
     // Matte Black
     "#18181b": {
-        baseColor: "#18181B",
-        darkColor: "#09090B",
-        copperColor: "#27272A",
+        baseColor: "#09090B",
+        maskColor: "#18181B",
+        copperColor: "#C4927C",
         silkscreenColor: "#F3F4F6"
     }
 };
@@ -83,14 +84,18 @@ export function renderPCBVectorToCanvas(
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Fill background
-    ctx.fillStyle = "#0F172A";
+    // Enable high quality antialiasing
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    // 1. Draw Background
+    ctx.fillStyle = "#111827";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Get color configuration based on selection
+    // Get color theme
     const theme = COLOR_THEMES[pcbColor.toLowerCase()] || COLOR_THEMES["#52c41a"];
 
-    // 1. Calculate Bounding Box based on the union of all parsed files with valid bounds
+    // Calculate Bounding Box
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     parsedFiles.forEach(f => {
         if (f.bounds.maxX > f.bounds.minX && f.bounds.maxY > f.bounds.minY) {
@@ -111,6 +116,7 @@ export function renderPCBVectorToCanvas(
     const pcbH = maxY - minY;
     const padding = 20;
 
+    // Scale to fit viewport maintaining aspect ratio
     const scaleX = (canvas.width - padding * 2) / pcbW;
     const scaleY = (canvas.height - padding * 2) / pcbH;
     const scale = Math.min(scaleX, scaleY);
@@ -118,60 +124,65 @@ export function renderPCBVectorToCanvas(
     const dx = (canvas.width - pcbW * scale) / 2 - minX * scale;
     const dy = (canvas.height - pcbH * scale) / 2 - minY * scale;
 
-    // Flip horizontally if side is bottom
+    // Horizontal mirroring for bottom view
     const mapX = (x: number) => {
         const val = x * scale + dx;
         return side === "bottom" ? canvas.width - val : val;
     };
     const mapY = (y: number) => canvas.height - (y * scale + dy);
 
-    // 1. Draw Board Outline and 2. Solder Mask Base Color
-    if (activeLayers.outline) {
-        ctx.fillStyle = theme.baseColor;
-        ctx.strokeStyle = "#C5C5C5"; // Silver/gray bezel outline
-        ctx.lineWidth = 2;
-
+    // Helper to generate board shape path
+    const buildBoardOutlinePath = (c: CanvasRenderingContext2D) => {
+        c.beginPath();
         if (outlineFile && outlineFile.commands.length > 0) {
-            ctx.beginPath();
             let first = true;
             outlineFile.commands.forEach(cmd => {
                 if (cmd.op === "poly" && cmd.polyPoints) {
                     cmd.polyPoints.forEach((p, idx) => {
-                        if (idx === 0) ctx.moveTo(mapX(p.x), mapY(p.y));
-                        else ctx.lineTo(mapX(p.x), mapY(p.y));
+                        if (idx === 0) c.moveTo(mapX(p.x), mapY(p.y));
+                        else c.lineTo(mapX(p.x), mapY(p.y));
                     });
                 } else if (cmd.op === "move" || first) {
-                    ctx.moveTo(mapX(cmd.x), mapY(cmd.y));
+                    c.moveTo(mapX(cmd.x), mapY(cmd.y));
                     first = false;
                 } else if (cmd.op === "draw") {
-                    ctx.lineTo(mapX(cmd.x), mapY(cmd.y));
+                    c.lineTo(mapX(cmd.x), mapY(cmd.y));
                 }
             });
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
+            c.closePath();
         } else {
-            // Draw rounded fallback rectangle matching bounds
-            ctx.beginPath();
             const startX = side === "bottom" ? mapX(maxX) : mapX(minX);
-            ctx.roundRect(startX, mapY(maxY), pcbW * scale, pcbH * scale, 12 * (scale / 5));
-            ctx.fill();
-            ctx.stroke();
+            c.roundRect(startX, mapY(maxY), pcbW * scale, pcbH * scale, 12 * (scale / 5));
         }
+    };
+
+    // 2. Draw Board Outline, Shadow, and FR4 Substrate
+    if (activeLayers.outline) {
+        ctx.save();
+        // Subtle drop shadow for realistic 3D appearance
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetX = 3;
+        ctx.shadowOffsetY = 5;
+
+        buildBoardOutlinePath(ctx);
+        ctx.fillStyle = theme.baseColor; // FR4 substrate
+        ctx.fill();
+        ctx.restore();
+
+        // Draw light gray bezel border
+        ctx.save();
+        buildBoardOutlinePath(ctx);
+        ctx.strokeStyle = "#BFBFBF";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
     }
 
-    // 3. Render Copper Layers UNDER Solder Mask (Alpha blended 0.25 - 0.35)
-    const activeCopper = side === "top" ? "copper_top" : "copper_bottom";
-    const copperFile = parsedFiles.find(f => f.type === activeCopper);
-    
-    if (copperFile && ((side === "top" && activeLayers.topCopper) || (side === "bottom" && activeLayers.bottomCopper))) {
-        ctx.save();
-        ctx.globalAlpha = 0.30; // Blend into board mask
-        ctx.strokeStyle = theme.copperColor;
-        ctx.fillStyle = theme.copperColor;
-
-        copperFile.commands.forEach(cmd => {
-            const ap = cmd.apertureId ? copperFile.apertures[cmd.apertureId] : null;
+    // Helper to draw Gerber draw/arc/poly commands for a file
+    const drawGerberLayer = (file: ParsedGerberFile, drawAperture: (cmd: GerberDrawCommand, ap: Aperture | null) => void) => {
+        file.commands.forEach(cmd => {
+            const ap = cmd.apertureId ? file.apertures[cmd.apertureId] : null;
 
             if (cmd.op === "draw") {
                 const width = ap ? (ap.dimensions[0] || 0.2) : 0.2;
@@ -202,34 +213,75 @@ export function renderPCBVectorToCanvas(
                 });
                 ctx.closePath();
                 ctx.fill();
-            } else if (cmd.op === "flash" && ap) {
-                // Flash copper shapes
-                if (ap.shape === "C") {
-                    ctx.beginPath();
-                    ctx.arc(mapX(cmd.x), mapY(cmd.y), (ap.dimensions[0] / 2) * scale, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (ap.shape === "R") {
-                    const w = (ap.dimensions[0] || 0.5) * scale;
-                    const h = (ap.dimensions[1] || 0.5) * scale;
-                    ctx.fillRect(mapX(cmd.x) - w / 2, mapY(cmd.y) - h / 2, w, h);
-                } else if (ap.shape === "O") {
-                    const w = (ap.dimensions[0] || 0.5) * scale;
-                    const h = (ap.dimensions[1] || 0.5) * scale;
-                    ctx.beginPath();
-                    ctx.ellipse(mapX(cmd.x), mapY(cmd.y), w / 2, h / 2, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                }
+            } else if (cmd.op === "flash") {
+                drawAperture(cmd, ap);
             }
         });
+    };
+
+    // 3. Render Copper Layer Under Solder Mask
+    const activeCopper = side === "top" ? "copper_top" : "copper_bottom";
+    const copperFile = parsedFiles.find(f => f.type === "copper_top" || f.type === "copper_bottom"); // find either top or bottom based on side
+
+    if (copperFile && ((side === "top" && activeLayers.topCopper) || (side === "bottom" && activeLayers.bottomCopper))) {
+        ctx.save();
+        // Draw copper traces
+        ctx.strokeStyle = theme.copperColor;
+        ctx.fillStyle = theme.copperColor;
+
+        const drawCopperFlash = (cmd: GerberDrawCommand, ap: Aperture | null) => {
+            if (!ap) return;
+            if (ap.shape === "C") {
+                ctx.beginPath();
+                ctx.arc(mapX(cmd.x), mapY(cmd.y), (ap.dimensions[0] / 2) * scale, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (ap.shape === "R") {
+                const w = (ap.dimensions[0] || 0.5) * scale;
+                const h = (ap.dimensions[1] || 0.5) * scale;
+                ctx.fillRect(mapX(cmd.x) - w / 2, mapY(cmd.y) - h / 2, w, h);
+            } else if (ap.shape === "O") {
+                const w = (ap.dimensions[0] || 0.5) * scale;
+                const h = (ap.dimensions[1] || 0.5) * scale;
+                ctx.beginPath();
+                ctx.ellipse(mapX(cmd.x), mapY(cmd.y), w / 2, h / 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        };
+
+        drawGerberLayer(copperFile, drawCopperFlash);
         ctx.restore();
     }
 
-    // 4. Draw Solder Mask Exposed Pads (Pads/Vias visible on top, colored Silver #D7D7D7)
-    // Solder mask openings typically correspond to pad shapes on copper layers or explicit mask layers.
-    // Drawing copper pad flashes on top in Silver creates the exact visual solder mask openings.
+    // 4. Render Solder Mask Overlay
+    if (activeLayers.outline && activeLayers.solderMask) {
+        ctx.save();
+        // Clip to board outline
+        buildBoardOutlinePath(ctx);
+        ctx.clip();
+
+        // Semi-transparent solder mask overlay (75% opacity)
+        ctx.fillStyle = theme.maskColor;
+        ctx.globalAlpha = 0.75;
+        buildBoardOutlinePath(ctx);
+        ctx.fill();
+
+        // 3D highlights & reflection on solder mask
+        ctx.globalAlpha = 1.0;
+        const reflectionGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        reflectionGrad.addColorStop(0, "rgba(255, 255, 255, 0.08)");
+        reflectionGrad.addColorStop(0.4, "rgba(255, 255, 255, 0.0)");
+        reflectionGrad.addColorStop(0.8, "rgba(0, 0, 0, 0.12)");
+        ctx.fillStyle = reflectionGrad;
+        buildBoardOutlinePath(ctx);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // 5. Draw Exposed Pads (Above Solder Mask, Tinned Silver/White #E5E7EB)
     if (copperFile && activeLayers.solderMask) {
-        ctx.fillStyle = "#D7D7D7";
-        ctx.strokeStyle = "#D7D7D7";
+        ctx.save();
+        ctx.fillStyle = "#E5E7EB";
+        ctx.strokeStyle = "#E5E7EB";
 
         copperFile.commands.forEach(cmd => {
             if (cmd.op === "flash") {
@@ -260,63 +312,60 @@ export function renderPCBVectorToCanvas(
                 }
             }
         });
+        ctx.restore();
     }
 
-    // 5. Draw Silkscreen Layers (White #FFFFFF text/lines)
+    // 6. Draw Silkscreen Legends (White #FFFFFF)
     const activeSilkscreen = side === "top" ? "silkscreen_top" : "silkscreen_bottom";
     const silkFile = parsedFiles.find(f => f.type === activeSilkscreen);
 
     if (silkFile && activeLayers.silkscreen) {
-        ctx.strokeStyle = theme.silkscreenColor;
-        ctx.fillStyle = theme.silkscreenColor;
+        ctx.save();
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.fillStyle = "#FFFFFF";
 
-        silkFile.commands.forEach(cmd => {
-            const ap = cmd.apertureId ? silkFile.apertures[cmd.apertureId] : null;
-
-            if (cmd.op === "draw") {
-                const width = ap ? (ap.dimensions[0] || 0.15) : 0.15;
-                ctx.lineWidth = width * scale;
-                ctx.lineCap = "round";
+        const drawSilkFlash = (cmd: GerberDrawCommand, ap: Aperture | null) => {
+            if (!ap) return;
+            if (ap.shape === "C") {
                 ctx.beginPath();
-                ctx.moveTo(mapX(cmd.startX ?? cmd.x), mapY(cmd.startY ?? cmd.y));
-                ctx.lineTo(mapX(cmd.x), mapY(cmd.y));
-                ctx.stroke();
-            } else if (cmd.op === "arc" && cmd.startX !== undefined && cmd.startY !== undefined) {
-                const width = ap ? (ap.dimensions[0] || 0.15) : 0.15;
-                ctx.lineWidth = width * scale;
-                ctx.lineCap = "round";
-                const cx = cmd.startX + (cmd.i ?? 0);
-                const cy = cmd.startY + (cmd.j ?? 0);
-                const radius = Math.sqrt((cmd.i ?? 0) ** 2 + (cmd.j ?? 0) ** 2);
-                const startAngle = Math.atan2(cmd.startY - cy, cmd.startX - cx);
-                const endAngle = Math.atan2(cmd.y - cy, cmd.x - cx);
-                ctx.beginPath();
-                ctx.arc(mapX(cx), mapY(cy), radius * scale, startAngle, endAngle, cmd.arcDir === "ccw");
-                ctx.stroke();
+                ctx.arc(mapX(cmd.x), mapY(cmd.y), (ap.dimensions[0] / 2) * scale, 0, Math.PI * 2);
+                ctx.fill();
             }
-        });
+        };
+
+        drawGerberLayer(silkFile, drawSilkFlash);
+        ctx.restore();
     }
 
-    // 6. Draw Drill Holes (NPTH / PTH)
+    // 7. Draw Drill Holes (Annular Ring + Hole)
     const drillFile = parsedFiles.find(f => f.type === "drill");
     if (drillFile && activeLayers.drills) {
+        ctx.save();
+        
+        // 1. Draw silver plated rings
+        ctx.fillStyle = "#E5E7EB";
         drillFile.commands.forEach(cmd => {
             if (cmd.op === "flash") {
                 const ap = cmd.apertureId ? drillFile.apertures[cmd.apertureId] : null;
                 const diameter = ap ? (ap.dimensions[0] || 0.8) : 0.8;
-
-                // Draw outer silver pad ring (PTH structure)
-                ctx.fillStyle = "#D9D9D9";
                 ctx.beginPath();
-                ctx.arc(mapX(cmd.x), mapY(cmd.y), (diameter / 2 + 0.3) * scale, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Draw dark hole fill
-                ctx.fillStyle = "#1B1B1B";
-                ctx.beginPath();
-                ctx.arc(mapX(cmd.x), mapY(cmd.y), (diameter / 2) * scale, 0, Math.PI * 2);
+                ctx.arc(mapX(cmd.x), mapY(cmd.y), (diameter / 4 + 0.15) * scale, 0, Math.PI * 2);
                 ctx.fill();
             }
         });
+
+        // 2. Erase the hole center to show the page background
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        drillFile.commands.forEach(cmd => {
+            if (cmd.op === "flash") {
+                const ap = cmd.apertureId ? drillFile.apertures[cmd.apertureId] : null;
+                const diameter = ap ? (ap.dimensions[0] || 0.8) : 0.8;
+                ctx.beginPath();
+                ctx.arc(mapX(cmd.x), mapY(cmd.y), (diameter / 4) * scale, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+        ctx.restore();
     }
 }

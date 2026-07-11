@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import JSZip from "jszip";
-import { extractAndAnalyzeGerber } from "../../../lib/gerber/extract";
+import { extractAndAnalyzeGerber } from "../../../../src/lib/gerber";
 
 export async function POST(req: NextRequest) {
     try {
@@ -32,25 +31,23 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Read ArrayBuffer
         const buffer = await file.arrayBuffer();
 
-        // Extract and Analyze Gerber
-        const { files, parsedGerberFiles, tracespaceFiles, info, previewFront, previewBack } = await extractAndAnalyzeGerber(buffer);
+        // Call our tracespace parser orchestration wrapper
+        const { files, parsedGerberFiles, info, previewFront, previewBack } = await extractAndAnalyzeGerber(buffer);
 
-        // Generate a random temporary folder name to satisfy the spec
         const randomHash = Math.random().toString(36).substring(2, 10);
         const folderPath = `uploads/${randomHash}`;
 
+        // Return exact requested schema keys at the root
         return NextResponse.json({
             success: true,
             folder: folderPath,
             files: files.map(f => ({ name: f.name, type: f.type })),
             parsedGerberFiles,
-            tracespaceFiles,
             info,
             
-            // Root-level properties requested by user
+            // Step 8 & 12: Gerber output values at root
             width_mm: info.width,
             height_mm: info.height,
             boardShape: info.boardShape,
@@ -69,9 +66,13 @@ export async function POST(req: NextRequest) {
         });
 
     } catch (err: any) {
-        console.error("Upload API Error:", err);
+        console.error("Gerber Upload API Error:", err);
         return NextResponse.json(
-            { success: false, error: err.message || "Failed to process Gerber upload." },
+            { 
+                success: false, 
+                error: err.message || "Failed to process Gerber upload.",
+                details: err.stack || ""
+            },
             { status: 500 }
         );
     }
