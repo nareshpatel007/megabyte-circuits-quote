@@ -486,7 +486,7 @@ export default function PCBSpecification() {
         const length = (parseFloat(formData.width) || 0) * unitMultiplier;
         const width = (parseFloat(formData.height) || 0) * unitMultiplier;
         const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
-        const solderMask = formData.pcbColor === "#52c41a" ? "Green" : "Other";
+        const solderMask = formData.pcbColor === "#52c41a" ? "Green" : "Non-Green";
         const copperWeight = formData.copperWeight.replace(" ", "");
         const thickness = parseFloat(formData.thickness) || 1.6;
 
@@ -788,7 +788,7 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                     </h3>
                                     {(() => {
                                         const { options, showContact } = getLeadTimePricing();
-                                        
+
                                         if (showContact) {
                                             return (
                                                 <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-center shadow-sm">
@@ -806,7 +806,7 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                         const length = (parseFloat(formData.width) || 0) * unitMultiplier;
                                         const width = (parseFloat(formData.height) || 0) * unitMultiplier;
                                         const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
-                                        
+
                                         // Calculate default pricing values
                                         const defaultOrderValue = Math.max(Math.round(length * width * 0.05 * quantity), 100);
                                         const defaultUnitPrice = (defaultOrderValue / quantity).toFixed(2);
@@ -826,12 +826,12 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
 
                                             // Get price from computed options list
                                             const matchedOpt = options.find(o => o.day === effectiveDay);
-                                            
-                                            const orderValue = matchedOpt && parseFloat(matchedOpt.orderValue) > 0 
-                                                ? matchedOpt.orderValue 
+
+                                            const orderValue = matchedOpt && parseFloat(matchedOpt.orderValue) > 0
+                                                ? matchedOpt.orderValue
                                                 : defaultOrderValue.toString();
-                                            const unitPrice = matchedOpt && parseFloat(matchedOpt.unitPrice) > 0 
-                                                ? matchedOpt.unitPrice 
+                                            const unitPrice = matchedOpt && parseFloat(matchedOpt.unitPrice) > 0
+                                                ? matchedOpt.unitPrice
                                                 : defaultUnitPrice;
 
                                             const isLeadTimeOption = [1, 3, 5, 7, 10].includes(daysAhead);
@@ -859,11 +859,10 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                                             <div
                                                                 key={item.day}
                                                                 onClick={() => setSelectedDay(item.day)}
-                                                                className={`p-2 border rounded-xl flex flex-col items-center justify-between text-center cursor-pointer transition-all ${
-                                                                    isSelected
+                                                                className={`p-2 border rounded-xl flex flex-col items-center justify-between text-center cursor-pointer transition-all ${isSelected
                                                                         ? "border-primary bg-primary/5 ring-1 ring-primary"
                                                                         : "border-slate-200 bg-white hover:border-primary/50"
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 <span className="text-[9px] font-black text-slate-400 uppercase leading-none">{item.weekday}</span>
                                                                 <span className="text-xs font-black text-slate-800 my-1">{item.dateStr}</span>
@@ -994,7 +993,7 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                 <h2 className="text-lg font-black text-slate-800">Complete Your Order</h2>
                                 <p className="text-xs font-bold text-slate-400 mt-0.5">Please provide delivery and contact details</p>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setIsModalOpen(false)}
                                 className="p-1.5 hover:bg-slate-200/60 rounded-full transition-colors text-slate-400 hover:text-slate-600 cursor-pointer"
                             >
