@@ -40,6 +40,7 @@ export interface PCBInfo {
     detectedFiles: { name: string; type: string; found: boolean }[];
     drillFileDetected: boolean;
     outlineFileDetected: boolean;
+    debugInfo?: string;
 }
 
 export interface PCBPreview {

@@ -30,6 +30,25 @@ export async function extractAndAnalyzeGerber(buffer: ArrayBuffer): Promise<{
         outline: false
     };
 
+    // Pre-scan files to find default coordinate format and units
+    let defaultUnits: "mm" | "in" = "mm";
+    let defaultDivisor = 100000; // standard default for modern Gerbers (5 decimal places for mm)
+
+    for (const name of fileNames) {
+        if (zip.files[name].dir) continue;
+        const content = await zip.files[name].async("string");
+        if (content.includes("%MOMM")) {
+            defaultUnits = "mm";
+        } else if (content.includes("%MOIN")) {
+            defaultUnits = "in";
+        }
+        const fsMatch = content.match(/%FSLAX\d(\d)Y/i) || content.match(/%FSTAX\d(\d)Y/i);
+        if (fsMatch) {
+            const decDigits = parseInt(fsMatch[1], 10);
+            defaultDivisor = Math.pow(10, decDigits);
+        }
+    }
+
     for (const name of fileNames) {
         if (zip.files[name].dir) continue;
 
@@ -47,7 +66,7 @@ export async function extractAndAnalyzeGerber(buffer: ArrayBuffer): Promise<{
             if (type === "drill") drillFileDetected = true;
 
             // Generate parsed vector file structure
-            const parsed = parseGerberFile(name, content, type);
+            const parsed = parseGerberFile(name, content, type, defaultUnits, defaultDivisor);
             parsedGerberFiles.push(parsed);
         }
 
@@ -76,8 +95,31 @@ export async function extractAndAnalyzeGerber(buffer: ArrayBuffer): Promise<{
         }
     }
 
-    // Determine dimensions from outline Gerber
-    const { width, height } = parseGerberOutline(outlineContent);
+    // Determine dimensions from outline Gerber first
+    let { width, height } = parseGerberOutline(outlineContent, defaultUnits, defaultDivisor);
+
+    // Robust fallback: if outline has 0 width or height, extract from parsed files union bounds
+    if (width <= 0 || height <= 0) {
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        parsedGerberFiles.forEach(f => {
+            if (["outline", "copper_top", "copper_bottom"].includes(f.type)) {
+                if (f.bounds.minX < minX) minX = f.bounds.minX;
+                if (f.bounds.maxX > maxX) maxX = f.bounds.maxX;
+                if (f.bounds.minY < minY) minY = f.bounds.minY;
+                if (f.bounds.maxY > maxY) maxY = f.bounds.maxY;
+            }
+        });
+        if (minX !== Infinity && maxX !== -Infinity && minY !== Infinity && maxY !== -Infinity) {
+            width = parseFloat((maxX - minX).toFixed(2));
+            height = parseFloat((maxY - minY).toFixed(2));
+        }
+    }
+
+    // Default fallback if still 0
+    if (width <= 0 || height <= 0) {
+        width = 100;
+        height = 100;
+    }
 
     const detectedFiles = Object.entries(detectedFilesMap).map(([type, found]) => ({
         name: type.replace(/_/g, " ").toUpperCase(),
@@ -85,13 +127,18 @@ export async function extractAndAnalyzeGerber(buffer: ArrayBuffer): Promise<{
         found
     }));
 
+    const debugInfo = parsedGerberFiles.map(f => {
+        return `${f.name.substring(f.name.lastIndexOf('/') + 1)} (${f.type}): bounds=[${f.bounds.minX.toFixed(2)}, ${f.bounds.maxX.toFixed(2)}, ${f.bounds.minY.toFixed(2)}, ${f.bounds.maxY.toFixed(2)}]`;
+    }).join(" | ");
+
     const info: PCBInfo = {
         width,
         height,
         layers,
         detectedFiles,
         drillFileDetected,
-        outlineFileDetected
+        outlineFileDetected,
+        debugInfo
     };
 
     return {

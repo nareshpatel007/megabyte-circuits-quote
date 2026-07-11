@@ -1,10 +1,16 @@
 import { ParsedGerberFile, GerberDrawCommand, Aperture } from "./types";
 
-export function parseGerberFile(filename: string, content: string, type: ParsedGerberFile["type"]): ParsedGerberFile {
+export function parseGerberFile(
+    filename: string,
+    content: string,
+    type: ParsedGerberFile["type"],
+    defaultUnits?: "mm" | "in",
+    defaultDivisor?: number
+): ParsedGerberFile {
     const commands: GerberDrawCommand[] = [];
     const apertures: { [id: string]: Aperture } = {};
-    let units: "mm" | "in" = "mm";
-    let divisor = 10000; // default decimal divisor
+    let units: "mm" | "in" = defaultUnits || "mm";
+    let divisor = defaultDivisor || 100000; // default to 5 decimal places for mm
     let currentX = 0;
     let currentY = 0;
     let activeApertureId = "";
@@ -276,9 +282,9 @@ export function parseGerberFile(filename: string, content: string, type: ParsedG
     // Default reference bounds if no vector bounds detected
     if (minX === Infinity || maxX === -Infinity || minY === Infinity || maxY === -Infinity) {
         minX = 0;
-        maxX = 91.62;
+        maxX = 0;
         minY = 0;
-        maxY = 54.35;
+        maxY = 0;
     }
 
     return {
@@ -291,8 +297,12 @@ export function parseGerberFile(filename: string, content: string, type: ParsedG
     };
 }
 
-export function parseGerberOutline(content: string): { width: number; height: number; success: boolean } {
-    const parsed = parseGerberFile("outline", content, "outline");
+export function parseGerberOutline(
+    content: string,
+    defaultUnits?: "mm" | "in",
+    defaultDivisor?: number
+): { width: number; height: number; success: boolean } {
+    const parsed = parseGerberFile("outline", content, "outline", defaultUnits, defaultDivisor);
     const w = parsed.bounds.maxX - parsed.bounds.minX;
     const h = parsed.bounds.maxY - parsed.bounds.minY;
     

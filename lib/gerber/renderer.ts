@@ -90,19 +90,18 @@ export function renderPCBVectorToCanvas(
     // Get color configuration based on selection
     const theme = COLOR_THEMES[pcbColor.toLowerCase()] || COLOR_THEMES["#52c41a"];
 
-    // 1. Calculate Bounding Box based primarily on Outline layer (or Copper Top layer)
+    // 1. Calculate Bounding Box based on the union of all parsed files with valid bounds
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    
-    const outlineFile = parsedFiles.find(f => f.type === "outline");
-    const copperTopFile = parsedFiles.find(f => f.type === "copper_top");
-    const boundingFile = outlineFile || copperTopFile || (parsedFiles.length > 0 ? parsedFiles[0] : null);
+    parsedFiles.forEach(f => {
+        if (f.bounds.maxX > f.bounds.minX && f.bounds.maxY > f.bounds.minY) {
+            if (f.bounds.minX < minX) minX = f.bounds.minX;
+            if (f.bounds.maxX > maxX) maxX = f.bounds.maxX;
+            if (f.bounds.minY < minY) minY = f.bounds.minY;
+            if (f.bounds.maxY > maxY) maxY = f.bounds.maxY;
+        }
+    });
 
-    if (boundingFile) {
-        minX = boundingFile.bounds.minX;
-        maxX = boundingFile.bounds.maxX;
-        minY = boundingFile.bounds.minY;
-        maxY = boundingFile.bounds.maxY;
-    }
+    const outlineFile = parsedFiles.find(f => f.type === "outline");
 
     if (minX === Infinity || maxX === -Infinity || minY === Infinity || maxY === -Infinity) {
         minX = 0; maxX = 100; minY = 0; maxY = 100;
@@ -154,7 +153,8 @@ export function renderPCBVectorToCanvas(
         } else {
             // Draw rounded fallback rectangle matching bounds
             ctx.beginPath();
-            ctx.roundRect(mapX(minX), mapY(maxY), pcbW * scale, pcbH * scale, 12 * (scale / 5));
+            const startX = side === "bottom" ? mapX(maxX) : mapX(minX);
+            ctx.roundRect(startX, mapY(maxY), pcbW * scale, pcbH * scale, 12 * (scale / 5));
             ctx.fill();
             ctx.stroke();
         }

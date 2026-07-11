@@ -474,7 +474,6 @@ export default function PCBSpecification() {
     const [highSpecsOpen, setHighSpecsOpen] = useState(false);
 
     // Sticky Notes Calendar states
-    const [calendarViewDate, setCalendarViewDate] = useState(new Date());
     const [selectedDay, setSelectedDay] = useState<number | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [checkoutData, setCheckoutData] = useState<{ day: number; unitPrice: string; orderValue: string; dateStr: string } | null>(null);
@@ -860,8 +859,8 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                                                 key={item.day}
                                                                 onClick={() => setSelectedDay(item.day)}
                                                                 className={`p-2 border rounded-xl flex flex-col items-center justify-between text-center cursor-pointer transition-all ${isSelected
-                                                                        ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                                                        : "border-slate-200 bg-white hover:border-primary/50"
+                                                                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                                                    : "border-slate-200 bg-white hover:border-primary/50"
                                                                     }`}
                                                             >
                                                                 <span className="text-[9px] font-black text-slate-400 uppercase leading-none">{item.weekday}</span>
