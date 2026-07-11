@@ -106,6 +106,51 @@ export default function QuoteForm({
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    const validateDimensions = (w: number, h: number, l: number) => {
+        if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) return;
+        const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
+        const wMm = w * unitMultiplier;
+        const hMm = h * unitMultiplier;
+
+        const minLength = 20;
+        const minWidth = 20;
+        let maxLength = 300;
+        let maxWidth = 300;
+
+        if (l === 1) {
+            maxLength = 400;
+            maxWidth = 400;
+        } else if (l === 2) {
+            maxLength = 300;
+            maxWidth = 300;
+        } else if ([4, 6, 8, 10].includes(l)) {
+            maxLength = 400;
+            maxWidth = 500;
+        }
+
+        let newW = w;
+        let newH = h;
+        let reset = false;
+
+        if (wMm < minLength) {
+            newW = minLength / unitMultiplier;
+        }
+        if (hMm < minWidth) {
+            newH = minWidth / unitMultiplier;
+        }
+
+        if (wMm > maxLength || hMm > maxWidth) {
+            alert(`For ${l}-layer boards, the board size must be between ${minLength}mm x ${minWidth}mm and ${maxLength}mm x ${maxWidth}mm.`);
+            newW = 100 / unitMultiplier;
+            newH = 100 / unitMultiplier;
+            reset = true;
+        }
+
+        if (newW !== w || newH !== h || reset) {
+            setFormData(prev => ({ ...prev, width: newW.toFixed(1), height: newH.toFixed(1) }));
+        }
+    };
+
     // Keep state track for advanced options accordion
     const [advancedOpen, setAdvancedOpen] = useState(true);
 
@@ -369,7 +414,42 @@ export default function QuoteForm({
 
     return (
         <TooltipProvider>
-            <div className="space-y-1">
+            <div className="space-y-4">
+                {/* Contact & Board Info */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4 border-b border-slate-100">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-slate-700">Board Name</label>
+                        <input
+                            type="text"
+                            value={formData.boardName || ""}
+                            onChange={(e) => updateField("boardName", e.target.value)}
+                            placeholder="Enter Board Name"
+                            className="h-10 px-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-primary transition-all font-semibold text-slate-800"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-slate-700">Mobile</label>
+                        <input
+                            type="tel"
+                            value={formData.userMobile || ""}
+                            onChange={(e) => updateField("userMobile", e.target.value)}
+                            placeholder="10-digit number"
+                            maxLength={10}
+                            className="h-10 px-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-primary transition-all font-semibold text-slate-800"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-slate-700">User Email</label>
+                        <input
+                            type="email"
+                            value={formData.userEmail || ""}
+                            onChange={(e) => updateField("userEmail", e.target.value)}
+                            placeholder="Enter Email Address"
+                            className="h-10 px-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-primary transition-all font-semibold text-slate-800"
+                        />
+                    </div>
+                </div>
+
                 {/* Basic specs */}
                 <ConfigRow label="Base Material" tooltip="Standard FR-4 is recommended for most digital circuit designs.">
                     {["FR-4", "Flex", "Aluminum", "Rogers", "PTFE Teflon"].map(m => (
@@ -389,7 +469,10 @@ export default function QuoteForm({
                             <Pill
                                 key={l}
                                 active={formData.layers === l}
-                                onClick={() => updateField("layers", l)}
+                                onClick={() => {
+                                    updateField("layers", l);
+                                    validateDimensions(parseFloat(formData.width) || 0, parseFloat(formData.height) || 0, parseInt(l));
+                                }}
                             >
                                 {l}
                             </Pill>
@@ -405,7 +488,10 @@ export default function QuoteForm({
                                 <Pill
                                     key={l}
                                     active={formData.layers === l}
-                                    onClick={() => updateField("layers", l)}
+                                    onClick={() => {
+                                        updateField("layers", l);
+                                        validateDimensions(parseFloat(formData.width) || 0, parseFloat(formData.height) || 0, parseInt(l));
+                                    }}
                                 >
                                     <span className="flex items-center gap-0.5">{l}</span>
                                 </Pill>
@@ -420,6 +506,7 @@ export default function QuoteForm({
                             type="number"
                             value={formData.width}
                             onChange={(e) => updateField("width", e.target.value)}
+                            onBlur={(e) => validateDimensions(parseFloat(e.target.value) || 0, parseFloat(formData.height) || 0, parseInt(formData.layers))}
                             placeholder="100"
                             readOnly={isUploaded}
                             className={`w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all ${
@@ -431,6 +518,7 @@ export default function QuoteForm({
                             type="number"
                             value={formData.height}
                             onChange={(e) => updateField("height", e.target.value)}
+                            onBlur={(e) => validateDimensions(parseFloat(formData.width) || 0, parseFloat(e.target.value) || 0, parseInt(formData.layers))}
                             placeholder="100"
                             readOnly={isUploaded}
                             className={`w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all ${

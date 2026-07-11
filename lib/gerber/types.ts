@@ -86,6 +86,13 @@ export interface QuoteFormData {
     assemblyOn: boolean;
     stencilOn: boolean;
     buildTime: string;
+    boardName: string;
+    userMobile: string;
+    userEmail: string;
+    gstNumber: string;
+    customerName: string;
+    billingAddress: string;
+    shippingAddress: string;
 }
 
 export interface UploadResponse {

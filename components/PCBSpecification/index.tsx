@@ -46,8 +46,422 @@ const INITIAL_FORM_DATA: QuoteFormData = {
     pcbRemark: "",
     assemblyOn: false,
     stencilOn: false,
-    buildTime: "2 days"
+    buildTime: "2 days",
+    boardName: "",
+    userMobile: "",
+    userEmail: "",
+    gstNumber: "",
+    customerName: "",
+    billingAddress: "",
+    shippingAddress: ""
 };
+
+// --- Pricing Matrix Definitions (from PHP) ---
+function getStandardPrices() {
+    return {
+        '1': {
+            "0.5 or less": [4.62, 3.08, 2.31, 1.925, 1.54],
+            "0.51 to 1": [4.62, 3.08, 2.31, 1.925, 1.54],
+            "1.01 to 2": [3.08, 1.54, 1.386, 1.078, 0.77],
+            "2.01 to 3": [3.08, 1.54, 1.386, 0.886, 0.539],
+            "3.01 to 9.99": [0, 1.54, 1.155, 0.847, 0.539]
+        },
+        '2': {
+            "0.5 or less": [5.28, 4.62, 3.3, 2.64, 1.98],
+            "0.51 to 1": [5.28, 3.96, 2.64, 2.31, 1.98],
+            "1.01 to 2": [0, 2.64, 2.31, 1.816, 1.32],
+            "2.01 to 3": [0, 0, 1.848, 1.584, 1.32],
+            "3.01 to 9.99": [0, 0, 0, 1.518, 1.32]
+        },
+        '4': {
+            "0.5 or less": [7, 5.6, 4.2, 3.5, 2.8],
+            "0.51 to 1": [7, 5.6, 4.2, 3.5, 2.8],
+            "1.01 to 2": [4.2, 2.8, 2.52, 2.1, 1.68],
+            "2.01 to 3": [4.2, 2.8, 2.1, 1.68, 1.4],
+            "3.01 to 9.99": [4.2, 2.8, 2.1, 1.68, 1.4]
+        },
+        '6': {
+            "0.5 or less": [9.8, 8.4, 6.3, 4.9, 4.2],
+            "0.51 to 1": [9.8, 8.4, 6.3, 4.9, 4.2],
+            "1.01 to 2": [7, 5.6, 4.9, 4.2, 3.5],
+            "2.01 to 3": [7, 5.6, 4.2, 3.5, 2.8],
+            "3.01 to 9.99": [7, 5.6, 4.2, 3.5, 2.8]
+        },
+        '8': {
+            "0.5 or less": [7, 5.6, 4.2, 3.5, 2.8],
+            "0.51 to 1": [7, 5.6, 4.2, 3.5, 2.8],
+            "1.01 to 2": [4.2, 2.8, 2.52, 2.1, 1.68],
+            "2.01 to 3": [4.2, 2.8, 2.1, 1.68, 1.4],
+            "3.01 to 9.99": [4.2, 2.8, 2.1, 1.68, 1.4]
+        },
+        '10': {
+            "0.5 or less": [9.8, 8.4, 6.3, 4.9, 4.2],
+            "0.51 to 1": [9.8, 8.4, 6.3, 4.9, 4.2],
+            "1.01 to 2": [7, 5.6, 4.9, 4.2, 3.5],
+            "2.01 to 3": [7, 5.6, 4.2, 3.5, 2.8],
+            "3.01 to 9.99": [7, 5.6, 4.2, 3.5, 2.8]
+        }
+    };
+}
+
+function getOtherMask1ozPrices() {
+    return {
+        '1': {
+            "0.5 or less": [5.39, 3.85, 3.08, 2.695, 2.31],
+            "0.51 to 1": [5.39, 3.85, 3.08, 2.695, 2.31],
+            "1.01 to 2": [3.85, 1.694, 1.54, 1.232, 0.924],
+            "2.01 to 3": [3.85, 1.694, 1.54, 0.979, 0.57],
+            "3.01 to 9.99": [0, 1.694, 1.309, 0.939, 0.57]
+        },
+        '2': {
+            "0.5 or less": [6.6, 5.94, 3.96, 3.136, 2.31],
+            "0.51 to 1": [6.6, 5.28, 3.3, 2.806, 2.31],
+            "1.01 to 2": [0, 3.036, 2.64, 2.146, 1.65],
+            "2.01 to 3": [0, 0, 1.98, 1.782, 1.584],
+            "3.01 to 9.99": [0, 0, 0, 1.65, 1.584]
+        },
+        '4': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '6': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        },
+        '8': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '10': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        }
+    };
+}
+
+function getGreenMask1ozOtherThicknessPrices() {
+    return {
+        '1': {
+            "0.5 or less": [6.93, 4.62, 3.465, 2.888, 2.31],
+            "0.51 to 1": [6.93, 4.62, 3.465, 2.888, 2.31],
+            "1.01 to 2": [4.62, 2.31, 2.079, 1.617, 1.155],
+            "2.01 to 3": [4.62, 2.31, 1.848, 1.617, 1.155],
+            "3.01 to 9.99": [0, 2.31, 1.733, 1.271, 0.809]
+        },
+        '2': {
+            "0.5 or less": [7.92, 6.93, 4.95, 3.96, 2.97],
+            "0.51 to 1": [7.92, 5.94, 3.96, 3.466, 2.97],
+            "1.01 to 2": [0, 3.96, 3.466, 2.723, 1.98],
+            "2.01 to 3": [0, 0, 2.442, 2.212, 1.98],
+            "3.01 to 9.99": [0, 0, 0, 2.278, 1.98]
+        },
+        '4': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '6': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        },
+        '8': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '10': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        }
+    };
+}
+
+function getOtherMask1ozOtherThicknessPrices() {
+    return {
+        '1': {
+            "0.5 or less": [8.085, 5.775, 4.62, 4.043, 3.465],
+            "0.51 to 1": [8.085, 5.775, 4.62, 4.043, 3.465],
+            "1.01 to 2": [5.775, 2.541, 2.31, 1.848, 1.386],
+            "2.01 to 3": [5.775, 2.541, 2.079, 1.467, 0.855],
+            "3.01 to 9.99": [0, 2.541, 1.964, 1.41, 0.855]
+        },
+        '2': {
+            "0.5 or less": [9.9, 8.91, 5.94, 4.712, 3.466],
+            "0.51 to 1": [9.9, 7.92, 4.95, 4.208, 3.466],
+            "1.01 to 2": [0, 4.554, 3.96, 3.234, 2.476],
+            "2.01 to 3": [0, 0, 2.64, 2.508, 2.376],
+            "3.01 to 9.99": [0, 0, 0, 2.508, 2.376]
+        },
+        '4': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '6': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        },
+        '8': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '10': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        }
+    };
+}
+
+function getGreenMask2ozPrices() {
+    return {
+        '1': {
+            "0.5 or less": [9.24, 6.16, 4.62, 3.85, 3.08],
+            "0.51 to 1": [9.24, 6.16, 4.62, 3.85, 3.08],
+            "1.01 to 2": [6.16, 3.08, 2.772, 2.156, 1.54],
+            "2.01 to 3": [6.16, 3.08, 2.464, 1.771, 1.078],
+            "3.01 to 9.99": [0, 3.08, 2.31, 1.694, 1.078]
+        },
+        '2': {
+            "0.5 or less": [10.56, 9.24, 6.6, 5.28, 3.96],
+            "0.51 to 1": [10.56, 7.92, 5.28, 4.62, 3.96],
+            "1.01 to 2": [0, 5.28, 4.62, 3.63, 2.64],
+            "2.01 to 3": [0, 0, 3.3, 3.036, 2.64],
+            "3.01 to 9.99": [0, 0, 0, 3.036, 2.64]
+        },
+        '4': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '6': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        },
+        '8': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '10': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        }
+    };
+}
+
+function getOtherMask2ozPrices() {
+    return {
+        '1': {
+            "0.5 or less": [10.78, 7.7, 6.16, 5.39, 4.62],
+            "0.51 to 1": [10.78, 7.7, 6.16, 5.39, 4.62],
+            "1.01 to 2": [7.7, 3.388, 3.08, 2.464, 1.848],
+            "2.01 to 3": [7.7, 3.388, 2.772, 1.956, 1.14],
+            "3.01 to 9.99": [0, 3.388, 2.618, 1.879, 1.14]
+        },
+        '2': {
+            "0.5 or less": [13.2, 11.88, 7.92, 6.27, 4.62],
+            "0.51 to 1": [13.2, 10.56, 6.6, 5.61, 4.62],
+            "1.01 to 2": [0, 6.072, 5.28, 4.29, 3.3],
+            "2.01 to 3": [0, 0, 3.696, 3.432, 3.168],
+            "3.01 to 9.99": [0, 0, 0, 3.3, 3.168]
+        },
+        '4': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '6': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        },
+        '8': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '10': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        }
+    };
+}
+
+function getGreenMask2ozOtherThicknessPrices() {
+    return {
+        '1': {
+            "0.5 or less": [13.86, 9.24, 6.93, 5.775, 4.62],
+            "0.51 to 1": [13.86, 9.24, 6.93, 5.775, 4.62],
+            "1.01 to 2": [9.24, 4.62, 4.158, 3.234, 2.31],
+            "2.01 to 3": [9.24, 4.62, 3.696, 2.657, 1.617],
+            "3.01 to 9.99": [0, 4.62, 3.465, 2.541, 1.617]
+        },
+        '2': {
+            "0.5 or less": [15.84, 13.86, 9.9, 7.92, 5.94],
+            "0.51 to 1": [15.84, 11.88, 7.92, 6.93, 5.94],
+            "1.01 to 2": [0, 7.92, 6.93, 5.446, 3.96],
+            "2.01 to 3": [0, 0, 4.752, 4.554, 3.96],
+            "3.01 to 9.99": [0, 0, 0, 4.554, 3.96]
+        },
+        '4': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '6': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        },
+        '8': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '10': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        }
+    };
+}
+
+function getOtherMask2ozOtherThicknessPrices() {
+    return {
+        '1': {
+            "0.5 or less": [16.17, 11.55, 9.24, 8.085, 6.93],
+            "0.51 to 1": [16.17, 11.55, 9.24, 8.085, 6.93],
+            "1.01 to 2": [11.55, 5.082, 4.62, 3.696, 2.772],
+            "2.01 to 3": [11.55, 5.082, 4.158, 2.941, 1.709],
+            "3.01 to 9.99": [0, 5.082, 3.927, 2.818, 1.709]
+        },
+        '2': {
+            "0.5 or less": [19.8, 17.82, 11.88, 9.406, 6.93],
+            "0.51 to 1": [19.8, 15.84, 9.9, 8.416, 6.93],
+            "1.01 to 2": [0, 9.108, 7.92, 6.436, 4.95],
+            "2.01 to 3": [0, 0, 5.148, 4.95, 4.752],
+            "3.01 to 9.99": [0, 0, 0, 4.95, 4.752]
+        },
+        '4': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '6': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        },
+        '8': {
+            "0.5 or less": [7],
+            "0.51 to 1": [7],
+            "1.01 to 2": [4.2],
+            "2.01 to 3": [4.2],
+            "3.01 to 9.99": [4.2]
+        },
+        '10': {
+            "0.5 or less": [9.8],
+            "0.51 to 1": [9.8],
+            "1.01 to 2": [7],
+            "2.01 to 3": [7],
+            "3.01 to 9.99": [7]
+        }
+    };
+}
+
+function getPriceTiers(mask: string, weight: string, thickness: number) {
+    const isThickness1_6 = Math.abs(thickness - 1.6) < 0.01;
+    const thicknessKey = isThickness1_6 ? 1.6 : 'other';
+
+    const tiers: any = {
+        'Green': {
+            '1oz': {
+                1.6: getStandardPrices(),
+                'other': getGreenMask1ozOtherThicknessPrices()
+            },
+            '2oz': {
+                1.6: getGreenMask2ozPrices(),
+                'other': getGreenMask2ozOtherThicknessPrices()
+            }
+        },
+        'Other': {
+            '1oz': {
+                1.6: getOtherMask1ozPrices(),
+                'other': getOtherMask1ozOtherThicknessPrices()
+            },
+            '2oz': {
+                1.6: getOtherMask2ozPrices(),
+                'other': getOtherMask2ozOtherThicknessPrices()
+            }
+        }
+    };
+
+    return tiers[mask]?.[weight]?.[thicknessKey] ?? tiers[mask]?.[weight]?.['other'] ?? tiers['Other']?.[weight]?.['other'] ?? null;
+}
 
 export default function PCBSpecification() {
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -59,40 +473,130 @@ export default function PCBSpecification() {
     const [specsOpen, setSpecsOpen] = useState(true);
     const [highSpecsOpen, setHighSpecsOpen] = useState(false);
 
-    // Dynamic price calculation
-    const calculatePrice = () => {
-        const qty = parseInt(formData.qty) || 5;
-        const layers = parseInt(formData.layers) || 2;
-        const width = parseFloat(formData.width) || 100;
-        const height = parseFloat(formData.height) || 100;
+    // Sticky Notes Calendar states
+    const [calendarViewDate, setCalendarViewDate] = useState(new Date());
+    const [selectedDelivery, setSelectedDelivery] = useState<{ day: number; unitPrice: string; orderValue: string; dateStr: string } | null>(null);
 
-        let basePrice = 2.0; // Special Offer base
+    // Dynamic lead time-based pricing calculation
+    const getLeadTimePricing = () => {
+        const layers = parseInt(formData.layers, 10) || 1;
+        const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
+        const length = (parseFloat(formData.width) || 0) * unitMultiplier;
+        const width = (parseFloat(formData.height) || 0) * unitMultiplier;
+        const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
+        const solderMask = formData.pcbColor === "#52c41a" ? "Green" : "Other";
+        const copperWeight = formData.copperWeight.replace(" ", "");
+        const thickness = parseFloat(formData.thickness) || 1.6;
 
-        // Scale price with dimensions and layer count
-        const area = (width * height) / 10000; // sq dm
-        if (area > 1) {
-            basePrice += (area - 1) * 3.5 * layers;
+        if (length <= 0 || width <= 0 || quantity <= 0) {
+            return { options: [], showContact: false, totalAreaInSqM: 0 };
         }
 
-        // Layer multiplier
-        if (layers > 2) basePrice += (layers - 2) * 8.0;
+        const areaPerBoard = (length * width) / 1000000;
+        const totalAreaInSqM = areaPerBoard * quantity;
+        const areaInSqCm = totalAreaInSqM * 10000;
 
-        // Qty factor
-        if (qty > 5) {
-            basePrice += (qty - 5) * 1.25;
+        const fixedCosts: Record<string, Record<number, number>> = {
+            '1': { 1: 3100, 3: 2100, 5: 1600, 7: 1500, 10: 1400 },
+            '2': { 1: 8100, 3: 4100, 5: 2600, 7: 2200, 10: 1900 },
+            '4': { 20: 6000 },
+            '6': { 20: 7000 },
+            '8': { 20: 8000 },
+            '10': { 20: 9000 }
+        };
+
+        const priceTiers = getPriceTiers(solderMask, copperWeight, thickness);
+        if (!priceTiers) {
+            return { options: [], showContact: false, totalAreaInSqM };
         }
 
-        // High spec add-ons
-        if (formData.viaCovering !== "Not Specified") basePrice += 16.5;
-        if (formData.goldFingers === "Yes") basePrice += 20.0;
-        if (formData.copperWeight !== "1oz") basePrice += 10.0;
+        let tierKey = "";
+        if (totalAreaInSqM <= 0.5) tierKey = "0.5 or less";
+        else if (totalAreaInSqM <= 1) tierKey = "0.51 to 1";
+        else if (totalAreaInSqM <= 2) tierKey = "1.01 to 2";
+        else if (totalAreaInSqM <= 3) tierKey = "2.01 to 3";
+        else if (totalAreaInSqM <= 9.99) tierKey = "3.01 to 9.99";
+        else {
+            return { options: [], showContact: true, totalAreaInSqM };
+        }
 
-        if (formData.assemblyOn) basePrice += 30.0;
-        if (formData.stencilOn) basePrice += 9.5;
+        const applicablePrices = priceTiers[layers.toString()]?.[tierKey];
+        if (!applicablePrices) {
+            return { options: [], showContact: false, totalAreaInSqM };
+        }
 
-        if (formData.buildTime === "24 hours") basePrice += 14.0;
+        // Days setup
+        const daysList = [1, 3, 5, 7, 10, 20];
+        const options = daysList.map((day, idx) => {
+            const costPerSqCm = day === 20 ? applicablePrices[0] : applicablePrices[idx];
+            const fixedCost = fixedCosts[layers.toString()]?.[day];
+            if (fixedCost === undefined) {
+                return { day, unitPrice: "0.00", orderValue: "0.00", visible: false };
+            }
+            const variableCost = areaInSqCm * costPerSqCm;
+            const totalCost = fixedCost + variableCost;
+            const unitPrice = totalCost / quantity;
 
-        return basePrice.toFixed(2);
+            return {
+                day,
+                unitPrice: unitPrice.toFixed(2),
+                orderValue: totalCost.toFixed(2),
+                visible: true
+            };
+        });
+
+        // Apply visibility overrides
+        let showContact = false;
+        if (layers >= 4 && layers <= 10) {
+            options.forEach(opt => {
+                if (opt.day !== 20) opt.visible = false;
+            });
+        } else if (layers === 1 || layers === 2) {
+            options.forEach(opt => {
+                if (opt.day === 20) opt.visible = false;
+            });
+
+            if (layers === 2 && totalAreaInSqM > 7) {
+                options.forEach(opt => opt.visible = false);
+                showContact = true;
+            } else if (layers === 1 && totalAreaInSqM > 10) {
+                options.forEach(opt => opt.visible = false);
+                showContact = true;
+            } else {
+                // Area limits
+                if (layers === 2) {
+                    if (totalAreaInSqM > 2) {
+                        options.forEach(opt => {
+                            if ([1, 3, 5].includes(opt.day)) opt.visible = false;
+                        });
+                    } else if (totalAreaInSqM > 1.5) {
+                        options.forEach(opt => {
+                            if ([1, 3].includes(opt.day)) opt.visible = false;
+                        });
+                    } else if (totalAreaInSqM > 1) {
+                        options.forEach(opt => {
+                            if (opt.day === 1) opt.visible = false;
+                        });
+                    }
+                } else if (layers === 1) {
+                    if (totalAreaInSqM > 5) {
+                        options.forEach(opt => {
+                            if ([1, 3, 5].includes(opt.day)) opt.visible = false;
+                        });
+                    } else if (totalAreaInSqM > 3) {
+                        options.forEach(opt => {
+                            if ([1, 3].includes(opt.day)) opt.visible = false;
+                        });
+                    } else if (totalAreaInSqM > 2) {
+                        options.forEach(opt => {
+                            if (opt.day === 1) opt.visible = false;
+                        });
+                    }
+                }
+            }
+        }
+
+        return { options, showContact, totalAreaInSqM };
     };
 
     const handleUploadSuccess = (res: UploadResponse, file: File) => {
@@ -131,6 +635,64 @@ export default function PCBSpecification() {
         setParsedGerberFiles([]);
         setPcbInfo(null);
         setFormData(INITIAL_FORM_DATA);
+        setSelectedDelivery(null);
+    };
+
+    const handleOrderSubmit = (day: number, unitPrice: string, orderValue: string) => {
+        if (!formData.boardName) {
+            alert('Please Enter Board Name');
+            return;
+        }
+        if (!formData.userMobile) {
+            alert('Please Enter Mobile Number');
+            return;
+        }
+        if (!/^\d{10}$/.test(formData.userMobile)) {
+            alert('Please enter a valid 10-digit mobile number.');
+            return;
+        }
+        if (!formData.userEmail) {
+            alert('Please Enter Email');
+            return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.userEmail)) {
+            alert('Please enter a valid email address.');
+            return;
+        }
+
+        const qty = parseInt(formData.qty, 10);
+        if (isNaN(qty) || qty < 3) {
+            alert('Minimum order quantity is 3');
+            return;
+        }
+
+        const width = parseFloat(formData.width) || 0;
+        const height = parseFloat(formData.height) || 0;
+        if (width <= 0) {
+            alert('Please Enter Length');
+            return;
+        }
+        if (height <= 0) {
+            alert('Please Enter Width');
+            return;
+        }
+
+        const orderSummary = `
+Order Submitted Successfully!
+-----------------------------
+Lead Time: ${day} Days
+Unit Price: ₹${unitPrice}
+Order Value: ₹${orderValue}
+Board Name: ${formData.boardName}
+Mobile: ${formData.userMobile}
+Email: ${formData.userEmail}
+Customer Name: ${formData.customerName || "N/A"}
+GST Number: ${formData.gstNumber || "N/A"}
+Billing Address: ${formData.billingAddress || "N/A"}
+Shipping Address: ${formData.shippingAddress || "N/A"}
+        `;
+        alert(orderSummary);
+        handleReset();
     };
 
     return (
@@ -206,107 +768,191 @@ export default function PCBSpecification() {
                             />
                         </div>
                     </div>
-
                     {/* Right Quote Cost Summary */}
-                    <div className="w-full lg:w-[380px] shrink-0">
+                    <div className="w-full lg:w-[420px] shrink-0">
                         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-lg sticky top-24 overflow-hidden">
                             <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                                <h2 className="text-[16px] font-bold text-slate-800">Charge Details</h2>
-                                <ChevronUp className="w-5 h-5 text-slate-500" />
+                                <h2 className="text-[16px] font-bold text-slate-800">Delivery Calendar</h2>
+                                <span className="text-xs bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
+                                    INR (₹)
+                                </span>
                             </div>
 
-                            <div className="p-6 space-y-5">
-                                <div className="flex justify-between text-sm text-slate-500 font-semibold">
-                                    <span>Special Offer Base</span>
-                                    <span className="text-slate-800">$2.00</span>
-                                </div>
-
-                                {formData.viaCovering !== "Not Specified" && (
-                                    <div className="flex justify-between text-sm text-slate-500 font-semibold">
-                                        <span>Via Covering Add-on</span>
-                                        <span className="text-slate-800">$16.50</span>
-                                    </div>
-                                )}
-
-                                {formData.goldFingers === "Yes" && (
-                                    <div className="flex justify-between text-sm text-slate-500 font-semibold">
-                                        <span>Gold Finger Finish</span>
-                                        <span className="text-slate-800">$20.00</span>
-                                    </div>
-                                )}
-
-                                <div className="pt-4 border-t border-slate-100">
-                                    <span className="text-sm font-semibold text-slate-500">PCB Build Time</span>
-                                    <div className="space-y-2.5 mt-3">
-                                        {["2 days", "24 hours"].map(time => (
-                                            <label
-                                                key={time}
-                                                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${formData.buildTime === time
-                                                    ? "border-primary bg-primary/5 text-primary"
-                                                    : "border-slate-200 hover:border-primary/50 text-slate-700"
-                                                    }`}
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="radio"
-                                                        name="buildTimeRight"
-                                                        checked={formData.buildTime === time}
-                                                        onChange={() => setFormData(prev => ({ ...prev, buildTime: time }))}
-                                                        className="w-4 h-4 text-primary cursor-pointer"
-                                                    />
-                                                    <span className="text-xs font-bold capitalize">{time}</span>
+                            <div className="p-5 space-y-5 bg-white">
+                                {/* Simple 10-Day Grid Calendar */}
+                                <div className="space-y-3">
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                        Estimated Delivery (Next 10 Days)
+                                    </h3>
+                                    {(() => {
+                                        const { options, showContact } = getLeadTimePricing();
+                                        
+                                        if (showContact) {
+                                            return (
+                                                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-center shadow-sm">
+                                                    <p className="text-xs font-bold text-red-800">
+                                                        For larger orders, please contact us at:
+                                                    </p>
+                                                    <p className="text-sm font-extrabold text-red-900 mt-2">
+                                                        <a href="tel:9898842942" className="hover:underline">9898842942</a> or <a href="tel:8160282840" className="hover:underline">8160282840</a>
+                                                    </p>
                                                 </div>
-                                                <span className="text-xs font-bold text-slate-800">
-                                                    {time === "2 days" ? "$0.00" : "$14.00"}
-                                                </span>
-                                            </label>
-                                        ))}
-                                    </div>
+                                            );
+                                        }
+
+                                        const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
+                                        const length = (parseFloat(formData.width) || 0) * unitMultiplier;
+                                        const width = (parseFloat(formData.height) || 0) * unitMultiplier;
+                                        const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
+                                        
+                                        // Calculate default pricing values
+                                        const defaultOrderValue = Math.max(Math.round(length * width * 0.05 * quantity), 100);
+                                        const defaultUnitPrice = (defaultOrderValue / quantity).toFixed(2);
+
+                                        // Generate tomorrow to +10 days
+                                        const next10Days = Array.from({ length: 10 }, (_, i) => {
+                                            const daysAhead = i + 1;
+                                            const date = new Date();
+                                            date.setDate(date.getDate() + daysAhead);
+
+                                            // Check if this day matches an active lead time option
+                                            const matchedOpt = options.find(o => o.visible && o.day === daysAhead);
+                                            
+                                            const orderValue = matchedOpt ? matchedOpt.orderValue : defaultOrderValue.toString();
+                                            const unitPrice = matchedOpt ? matchedOpt.unitPrice : defaultUnitPrice;
+                                            const isLeadTimeOption = !!matchedOpt;
+
+                                            return {
+                                                day: daysAhead,
+                                                dateStr: date.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+                                                weekday: date.toLocaleDateString("en-IN", { weekday: "short" }),
+                                                formattedDate: date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                                                orderValue,
+                                                unitPrice,
+                                                isLeadTimeOption
+                                            };
+                                        });
+
+                                        return (
+                                            <div className="grid grid-cols-5 gap-2">
+                                                {next10Days.map(item => {
+                                                    const isSelected = selectedDelivery?.day === item.day;
+
+                                                    return (
+                                                        <div
+                                                            key={item.day}
+                                                            onClick={() => setSelectedDelivery({
+                                                                day: item.day,
+                                                                unitPrice: item.unitPrice,
+                                                                orderValue: item.orderValue,
+                                                                dateStr: item.formattedDate
+                                                            })}
+                                                            className={`p-2 border rounded-xl flex flex-col items-center justify-between text-center cursor-pointer transition-all ${
+                                                                isSelected
+                                                                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                                                    : item.isLeadTimeOption
+                                                                    ? "border-emerald-250 bg-emerald-50/30 hover:border-emerald-400"
+                                                                    : "border-slate-200 bg-slate-50/20 hover:border-primary/50"
+                                                            }`}
+                                                        >
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase leading-none">{item.weekday}</span>
+                                                            <span className="text-xs font-black text-slate-800 my-1">{item.dateStr}</span>
+                                                            <span className="text-[9px] font-black text-primary leading-none">₹{parseInt(item.orderValue)}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
 
-                                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                                    <div>
-                                        <span className="text-xs text-slate-400 font-semibold">Calculated Price</span>
-                                        <div className="text-3xl font-extrabold text-primary mt-0.5">${calculatePrice()}</div>
+                                {/* Selection Banner */}
+                                {selectedDelivery ? (
+                                    <div className="bg-[#fffbeb] border border-amber-200 rounded-xl p-4 shadow-sm space-y-3 animate-in fade-in duration-200">
+                                        <div className="flex justify-between items-center text-xs font-bold text-amber-800">
+                                            <span>Delivery Option Selected:</span>
+                                            <span className="bg-amber-100 px-2 py-0.5 rounded text-[10px] font-black">{selectedDelivery.dateStr}</span>
+                                        </div>
+                                        <div className="flex justify-between items-baseline">
+                                            <span className="text-slate-500 text-xs font-semibold">Order Value:</span>
+                                            <span className="text-lg font-black text-amber-900">₹{selectedDelivery.orderValue}</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOrderSubmit(selectedDelivery.day, selectedDelivery.unitPrice, selectedDelivery.orderValue)}
+                                            className="w-full h-10 bg-primary hover:bg-secondary text-white font-extrabold rounded-lg shadow-sm transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-1.5"
+                                        >
+                                            Confirm and Submit Order
+                                        </button>
                                     </div>
-                                    <span className="text-[10px] text-slate-400 max-w-[140px] text-right font-medium leading-normal">
-                                        *Additional charge may apply for custom specifications
+                                ) : (
+                                    <div className="text-center p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold text-slate-500 italic">
+                                        Please tap on any delivery card in the calendar grid above to select a delivery date.
+                                    </div>
+                                )}
+
+                                {/* Total Square Meter */}
+                                <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-500">
+                                    <span>Total Square Meter:</span>
+                                    <span className="text-sm font-extrabold text-slate-800">
+                                        {(() => {
+                                            const { totalAreaInSqM } = getLeadTimePricing();
+                                            return totalAreaInSqM.toFixed(2);
+                                        })()} m²
                                     </span>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    className="w-full h-12 bg-primary hover:bg-secondary text-white font-bold rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer text-sm"
-                                >
-                                    SAVE TO CART
-                                </button>
-
-                                <div className="p-4 bg-gray-50 rounded border border-gray-100 text-sm">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="text-gray-600">Shipping Estimate</span>
-                                        <span className="font-bold text-gray-900">$29.23</span>
+                                {/* Customer Details Forms */}
+                                <div className="pt-4 border-t border-slate-100 space-y-3.5">
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Customer Details</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[11px] font-bold text-slate-600">Customer Name</label>
+                                            <input
+                                                type="text"
+                                                value={formData.customerName || ""}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, customerName: e.target.value }))}
+                                                placeholder="Enter Customer Name"
+                                                className="h-9 px-3 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[11px] font-bold text-slate-600">GST Number</label>
+                                            <input
+                                                type="text"
+                                                value={formData.gstNumber || ""}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, gstNumber: e.target.value }))}
+                                                placeholder="Enter GST Number"
+                                                className="h-9 px-3 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[11px] font-bold text-slate-600">Billing Address</label>
+                                            <textarea
+                                                rows={2}
+                                                value={formData.billingAddress || ""}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, billingAddress: e.target.value }))}
+                                                placeholder="Enter Billing Address"
+                                                className="p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850 resize-none"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[11px] font-bold text-slate-600">Shipping Address</label>
+                                            <textarea
+                                                rows={2}
+                                                value={formData.shippingAddress || ""}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, shippingAddress: e.target.value }))}
+                                                placeholder="Enter Shipping Address"
+                                                className="p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:border-primary font-semibold text-slate-850 resize-none"
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="text-gray-500 text-xs flex justify-between">
-                                        <span>DHL Express (DDP)</span>
-                                        <span>Weight: 0.29kg</span>
-                                    </div>
-                                    <div className="text-gray-500 text-xs mt-1">2-4 business days</div>
                                 </div>
-
-                                <div className="flex flex-wrap gap-2 pt-2">
-                                    <span className="inline-flex items-center gap-1 text-xs border border-primary/30 bg-primary/10 text-primary px-2 py-1 rounded">
-                                        Save $20.00
-                                    </span>
-                                    <span className="inline-flex items-center gap-1 text-xs border border-primary/30 bg-primary/10 text-primary px-2 py-1 rounded">
-                                        Save $50.00
-                                    </span>
-                                </div>
-                            </div>
                         </div>
                     </div>
-
                 </div>
-            </main>
+            </div>
+        </main>
 
             {/* Footer */}
             <footer className="bg-[#0f1729] text-gray-300 pt-16 pb-8 mt-12 border-t-4 border-primary">
