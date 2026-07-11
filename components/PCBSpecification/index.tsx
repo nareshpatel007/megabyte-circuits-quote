@@ -475,7 +475,7 @@ export default function PCBSpecification() {
 
     // Sticky Notes Calendar states
     const [calendarViewDate, setCalendarViewDate] = useState(new Date());
-    const [selectedDelivery, setSelectedDelivery] = useState<{ day: number; unitPrice: string; orderValue: string; dateStr: string } | null>(null);
+    const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
     // Dynamic lead time-based pricing calculation
     const getLeadTimePricing = () => {
@@ -635,7 +635,7 @@ export default function PCBSpecification() {
         setParsedGerberFiles([]);
         setPcbInfo(null);
         setFormData(INITIAL_FORM_DATA);
-        setSelectedDelivery(null);
+        setSelectedDay(null);
     };
 
     const handleOrderSubmit = (day: number, unitPrice: string, orderValue: string) => {
@@ -815,12 +815,24 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                             const date = new Date();
                                             date.setDate(date.getDate() + daysAhead);
 
-                                            // Check if this day matches an active lead time option
-                                            const matchedOpt = options.find(o => o.visible && o.day === daysAhead);
+                                            // Map intermediate days to the higher price of the next shorter lead time
+                                            let effectiveDay = daysAhead;
+                                            if (daysAhead === 2) effectiveDay = 1;
+                                            else if (daysAhead === 4) effectiveDay = 3;
+                                            else if (daysAhead === 6) effectiveDay = 5;
+                                            else if (daysAhead === 8 || daysAhead === 9) effectiveDay = 7;
+
+                                            // Get price from computed options list
+                                            const matchedOpt = options.find(o => o.day === effectiveDay);
                                             
-                                            const orderValue = matchedOpt ? matchedOpt.orderValue : defaultOrderValue.toString();
-                                            const unitPrice = matchedOpt ? matchedOpt.unitPrice : defaultUnitPrice;
-                                            const isLeadTimeOption = !!matchedOpt;
+                                            const orderValue = matchedOpt && parseFloat(matchedOpt.orderValue) > 0 
+                                                ? matchedOpt.orderValue 
+                                                : defaultOrderValue.toString();
+                                            const unitPrice = matchedOpt && parseFloat(matchedOpt.unitPrice) > 0 
+                                                ? matchedOpt.unitPrice 
+                                                : defaultUnitPrice;
+
+                                            const isLeadTimeOption = [1, 3, 5, 7, 10].includes(daysAhead);
 
                                             return {
                                                 day: daysAhead,
@@ -833,63 +845,60 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                             };
                                         });
 
-                                        return (
-                                            <div className="grid grid-cols-5 gap-2">
-                                                {next10Days.map(item => {
-                                                    const isSelected = selectedDelivery?.day === item.day;
+                                        const selectedDayData = next10Days.find(item => item.day === selectedDay);
 
-                                                    return (
-                                                        <div
-                                                            key={item.day}
-                                                            onClick={() => setSelectedDelivery({
-                                                                day: item.day,
-                                                                unitPrice: item.unitPrice,
-                                                                orderValue: item.orderValue,
-                                                                dateStr: item.formattedDate
-                                                            })}
-                                                            className={`p-2 border rounded-xl flex flex-col items-center justify-between text-center cursor-pointer transition-all ${
-                                                                isSelected
-                                                                    ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                                                    : item.isLeadTimeOption
-                                                                    ? "border-emerald-250 bg-emerald-50/30 hover:border-emerald-400"
-                                                                    : "border-slate-200 bg-slate-50/20 hover:border-primary/50"
-                                                            }`}
-                                                        >
-                                                            <span className="text-[9px] font-black text-slate-400 uppercase leading-none">{item.weekday}</span>
-                                                            <span className="text-xs font-black text-slate-800 my-1">{item.dateStr}</span>
-                                                            <span className="text-[9px] font-black text-primary leading-none">₹{parseInt(item.orderValue)}</span>
+                                        return (
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-5 gap-2">
+                                                    {next10Days.map(item => {
+                                                        const isSelected = selectedDay === item.day;
+
+                                                        return (
+                                                            <div
+                                                                key={item.day}
+                                                                onClick={() => setSelectedDay(item.day)}
+                                                                className={`p-2 border rounded-xl flex flex-col items-center justify-between text-center cursor-pointer transition-all ${
+                                                                    isSelected
+                                                                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                                                        : "border-slate-200 bg-white hover:border-primary/50"
+                                                                }`}
+                                                            >
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase leading-none">{item.weekday}</span>
+                                                                <span className="text-xs font-black text-slate-800 my-1">{item.dateStr}</span>
+                                                                <span className="text-[9px] font-black text-primary leading-none">₹{parseInt(item.orderValue)}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {/* Selection Banner inside the dynamic render scope */}
+                                                {selectedDayData ? (
+                                                    <div className="bg-[#fffbeb] border border-amber-200 rounded-xl p-4 shadow-sm space-y-3 animate-in fade-in duration-200">
+                                                        <div className="flex justify-between items-center text-xs font-bold text-amber-800">
+                                                            <span>Delivery Option Selected:</span>
+                                                            <span className="bg-amber-100 px-2 py-0.5 rounded text-[10px] font-black">{selectedDayData.formattedDate}</span>
                                                         </div>
-                                                    );
-                                                })}
+                                                        <div className="flex justify-between items-baseline">
+                                                            <span className="text-slate-500 text-xs font-semibold">Order Value:</span>
+                                                            <span className="text-lg font-black text-amber-900">₹{selectedDayData.orderValue}</span>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOrderSubmit(selectedDayData.day, selectedDayData.unitPrice, selectedDayData.orderValue)}
+                                                            className="w-full h-10 bg-primary hover:bg-secondary text-white font-extrabold rounded-lg shadow-sm transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-1.5"
+                                                        >
+                                                            Confirm and Submit Order
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold text-slate-500 italic">
+                                                        Please tap on any delivery card in the calendar grid above to select a delivery date.
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })()}
                                 </div>
-
-                                {/* Selection Banner */}
-                                {selectedDelivery ? (
-                                    <div className="bg-[#fffbeb] border border-amber-200 rounded-xl p-4 shadow-sm space-y-3 animate-in fade-in duration-200">
-                                        <div className="flex justify-between items-center text-xs font-bold text-amber-800">
-                                            <span>Delivery Option Selected:</span>
-                                            <span className="bg-amber-100 px-2 py-0.5 rounded text-[10px] font-black">{selectedDelivery.dateStr}</span>
-                                        </div>
-                                        <div className="flex justify-between items-baseline">
-                                            <span className="text-slate-500 text-xs font-semibold">Order Value:</span>
-                                            <span className="text-lg font-black text-amber-900">₹{selectedDelivery.orderValue}</span>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleOrderSubmit(selectedDelivery.day, selectedDelivery.unitPrice, selectedDelivery.orderValue)}
-                                            className="w-full h-10 bg-primary hover:bg-secondary text-white font-extrabold rounded-lg shadow-sm transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-1.5"
-                                        >
-                                            Confirm and Submit Order
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="text-center p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold text-slate-500 italic">
-                                        Please tap on any delivery card in the calendar grid above to select a delivery date.
-                                    </div>
-                                )}
 
                                 {/* Total Square Meter */}
                                 <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-500">
