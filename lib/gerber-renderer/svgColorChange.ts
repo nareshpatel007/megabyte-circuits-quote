@@ -15,7 +15,7 @@ export default function handleColorChange(props: ColorChangeProps) {
             .${props.id}_sm {color: #ffffff; opacity: ${props.soldermask ? 0.5 : 0} !important;}
             .${props.id}_ss {color: #ffffff !important;}
             .${props.id}_sp {color: #ffffff !important;}
-            .${props.id}_out {color: #000000 !important;}
+            .${props.id}_out {color: #ffffff !important;}
         `,
         'bwInvert': `
             .${props.id}_fr4 {color: #ffffff !important;}
@@ -24,7 +24,7 @@ export default function handleColorChange(props: ColorChangeProps) {
             .${props.id}_sm {color: #000000; opacity: ${props.soldermask ? 0.5 : 0} !important;}
             .${props.id}_ss {color: #000000 !important;}
             .${props.id}_sp {color: #000000 !important;}
-            .${props.id}_out {color: #ffffff !important;}
+            .${props.id}_out {color: #000000 !important;}
         `,
         'original': `
             .${props.id}_fr4 {color: #666666 !important;}
@@ -33,7 +33,7 @@ export default function handleColorChange(props: ColorChangeProps) {
             .${props.id}_sm {color: #004200 !important; opacity: 0.75 !important;}
             .${props.id}_ss {color: #ffffff !important;}
             .${props.id}_sp {color: #999999 !important;}
-            .${props.id}_out {color: #000000 !important;}
+            .${props.id}_out {color: #ffffff !important;}
         `,
         'green': `
             .${props.id}_fr4 {color: #1a4c1a !important;}
@@ -42,7 +42,7 @@ export default function handleColorChange(props: ColorChangeProps) {
             .${props.id}_sm {color: #007700 !important; opacity: 0.75 !important;}
             .${props.id}_ss {color: #ffffff !important;}
             .${props.id}_sp {color: #999999 !important;}
-            .${props.id}_out {color: #1a4c1a !important;}
+            .${props.id}_out {color: #ffffff !important;}
         `,
         'blue': `
             .${props.id}_fr4 {color: #1a1a4c !important;}
@@ -51,7 +51,7 @@ export default function handleColorChange(props: ColorChangeProps) {
             .${props.id}_sm {color: #0000bb !important; opacity: 0.75 !important;}
             .${props.id}_ss {color: #ffffff !important;}
             .${props.id}_sp {color: #999999 !important;}
-            .${props.id}_out {color: #1a1a4c !important;}
+            .${props.id}_out {color: #ffffff !important;}
         `,
         'red': `
             .${props.id}_fr4 {color: #4c1a1a !important;}
@@ -60,7 +60,7 @@ export default function handleColorChange(props: ColorChangeProps) {
             .${props.id}_sm {color: #bb0000 !important; opacity: 0.75 !important;}
             .${props.id}_ss {color: #ffffff !important;}
             .${props.id}_sp {color: #999999 !important;}
-            .${props.id}_out {color: #4c1a1a !important;}
+            .${props.id}_out {color: #ffffff !important;}
         `,
         'black': `
             .${props.id}_fr4 {color: #111111 !important;}
@@ -69,7 +69,7 @@ export default function handleColorChange(props: ColorChangeProps) {
             .${props.id}_sm {color: #222222 !important; opacity: 0.85 !important;}
             .${props.id}_ss {color: #ffffff !important;}
             .${props.id}_sp {color: #999999 !important;}
-            .${props.id}_out {color: #111111 !important;}
+            .${props.id}_out {color: #ffffff !important;}
         `,
         'white': `
             .${props.id}_fr4 {color: #dddddd !important;}
@@ -78,7 +78,7 @@ export default function handleColorChange(props: ColorChangeProps) {
             .${props.id}_sm {color: #ffffff !important; opacity: 0.85 !important;}
             .${props.id}_ss {color: #000000 !important;}
             .${props.id}_sp {color: #999999 !important;}
-            .${props.id}_out {color: #dddddd !important;}
+            .${props.id}_out {color: #000000 !important;}
         `,
         'yellow': `
             .${props.id}_fr4 {color: #cccc1a !important;}
@@ -87,7 +87,7 @@ export default function handleColorChange(props: ColorChangeProps) {
             .${props.id}_sm {color: #eeee00 !important; opacity: 0.75 !important;}
             .${props.id}_ss {color: #000000 !important;}
             .${props.id}_sp {color: #999999 !important;}
-            .${props.id}_out {color: #cccc1a !important;}
+            .${props.id}_out {color: #000000 !important;}
         `
     };
 
