@@ -67,7 +67,7 @@ export const updateSvg = (
 ) => {
     const gerberSvgs = svg.querySelectorAll('svg');
     if (gerberSvgs.length < 2) return;
-    const gerberSvg = gerberSvgs[1]; // The actual Gerber SVG inside the wrapper
+    const gerberSvg = Array.from(gerberSvgs).find(el => el.getAttribute('id')?.endsWith('svg')) || gerberSvgs[1];
 
     gerberSvg.querySelectorAll('g').forEach(g => {
         if (g.hasAttribute('id')) {
