@@ -116,6 +116,18 @@ export default function GerberPreview({ parsedFiles, info, pcbColor, svgResult }
             applyCustomToggles(topClone, layerToggles);
             applyCustomToggles(bottomClone, layerToggles);
             applyCustomToggles(fullClone, layerToggles);
+        } else if (selectedQuickSetup === "generate-all") {
+            const allLayers = {
+                trace: true,
+                pads: true,
+                silkscreen: true,
+                soldermask: true,
+                outline: true,
+                drill: true
+            };
+            applyCustomToggles(topClone, allLayers);
+            applyCustomToggles(bottomClone, allLayers);
+            applyCustomToggles(fullClone, allLayers);
         } else if (setup) {
             updateSvg(topClone, selectedQuickSetup, setup, "general", topStackObj, isDoubleSide);
             updateSvg(bottomClone, selectedQuickSetup, setup, "general", topStackObj, isDoubleSide);
