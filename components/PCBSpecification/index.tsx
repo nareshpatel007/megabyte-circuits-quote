@@ -8,6 +8,9 @@ import GerberPreview from "../GerberPreview";
 import QuoteForm from "../QuoteForm";
 import { GerberFile, PCBInfo, QuoteFormData, UploadResponse, ParsedGerberFile } from "../../lib/gerber/types";
 import { ParsedGerberFile as TracespaceParsedFile, PCBInfo as TracespacePCBInfo } from "../../src/lib/gerber/types";
+import { handleZip } from "../../lib/gerber-renderer/jsZip";
+import convertToSvg, { ConvertResult } from "../../lib/gerber-renderer/convertToSvg";
+
 
 const INITIAL_FORM_DATA: QuoteFormData = {
     baseMaterial: "FR-4",
@@ -470,6 +473,7 @@ export default function PCBSpecification() {
     const [parsedGerberFiles, setParsedGerberFiles] = useState<ParsedGerberFile[]>([]);
     const [tracespaceFiles, setTracespaceFiles] = useState<TracespaceParsedFile[]>([]);
     const [pcbInfo, setPcbInfo] = useState<TracespacePCBInfo | null>(null);
+    const [svgResult, setSvgResult] = useState<ConvertResult | null>(null);
 
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
     const [specsOpen, setSpecsOpen] = useState(true);
@@ -602,7 +606,7 @@ export default function PCBSpecification() {
         return { options, showContact, totalAreaInSqM };
     };
 
-    const handleUploadSuccess = (res: UploadResponse, file: File) => {
+    const handleUploadSuccess = async (res: UploadResponse, file: File) => {
         setUploadedFile(file);
 
         // Match response to mock format or parsed Gerber Files array
@@ -634,6 +638,14 @@ export default function PCBSpecification() {
         if (res.tracespaceFiles) {
             setTracespaceFiles(res.tracespaceFiles);
         }
+
+        try {
+            const extracted = await handleZip(file, { gerberOnly: true });
+            const result = await convertToSvg(extracted);
+            setSvgResult(result);
+        } catch (err) {
+            console.error("Client side SVG rendering failed", err);
+        }
     };
 
     const handleReset = () => {
@@ -644,6 +656,7 @@ export default function PCBSpecification() {
         setPcbInfo(null);
         setFormData(INITIAL_FORM_DATA);
         setSelectedDay(null);
+        setSvgResult(null);
     };
 
     const handleOrderSubmit = (day: number, unitPrice: string, orderValue: string) => {
@@ -744,7 +757,7 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
             </header>
 
             {/* Main grid */}
-            <main className="max-w-[1400px] mx-auto px-4 py-6">
+            <main className="max-w-[1550px] mx-auto px-4 py-6">
                 <div className="flex flex-col lg:flex-row gap-6">
 
                     {/* Left Quote Section */}
@@ -761,7 +774,12 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                             <GerberUploader onUploadSuccess={handleUploadSuccess} onReset={handleReset} />
 
                             {uploadedFile && pcbInfo && (
-                                <GerberPreview parsedFiles={tracespaceFiles} info={pcbInfo} pcbColor={formData.pcbColor} />
+                                <GerberPreview 
+                                    parsedFiles={tracespaceFiles} 
+                                    info={pcbInfo} 
+                                    pcbColor={formData.pcbColor} 
+                                    svgResult={svgResult} 
+                                />
                             )}
 
                             <QuoteForm

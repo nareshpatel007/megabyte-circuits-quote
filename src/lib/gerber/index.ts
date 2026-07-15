@@ -36,8 +36,12 @@ export async function extractAndAnalyzeGerber(buffer: ArrayBuffer): Promise<{
             if (type === "outline") outlineFileDetected = true;
             if (type === "drill") drillFileDetected = true;
 
-            const parsed = parseGerberContent(file.name, file.content, type);
-            parsedGerberFiles.push(parsed);
+            try {
+                const parsed = parseGerberContent(file.name, file.content, type);
+                parsedGerberFiles.push(parsed);
+            } catch (err) {
+                console.warn(`Skipping parsing for ${file.name} due to error:`, err);
+            }
         }
 
         files.push({

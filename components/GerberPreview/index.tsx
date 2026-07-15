@@ -1,24 +1,139 @@
 "use client";
 
-import React, { useState, useRef, MouseEvent, WheelEvent } from "react";
-import { ZoomIn, ZoomOut, RotateCcw, AlertTriangle, CheckCircle, FileText } from "lucide-react";
+import React, { useState, useRef, useEffect, MouseEvent, WheelEvent } from "react";
+import {
+    ZoomIn,
+    ZoomOut,
+    RotateCcw,
+    AlertTriangle,
+    FileText,
+    Sliders,
+    Check,
+    X,
+    ChevronDown,
+    RefreshCw
+} from "lucide-react";
 import { ParsedGerberFile, PCBInfo } from "../../src/lib/gerber/types";
-import { renderPCBToSVG } from "../../lib/gerber/svgRenderer";
-import { calculateBoardDimensions } from "../../lib/gerber/dimensionCalculator";
+import { ConvertResult } from "../../lib/gerber-renderer/convertToSvg";
+import setUpConfig from "../../lib/gerber-renderer/quickSetup";
+import handleColorChange from "../../lib/gerber-renderer/svgColorChange";
+import { updateSvg, updateToolWidth } from "../../lib/gerber-renderer/svgUtils";
 
 interface GerberPreviewProps {
     parsedFiles: ParsedGerberFile[];
     info: PCBInfo;
     pcbColor: string;
+    svgResult: ConvertResult | null;
 }
 
-export default function GerberPreview({ parsedFiles, info, pcbColor }: GerberPreviewProps) {
+export default function GerberPreview({ parsedFiles, info, pcbColor, svgResult }: GerberPreviewProps) {
     const inchesWidth = (info.width / 25.4).toFixed(2);
     const inchesHeight = (info.height / 25.4).toFixed(2);
 
-    // Compute dimensions dynamically based on parsed files (normalized)
-    const outlineFile = parsedFiles.find(f => f.type === "outline");
-    const dimensions = calculateBoardDimensions(outlineFile || null, parsedFiles);
+    // Option states
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedQuickSetup, setSelectedQuickSetup] = useState<string>("generate-all");
+    const [selectedColor, setSelectedColor] = useState<string>("original");
+    const [outlineToolWidth, setOutlineToolWidth] = useState<string>("0.0");
+    const [layerToggles, setLayerToggles] = useState({
+        trace: true,
+        pads: true,
+        silkscreen: true,
+        soldermask: true,
+        outline: true,
+        drill: true
+    });
+
+    // Custom processed SVGs
+    const [renderedTopSvg, setRenderedTopSvg] = useState<SVGElement | null>(null);
+    const [renderedBottomSvg, setRenderedBottomSvg] = useState<SVGElement | null>(null);
+
+    // Sync external pcbColor form field selection to selectedColor state
+    useEffect(() => {
+        const colorMap: Record<string, string> = {
+            "#52c41a": "green",
+            "#722ed1": "original",
+            "#f5222d": "red",
+            "#fadb14": "yellow",
+            "#1677ff": "blue",
+            "#ffffff": "white",
+            "#000000": "black"
+        };
+        const mapped = colorMap[pcbColor.toLowerCase()];
+        if (mapped) {
+            setSelectedColor(mapped);
+        }
+    }, [pcbColor]);
+
+    // Apply configuration changes to SVGs reactively
+    useEffect(() => {
+        if (!svgResult) {
+            setRenderedTopSvg(null);
+            setRenderedBottomSvg(null);
+            return;
+        }
+
+        // Clone SVGs
+        const topClone = svgResult.topSvg.cloneNode(true) as SVGElement;
+        const bottomClone = svgResult.bottomSvg.cloneNode(true) as SVGElement;
+        const fullClone = svgResult.fullStackSvg.cloneNode(true) as SVGElement;
+
+        // Apply setup configuration (layer visibility)
+        const configCreator = setUpConfig(
+            { id: svgResult.id, svg: topClone },
+            { id: svgResult.id, svg: bottomClone }
+        );
+        const setup = configCreator[selectedQuickSetup];
+
+        // Apply colors
+        handleColorChange({
+            color: selectedColor,
+            id: svgResult.id || "board",
+            soldermask: layerToggles.soldermask,
+            svgs: [topClone, bottomClone, fullClone]
+        });
+
+        // Apply tool outline width
+        const svgsToUpdate = [
+            { stack: { id: svgResult.id, svg: topClone }, name: 'toplayer' },
+            { stack: { id: svgResult.id, svg: bottomClone }, name: 'bottomlayer' },
+            { stack: { id: 'fullstack', svg: fullClone }, name: 'fullstack' }
+        ];
+
+        let correction = 0;
+        if (outlineToolWidth === "0.8") correction = 3;
+        else if (outlineToolWidth === "1") correction = 3.9;
+        else if (outlineToolWidth === "2") correction = 7.6;
+
+        updateToolWidth(svgsToUpdate, outlineToolWidth, svgResult.stackConfig, correction);
+
+        // Apply setup configuration or custom toggles
+        const topStackObj = { id: svgResult.id, svg: topClone };
+        const bottomStackObj = { id: svgResult.id, svg: bottomClone };
+        const isDoubleSide = true;
+
+        if (selectedQuickSetup === "custom") {
+            applyCustomToggles(topClone, layerToggles);
+            applyCustomToggles(bottomClone, layerToggles);
+            applyCustomToggles(fullClone, layerToggles);
+        } else if (setup) {
+            updateSvg(topClone, selectedQuickSetup, setup, "general", topStackObj, isDoubleSide);
+            updateSvg(bottomClone, selectedQuickSetup, setup, "general", topStackObj, isDoubleSide);
+            updateSvg(fullClone, selectedQuickSetup, setup, "general", topStackObj, isDoubleSide);
+        }
+
+        setRenderedTopSvg(topClone);
+        setRenderedBottomSvg(bottomClone);
+    }, [svgResult, selectedQuickSetup, selectedColor, outlineToolWidth, layerToggles]);
+
+    if (!svgResult) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 border border-slate-200/85 rounded-3xl bg-slate-50/50 space-y-3">
+                <RefreshCw className="w-8 h-8 text-cyan-600 animate-spin" />
+                <p className="text-sm font-semibold text-slate-650">Generating high-fidelity 2D Previews...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -26,26 +141,22 @@ export default function GerberPreview({ parsedFiles, info, pcbColor }: GerberPre
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Front side */}
                     <div className="flex flex-col items-center gap-3">
-                        <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Front Side (Top View)</span>
+                        <span className="text-xs font-bold text-slate-700 tracking-wider">Front Side (Top View)</span>
                         <div className="w-full h-[400px] border border-slate-150 rounded-2xl overflow-hidden bg-[#F3F4F6] relative">
                             <InteractiveSVGViewer
-                                parsedFiles={parsedFiles}
+                                svg={renderedTopSvg}
                                 side="top"
-                                pcbColor={pcbColor}
-                                dimensions={dimensions}
                             />
                         </div>
                     </div>
 
                     {/* Back side */}
                     <div className="flex flex-col items-center gap-3">
-                        <span className="text-[11px] font-black text-slate-500 tracking-wider uppercase">Back Side (Bottom View)</span>
+                        <span className="text-xs font-bold text-slate-700 tracking-wider">Back Side (Bottom View)</span>
                         <div className="w-full h-[400px] border border-slate-150 rounded-2xl overflow-hidden bg-[#F3F4F6] relative">
                             <InteractiveSVGViewer
-                                parsedFiles={parsedFiles}
+                                svg={renderedBottomSvg}
                                 side="bottom"
-                                pcbColor={pcbColor}
-                                dimensions={dimensions}
                             />
                         </div>
                     </div>
@@ -105,8 +216,8 @@ export default function GerberPreview({ parsedFiles, info, pcbColor }: GerberPre
                             <div
                                 key={idx}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold ${file.found
-                                        ? "bg-emerald-50/50 border-emerald-100 text-emerald-800"
-                                        : "bg-rose-50/50 border-rose-100 text-rose-800"
+                                    ? "bg-emerald-50/50 border-emerald-100 text-emerald-800"
+                                    : "bg-rose-50/50 border-rose-100 text-rose-800"
                                     }`}
                             >
                                 <span>{file.found ? "✓" : "✗"}</span>
@@ -131,27 +242,160 @@ export default function GerberPreview({ parsedFiles, info, pcbColor }: GerberPre
                     </div>
                 )}
             </div>
+
+            {/* Customization Options Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white border border-slate-200/80 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                        {/* Header */}
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-2">
+                                <Sliders className="w-5 h-5 text-cyan-650" />
+                                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">PCB Render Settings</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="p-1.5 hover:bg-slate-200/60 rounded-full transition-colors text-slate-400 hover:text-slate-655 cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Body / Options Form */}
+                        <div className="p-6 space-y-5 overflow-y-auto">
+
+                            {/* Preset Quick Setup */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Quick Setup Preset</label>
+                                <div className="relative">
+                                    <select
+                                        value={selectedQuickSetup}
+                                        onChange={(e) => setSelectedQuickSetup(e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 text-xs font-semibold p-2.5 rounded-xl outline-none focus:border-cyan-500/50 appearance-none text-slate-800 cursor-pointer"
+                                    >
+                                        <option value="generate-all">Generate All Layers</option>
+                                        <option value="top-trace">Top Side Trace Only</option>
+                                        <option value="top-drill">Top Side Drill Hits</option>
+                                        <option value="top-outline">Top Cut Out</option>
+                                        <option value="bottom-trace">Bottom Side Trace Only</option>
+                                        <option value="bottom-drill">Bottom Side Drill Hits</option>
+                                        <option value="bottom-outline">Bottom Cut Out</option>
+                                        <option value="custom">Custom Layer Toggle</option>
+                                    </select>
+                                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
+                                </div>
+                            </div>
+
+                            {/* Color Selection */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Board Mask Color</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {['original', 'green', 'blue', 'red', 'black', 'white', 'yellow', 'bw', 'bwInvert'].map((c) => (
+                                        <button
+                                            key={c}
+                                            type="button"
+                                            onClick={() => setSelectedColor(c)}
+                                            className={`p-2.5 rounded-xl text-[10px] font-bold border transition-all text-center capitalize cursor-pointer ${selectedColor === c
+                                                ? 'border-cyan-550 bg-cyan-50 text-cyan-700 shadow-sm'
+                                                : 'border-slate-200 hover:border-slate-300 bg-slate-50 text-slate-500'
+                                                }`}
+                                        >
+                                            {c === 'bw' ? 'B&W' : c === 'bwInvert' ? 'B&W Inv' : c}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Outline Tool Width */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Outline Cut Tool Width (mm)</label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {['0.0', '0.8', '1', '2'].map((widthVal) => (
+                                        <button
+                                            key={widthVal}
+                                            type="button"
+                                            onClick={() => setOutlineToolWidth(widthVal)}
+                                            className={`p-2.5 rounded-xl text-[10px] font-bold border transition-all text-center cursor-pointer ${outlineToolWidth === widthVal
+                                                ? 'border-cyan-550 bg-cyan-50 text-cyan-700 shadow-sm'
+                                                : 'border-slate-200 hover:border-slate-300 bg-slate-50 text-slate-500'
+                                                }`}
+                                        >
+                                            {widthVal === '0.0' ? 'None' : `${widthVal} mm`}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Custom Layer Toggles */}
+                            {selectedQuickSetup === "custom" && (
+                                <div className="border-t border-slate-100 pt-4 mt-2 space-y-3">
+                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Toggle Individual Layers</span>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {Object.keys(layerToggles).map((layer) => {
+                                            const val = layerToggles[layer as keyof typeof layerToggles];
+                                            return (
+                                                <button
+                                                    key={layer}
+                                                    type="button"
+                                                    onClick={() => setLayerToggles(prev => ({ ...prev, [layer]: !val }))}
+                                                    className={`px-3 py-2.5 rounded-xl border flex items-center justify-between text-[10px] font-bold transition-all cursor-pointer capitalize ${val
+                                                        ? 'border-cyan-550 bg-cyan-50 text-cyan-700'
+                                                        : 'border-slate-200 bg-slate-50 text-slate-400'
+                                                        }`}
+                                                >
+                                                    <span>{layer}</span>
+                                                    {val ? <Check className="w-3.5 h-3.5 text-cyan-600" /> : <X className="w-3.5 h-3.5 text-slate-400" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="flex-1 py-3 bg-cyan-650 hover:bg-cyan-600 active:scale-98 text-xs font-bold text-white rounded-xl shadow-lg shadow-cyan-600/10 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                                <Check className="w-4 h-4" />
+                                <span>Apply changes</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
 interface InteractiveViewerProps {
-    parsedFiles: ParsedGerberFile[];
+    svg: SVGElement | null;
     side: "top" | "bottom";
-    pcbColor: string;
-    dimensions: { width: number; height: number; minX: number; maxX: number; minY: number; maxY: number };
 }
 
-function InteractiveSVGViewer({ parsedFiles, side, pcbColor, dimensions }: InteractiveViewerProps) {
-    const [zoom, setZoom] = useState(1.2);
+function InteractiveSVGViewer({ svg, side }: InteractiveViewerProps) {
+    const [zoom, setZoom] = useState(1.0);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const [encodedSvg, setEncodedSvg] = useState<string>("");
     const viewerRef = useRef<HTMLDivElement>(null);
 
-    // Generate SVG string content
-    const svgString = renderPCBToSVG(parsedFiles, side, pcbColor, dimensions);
-    const encodedSvg = `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`;
+    // Convert SVG Element to base64/raw URL reactively so the browser can treat it as a scale-to-fit image
+    useEffect(() => {
+        if (svg) {
+            const svgString = new XMLSerializer().serializeToString(svg);
+            const encoded = `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`;
+            setEncodedSvg(encoded);
+        } else {
+            setEncodedSvg("");
+        }
+    }, [svg]);
 
     // Pan Event Handlers
     const handleMouseDown = (e: MouseEvent) => {
@@ -186,7 +430,7 @@ function InteractiveSVGViewer({ parsedFiles, side, pcbColor, dimensions }: Inter
     const handleZoomIn = () => setZoom(prev => Math.min(prev * 1.2, 25));
     const handleZoomOut = () => setZoom(prev => Math.max(prev / 1.2, 0.5));
     const handleReset = () => {
-        setZoom(1.2);
+        setZoom(1.0);
         setPan({ x: 0, y: 0 });
     };
 
@@ -208,13 +452,14 @@ function InteractiveSVGViewer({ parsedFiles, side, pcbColor, dimensions }: Inter
                     transformOrigin: "center center"
                 }}
             >
-                {/* Render the pure SVG vector natively inside the browser */}
-                <img
-                    src={encodedSvg}
-                    alt={`${side} PCB preview`}
-                    className="max-w-[85%] max-h-[85%] object-contain pointer-events-none"
-                    draggable={false}
-                />
+                {encodedSvg && (
+                    <img
+                        src={encodedSvg}
+                        alt={`${side} PCB preview`}
+                        className="max-w-[94%] max-h-[94%] object-contain pointer-events-none"
+                        draggable={false}
+                    />
+                )}
             </div>
 
             {/* Float Overlay Controls */}
@@ -247,3 +492,41 @@ function InteractiveSVGViewer({ parsedFiles, side, pcbColor, dimensions }: Inter
         </div>
     );
 }
+
+function applyCustomToggles(
+    svg: SVGElement,
+    toggles: {
+        trace: boolean;
+        pads: boolean;
+        silkscreen: boolean;
+        soldermask: boolean;
+        outline: boolean;
+        drill: boolean;
+    }
+) {
+    const gerberSvgs = svg.querySelectorAll('svg');
+    if (gerberSvgs.length < 2) return;
+    const gerberSvg = gerberSvgs[1];
+
+    gerberSvg.querySelectorAll('g').forEach((g) => {
+        if (g.hasAttribute('id')) {
+            const id = g.getAttribute('id') || '';
+            let show = true;
+            if (id.includes('_cu') || id.includes('copper')) {
+                show = toggles.trace;
+            } else if (id.includes('_cf') || id.includes('finish')) {
+                show = toggles.pads;
+            } else if (id.includes('_ss') || id.includes('silkscreen')) {
+                show = toggles.silkscreen;
+            } else if (id.includes('_sm') || id.includes('soldermask')) {
+                show = toggles.soldermask;
+            } else if (id.includes('_out') || id.includes('outline')) {
+                show = toggles.outline;
+            } else if (id.includes('_dr') || id.includes('drill')) {
+                show = toggles.drill;
+            }
+            g.style.display = show ? 'block' : 'none';
+        }
+    });
+}
+

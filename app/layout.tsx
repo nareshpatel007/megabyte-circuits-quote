@@ -4,6 +4,8 @@ import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import Providers from "./providers";
+import Script from "next/script";
+
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -31,6 +33,7 @@ export default function RootLayout({
             className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
         >
             <body className="min-h-full flex flex-col">
+                <Script src="https://unpkg.com/pcb-stackup@^4.0.0/dist/pcb-stackup.min.js" strategy="beforeInteractive" />
                 <Providers>
                     <TooltipProvider>
                         {children}
