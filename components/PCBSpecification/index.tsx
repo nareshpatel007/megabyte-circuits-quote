@@ -769,15 +769,11 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                         <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <h1 className="text-lg font-bold text-gray-900">Online PCB Quote</h1>
-                                <div className="flex items-center gap-4 text-sm">
-                                    <a href="#" className="text-primary hover:underline">Instructions For Ordering &gt;</a>
-                                    <a href="#" className="text-primary hover:underline">Upload History &gt;</a>
-                                </div>
                             </div>
 
-                            <GerberUploader 
-                                onUploadSuccess={handleUploadSuccess} 
-                                onReset={handleReset} 
+                            <GerberUploader
+                                onUploadSuccess={handleUploadSuccess}
+                                onReset={handleReset}
                                 extraActions={
                                     uploadedFile && (
                                         <button
@@ -1201,11 +1197,10 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                             key={cName}
                                             type="button"
                                             onClick={() => setTempOptions(prev => ({ ...prev, sm: cName as any }))}
-                                            className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all capitalize cursor-pointer ${
-                                                tempOptions.sm === cName
+                                            className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all capitalize cursor-pointer ${tempOptions.sm === cName
                                                     ? "border-slate-900 bg-slate-900 text-white"
                                                     : "border-slate-200 hover:border-slate-400 text-slate-700 bg-white"
-                                            }`}
+                                                }`}
                                         >
                                             {cName}
                                         </button>
@@ -1222,11 +1217,10 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                             key={fName}
                                             type="button"
                                             onClick={() => setTempOptions(prev => ({ ...prev, cf: fName as any }))}
-                                            className={`py-2.5 px-4 text-xs font-bold rounded-xl border text-center transition-all capitalize cursor-pointer ${
-                                                tempOptions.cf === fName
+                                            className={`py-2.5 px-4 text-xs font-bold rounded-xl border text-center transition-all capitalize cursor-pointer ${tempOptions.cf === fName
                                                     ? "border-slate-900 bg-slate-900 text-white"
                                                     : "border-slate-200 hover:border-slate-400 text-slate-700 bg-white"
-                                            }`}
+                                                }`}
                                         >
                                             {fName === "gold" ? "Gold (ENIG)" : "HASL (Tin)"}
                                         </button>
@@ -1240,9 +1234,8 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                 <button
                                     type="button"
                                     onClick={() => setTempOptions(prev => ({ ...prev, sp: !prev.sp }))}
-                                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-300 cursor-pointer ${
-                                        tempOptions.sp ? "bg-slate-900 justify-end" : "bg-slate-200 justify-start"
-                                    }`}
+                                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-300 cursor-pointer ${tempOptions.sp ? "bg-slate-900 justify-end" : "bg-slate-200 justify-start"
+                                        }`}
                                 >
                                     <span className="bg-white w-4 h-4 rounded-full shadow-md" />
                                 </button>
