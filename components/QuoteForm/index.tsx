@@ -149,7 +149,7 @@ export default function QuoteForm({
         }
 
         if (newW !== w || newH !== h || reset) {
-            setFormData(prev => ({ ...prev, width: newW.toFixed(1), height: newH.toFixed(1) }));
+            setFormData(prev => ({ ...prev, width: newW.toFixed(2), height: newH.toFixed(2) }));
         }
     };
 

@@ -663,8 +663,8 @@ export default function PCBSpecification() {
                     rawWidth = rawWidth * 25.4;
                     rawHeight = rawHeight * 25.4;
                 }
-                widthVal = rawWidth.toFixed(1);
-                heightVal = rawHeight.toFixed(1);
+                widthVal = rawWidth.toFixed(2);
+                heightVal = rawHeight.toFixed(2);
                 unitVal = "mm";
             }
 
