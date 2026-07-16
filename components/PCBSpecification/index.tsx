@@ -655,19 +655,17 @@ export default function PCBSpecification() {
             let unitVal: "mm" | "inches" = "mm";
 
             if (topSide) {
-                const rawWidth = topSide.width;
-                const rawHeight = topSide.height;
+                let rawWidth = topSide.width;
+                let rawHeight = topSide.height;
                 const units = topSide.units;
 
                 if (units === 'in') {
-                    widthVal = rawWidth.toFixed(2);
-                    heightVal = rawHeight.toFixed(2);
-                    unitVal = "inches";
-                } else {
-                    widthVal = rawWidth.toFixed(1);
-                    heightVal = rawHeight.toFixed(1);
-                    unitVal = "mm";
+                    rawWidth = rawWidth * 25.4;
+                    rawHeight = rawHeight * 25.4;
                 }
+                widthVal = rawWidth.toFixed(1);
+                heightVal = rawHeight.toFixed(1);
+                unitVal = "mm";
             }
 
             setFormData(prev => ({
