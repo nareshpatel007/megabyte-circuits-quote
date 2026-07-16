@@ -41,7 +41,7 @@ export default function GerberStackupPreview({ layers, renderOptions }: GerberSt
             <div className="relative">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Front View */}
-                    <div className="flex flex-col items-center gap-3">
+                    <div className="flex flex-col items-center">
                         <span className="text-xs font-bold text-slate-700 tracking-wider">Front Side (Top View)</span>
                         <div className="w-full overflow-hidden flex items-center justify-center">
                             {loading ? (
@@ -58,7 +58,7 @@ export default function GerberStackupPreview({ layers, renderOptions }: GerberSt
                     </div>
 
                     {/* Back View */}
-                    <div className="flex flex-col items-center gap-3">
+                    <div className="flex flex-col items-center">
                         <span className="text-xs font-bold text-slate-700 tracking-wider">Back Side (Bottom View)</span>
                         <div className="w-full overflow-hidden flex items-center justify-center">
                             {loading ? (
