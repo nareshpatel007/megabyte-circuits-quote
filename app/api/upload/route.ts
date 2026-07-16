@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import JSZip from "jszip";
-import { extractAndAnalyzeGerber } from "../../../lib/gerber/extract";
 
 const IMAGEKIT_PRIVATE_KEY = "private_QfLkdkXBHX5OPw3VBNH8Zg64Mek=";
 
@@ -56,39 +54,10 @@ export async function POST(req: NextRequest) {
         const uploadData = await uploadRes.json();
         const zipUrl = uploadData.url;
 
-        // 2. Fetch the uploaded Gerber ZIP from ImageKit to extract
-        const zipRes = await fetch(zipUrl);
-        if (!zipRes.ok) {
-            throw new Error("Failed to download ZIP file back from ImageKit.");
-        }
-        const buffer = await zipRes.arrayBuffer();
-
-        // Extract and Analyze Gerber
-        const { files, parsedGerberFiles, tracespaceFiles, info, previewFront, previewBack } = await extractAndAnalyzeGerber(buffer);
-
         return NextResponse.json({
             success: true,
             folder: uploadData.filePath || `uploads/${uploadData.fileId}`,
-            imageUrl: zipUrl, // Return the ImageKit URL to the client
-            files: files.map(f => ({ name: f.name, type: f.type })),
-            parsedGerberFiles,
-            tracespaceFiles,
-            info,
-            width_mm: info.width,
-            height_mm: info.height,
-            boardShape: info.boardShape,
-            layerCount: info.layers,
-            drillCount: info.drillCount,
-            topCopper: !!files.find(f => f.type === "copper_top"),
-            bottomCopper: !!files.find(f => f.type === "copper_bottom"),
-            topMask: !!files.find(f => f.type === "solder_mask_top"),
-            bottomMask: !!files.find(f => f.type === "solder_mask_bottom"),
-            topSilk: !!files.find(f => f.type === "silkscreen_top"),
-            bottomSilk: !!files.find(f => f.type === "silkscreen_bottom"),
-            outline: info.outlineFileDetected,
-            warnings: info.warnings,
-            previewFront,
-            previewBack
+            imageUrl: zipUrl
         });
 
     } catch (err: any) {

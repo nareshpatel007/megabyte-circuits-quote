@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { ShoppingCart, ChevronDown, ChevronUp, Cpu, Layers, Search, Menu, X } from "lucide-react";
+
+import { ShoppingCart, ChevronDown, ChevronUp, Cpu, Layers, Search, Menu, X, Settings } from "lucide-react";
 import Link from "next/link";
 import GerberUploader from "../GerberUploader";
-import GerberCanvasPreview from "../GerberCanvasPreview";
+import GerberStackupPreview from "../GerberStackupPreview";
 import QuoteForm from "../QuoteForm";
-import { GerberFile, PCBInfo, QuoteFormData, UploadResponse, ParsedGerberFile } from "../../lib/gerber/types";
-import { ParsedGerberFile as TracespaceParsedFile, PCBInfo as TracespacePCBInfo } from "../../src/lib/gerber/types";
+import { GerberFile, QuoteFormData, UploadResponse } from "../../lib/gerber/types";
+import { loadLayers, type RenderOptions, COLORS, FINISHES } from "../../lib/gerber/clientRenderer";
+import { type InputLayer } from "pcb-stackup";
 
 
 const INITIAL_FORM_DATA: QuoteFormData = {
@@ -467,10 +469,7 @@ function getPriceTiers(mask: string, weight: string, thickness: number) {
 
 export default function PCBSpecification() {
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-    const [gerberFiles, setGerberFiles] = useState<GerberFile[]>([]);
-    const [parsedGerberFiles, setParsedGerberFiles] = useState<ParsedGerberFile[]>([]);
-    const [tracespaceFiles, setTracespaceFiles] = useState<TracespaceParsedFile[]>([]);
-    const [pcbInfo, setPcbInfo] = useState<TracespacePCBInfo | null>(null);
+    const [clientLayers, setClientLayers] = useState<InputLayer[]>([]);
 
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
     const [specsOpen, setSpecsOpen] = useState(true);
@@ -480,6 +479,14 @@ export default function PCBSpecification() {
     const [selectedDay, setSelectedDay] = useState<number | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [checkoutData, setCheckoutData] = useState<{ day: number; unitPrice: string; orderValue: string; dateStr: string } | null>(null);
+
+    const [renderOptions, setRenderOptions] = useState<RenderOptions>({
+        sm: "green",
+        cf: "gold",
+        sp: false
+    });
+    const [tempOptions, setTempOptions] = useState<RenderOptions>({ ...renderOptions });
+    const [isConfigOpen, setIsConfigOpen] = useState(false);
 
     // Dynamic lead time-based pricing calculation
     const getLeadTimePricing = () => {
@@ -605,44 +612,26 @@ export default function PCBSpecification() {
 
     const handleUploadSuccess = async (res: UploadResponse, file: File) => {
         setUploadedFile(file);
+        try {
+            const layers = await loadLayers(file);
+            setClientLayers(layers);
 
-        // Match response to mock format or parsed Gerber Files array
-        if (res.info) {
-            setPcbInfo(res.info);
-            // Sync form details
+            const copperLayers = layers.filter(l => l.type === 'copper');
+            const detectedLayersCount = copperLayers.length;
+
             setFormData(prev => ({
                 ...prev,
-                layers: res.info!.layers.toString(),
-                width: res.info!.width.toString(),
-                height: res.info!.height.toString(),
-                unit: "mm"
+                layers: detectedLayersCount > 0 ? Math.max(2, detectedLayersCount).toString() : "2"
             }));
-        }
-
-        // Convert the files list to files metadata
-        if (res.files) {
-            const mappedFiles = res.files.map(f => ({
-                name: f.name,
-                type: f.type as any
-            }));
-            setGerberFiles(mappedFiles);
-        }
-
-        if (res.parsedGerberFiles) {
-            setParsedGerberFiles(res.parsedGerberFiles);
-        }
-
-        if (res.tracespaceFiles) {
-            setTracespaceFiles(res.tracespaceFiles);
+        } catch (err) {
+            console.error("Failed to extract layers:", err);
+            alert("Failed to parse Gerber files.");
         }
     };
 
     const handleReset = () => {
         setUploadedFile(null);
-        setGerberFiles([]);
-        setParsedGerberFiles([]);
-        setTracespaceFiles([]);
-        setPcbInfo(null);
+        setClientLayers([]);
         setFormData(INITIAL_FORM_DATA);
         setSelectedDay(null);
     };
@@ -759,13 +748,29 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                 </div>
                             </div>
 
-                            <GerberUploader onUploadSuccess={handleUploadSuccess} onReset={handleReset} />
+                            <GerberUploader 
+                                onUploadSuccess={handleUploadSuccess} 
+                                onReset={handleReset} 
+                                extraActions={
+                                    uploadedFile && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setTempOptions({ ...renderOptions });
+                                                setIsConfigOpen(true);
+                                            }}
+                                            className="px-4 py-2 bg-slate-900 text-white font-semibold text-xs rounded-xl shadow hover:bg-slate-800 transition-all flex items-center gap-1.5 cursor-pointer"
+                                        >
+                                            <Settings className="w-3.5 h-3.5" /> Configuration Preview
+                                        </button>
+                                    )
+                                }
+                            />
 
-                            {uploadedFile && pcbInfo && (
-                                <GerberCanvasPreview
-                                    parsedFiles={tracespaceFiles}
-                                    info={pcbInfo}
-                                    pcbColor={formData.pcbColor}
+                            {uploadedFile && clientLayers.length > 0 && (
+                                <GerberStackupPreview
+                                    layers={clientLayers}
+                                    renderOptions={renderOptions}
                                 />
                             )}
 
@@ -777,7 +782,7 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                 highSpecsOpen={highSpecsOpen}
                                 setHighSpecsOpen={setHighSpecsOpen}
                                 isUploaded={!!uploadedFile}
-                                parsedFiles={parsedGerberFiles}
+                                parsedFiles={[]}
                             />
                         </div>
                     </div>
@@ -1128,6 +1133,108 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                 Confirm and Place Order
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Configuration Modal Popup */}
+            {isConfigOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-150">
+                        {/* Modal Header */}
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div>
+                                <h3 className="text-base font-bold text-slate-800">Preview Configuration</h3>
+                                <p className="text-[11px] font-medium text-slate-400 mt-0.5">Customize soldermask color and copper finishes</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsConfigOpen(false)}
+                                className="p-1.5 hover:bg-slate-200/60 rounded-full transition-colors text-slate-400 hover:text-slate-600 cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Form */}
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            setRenderOptions({ ...tempOptions });
+                            setIsConfigOpen(false);
+                        }} className="p-6 space-y-5">
+                            {/* Soldermask color */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-600">Solder Mask Color</label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {Object.keys(COLORS).map((cName) => (
+                                        <button
+                                            key={cName}
+                                            type="button"
+                                            onClick={() => setTempOptions(prev => ({ ...prev, sm: cName as any }))}
+                                            className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all capitalize cursor-pointer ${
+                                                tempOptions.sm === cName
+                                                    ? "border-slate-900 bg-slate-900 text-white"
+                                                    : "border-slate-200 hover:border-slate-400 text-slate-700 bg-white"
+                                            }`}
+                                        >
+                                            {cName}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Copper Finish */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-600">Surface Finish</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {Object.keys(FINISHES).map((fName) => (
+                                        <button
+                                            key={fName}
+                                            type="button"
+                                            onClick={() => setTempOptions(prev => ({ ...prev, cf: fName as any }))}
+                                            className={`py-2.5 px-4 text-xs font-bold rounded-xl border text-center transition-all capitalize cursor-pointer ${
+                                                tempOptions.cf === fName
+                                                    ? "border-slate-900 bg-slate-900 text-white"
+                                                    : "border-slate-200 hover:border-slate-400 text-slate-700 bg-white"
+                                            }`}
+                                        >
+                                            {fName === "gold" ? "Gold (ENIG)" : "HASL (Tin)"}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Solder Paste toggle */}
+                            <div className="flex items-center justify-between py-2 border-t border-slate-100">
+                                <span className="text-xs font-bold text-slate-600">Include Solder Paste Layers</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setTempOptions(prev => ({ ...prev, sp: !prev.sp }))}
+                                    className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-300 cursor-pointer ${
+                                        tempOptions.sp ? "bg-slate-900 justify-end" : "bg-slate-200 justify-start"
+                                    }`}
+                                >
+                                    <span className="bg-white w-4 h-4 rounded-full shadow-md" />
+                                </button>
+                            </div>
+
+                            {/* Submit */}
+                            <div className="pt-4 border-t border-slate-100 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsConfigOpen(false)}
+                                    className="flex-1 py-2.5 border border-slate-200 hover:border-slate-350 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow transition-all cursor-pointer"
+                                >
+                                    Apply Changes
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

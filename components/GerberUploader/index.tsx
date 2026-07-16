@@ -7,9 +7,10 @@ import { UploadResponse } from "../../lib/gerber/types";
 interface GerberUploaderProps {
     onUploadSuccess: (res: UploadResponse, file: File) => void;
     onReset: () => void;
+    extraActions?: React.ReactNode;
 }
 
-export default function GerberUploader({ onUploadSuccess, onReset }: GerberUploaderProps) {
+export default function GerberUploader({ onUploadSuccess, onReset, extraActions }: GerberUploaderProps) {
     const [dragActive, setDragActive] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [progress, setProgress] = useState(0);
@@ -147,13 +148,16 @@ export default function GerberUploader({ onUploadSuccess, onReset }: GerberUploa
                             </p>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={resetUploader}
-                        className="bg-white hover:bg-slate-50 text-gray-600 border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer hover:border-gray-300 active:scale-95"
-                    >
-                        Re-upload Gerber
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {extraActions}
+                        <button
+                            type="button"
+                            onClick={resetUploader}
+                            className="bg-white hover:bg-slate-50 text-gray-600 border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer hover:border-gray-300 active:scale-95"
+                        >
+                            Re-upload Gerber
+                        </button>
+                    </div>
                 </div>
             ) : (
                 <div

@@ -1,5 +1,3 @@
-import { ParsedGerberFile as TracespaceParsedFile } from "../../src/lib/gerber/types";
-
 export interface Aperture {
     id: string;
     shape: "C" | "R" | "O" | "P" | "T" | "unknown"; // Circle, Rectangle, Oval, Polygon, Thermal Relief
@@ -104,7 +102,7 @@ export interface UploadResponse {
     files?: { name: string; type: string }[];
     info?: any;
     parsedGerberFiles?: ParsedGerberFile[];
-    tracespaceFiles?: TracespaceParsedFile[];
+    tracespaceFiles?: any[];
     previewFront?: string;
     previewBack?: string;
     error?: string;

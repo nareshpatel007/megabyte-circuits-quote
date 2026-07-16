@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { Info, Check, ChevronUp, ChevronDown, X } from "lucide-react";
 import { QuoteFormData, ParsedGerberFile } from "../../lib/gerber/types";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { renderPCBVectorToCanvas } from "../../lib/gerber/renderer";
 
 interface QuoteFormProps {
     formData: QuoteFormData;
@@ -264,21 +263,8 @@ export default function QuoteForm({
         ctx.translate(offsetLeft, offsetTop);
         ctx.scale(drawScale, drawScale);
 
-        // Pre-render the single PCB onto an offscreen canvas if 2D Preview is requested
+        // Pre-render reference placeholder
         let offscreenCanvas: HTMLCanvasElement | null = null;
-        if (modalActiveTab === "preview" && parsedFiles && parsedFiles.length > 0) {
-            offscreenCanvas = document.createElement("canvas");
-            offscreenCanvas.width = 400;
-            offscreenCanvas.height = Math.round(400 * (singleH / singleW));
-            renderPCBVectorToCanvas(offscreenCanvas, parsedFiles, tempModalSide, formData.pcbColor, {
-                outline: true,
-                topCopper: tempModalSide === "top",
-                bottomCopper: tempModalSide === "bottom",
-                solderMask: true,
-                silkscreen: true,
-                drills: true
-            });
-        }
 
         // Draw rail background and borders in green theme if 2D Preview is enabled
         const greenBaseTheme = "#1F7A35";
