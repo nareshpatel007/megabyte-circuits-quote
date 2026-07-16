@@ -44,6 +44,15 @@ export function isGerberOrDrill(content: string): boolean {
 
 export function detectFileType(filename: string, content: string): GerberLayerType {
     const lower = filename.toLowerCase();
+    
+    const ignoreKeywords = [
+        "assembly", "fab", "mech", "dimension", "drawing", "notes", 
+        "rat", "keepout", "courtyard", "user", "comment", "construction"
+    ];
+    if (ignoreKeywords.some(kw => lower.includes(kw))) {
+        return "unknown";
+    }
+
     const cleanContent = content.replace(/\r/g, "");
 
     // 1. Detect Drill (Excellon) files

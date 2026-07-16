@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { ShoppingCart, ChevronDown, ChevronUp, Cpu, Layers, Search, Menu, X } from "lucide-react";
 import Link from "next/link";
 import GerberUploader from "../GerberUploader";
-import GerberPreview from "../GerberPreview";
+import GerberCanvasPreview from "../GerberCanvasPreview";
 import QuoteForm from "../QuoteForm";
 import { GerberFile, PCBInfo, QuoteFormData, UploadResponse, ParsedGerberFile } from "../../lib/gerber/types";
 import { ParsedGerberFile as TracespaceParsedFile, PCBInfo as TracespacePCBInfo } from "../../src/lib/gerber/types";
@@ -762,7 +762,7 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                             <GerberUploader onUploadSuccess={handleUploadSuccess} onReset={handleReset} />
 
                             {uploadedFile && pcbInfo && (
-                                <GerberPreview
+                                <GerberCanvasPreview
                                     parsedFiles={tracespaceFiles}
                                     info={pcbInfo}
                                     pcbColor={formData.pcbColor}

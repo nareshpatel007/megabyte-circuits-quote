@@ -3,6 +3,14 @@ import { GerberFile } from "./types";
 export function detectFileType(filename: string): GerberFile["type"] {
     const lower = filename.toLowerCase();
     
+    const ignoreKeywords = [
+        "assembly", "fab", "mech", "dimension", "drawing", "notes", 
+        "rat", "keepout", "courtyard", "user", "comment", "construction"
+    ];
+    if (ignoreKeywords.some(kw => lower.includes(kw))) {
+        return "unknown";
+    }
+    
     // Drill files check
     if (/\.(drl|txt|xln|tap|drd)$/i.test(filename) || lower.includes("drill")) {
         return "drill";
