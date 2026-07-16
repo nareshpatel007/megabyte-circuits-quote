@@ -751,38 +751,11 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
         <div className="min-h-screen bg-[#f0f2f5] font-sans">
             {/* Header */}
             <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-                <div className="max-w-[1400px] mx-auto px-4 h-20 flex items-center justify-between">
+                <div className="max-w-[1550px] mx-auto px-4 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Link href="/" className="flex items-center gap-2 group">
                             <img src="/images/logo.png" alt="Megabyte Circuit Logo" className="h-18 w-auto object-contain" />
                         </Link>
-                    </div>
-
-                    <div className="hidden lg:flex flex-1 max-w-2xl px-8">
-                        <div className="relative w-full">
-                            <input
-                                type="text"
-                                placeholder="Search..."
-                                className="w-full h-10 pl-10 pr-4 rounded-full border border-gray-300 bg-gray-50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
-                            />
-                            <Search className="w-5 h-5 text-gray-400 absolute left-3.5 top-2.5" />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-6">
-                        <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600 hover:text-primary cursor-pointer">
-                            <span>USD</span>
-                            <ChevronDown className="w-4 h-4" />
-                        </div>
-                        <button className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
-                            <ShoppingCart className="w-5 h-5 text-gray-700" />
-                            <span className="absolute top-0 right-0 bg-[#f5821f] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
-                                0
-                            </span>
-                        </button>
-                        <button className="text-sm font-medium text-gray-700 hover:text-primary transition-colors">
-                            Sign In
-                        </button>
                     </div>
                 </div>
             </header>
@@ -1000,7 +973,7 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
 
             {/* Footer */}
             <footer className="bg-[#0f1729] text-gray-300 pt-16 pb-8 mt-12 border-t-4 border-primary">
-                <div className="max-w-[1400px] mx-auto px-4">
+                <div className="max-w-[1550px] mx-auto px-4">
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-12">
                         <div>
                             <h3 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">PCB Service</h3>
