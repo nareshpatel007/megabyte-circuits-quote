@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
         const imageKitForm = new FormData();
         imageKitForm.append("file", file);
         imageKitForm.append("fileName", file.name);
+        imageKitForm.append("folder", "megabytes");
 
         const authHeader = "Basic " + Buffer.from(IMAGEKIT_PRIVATE_KEY + ":").toString("base64");
         const uploadRes = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
