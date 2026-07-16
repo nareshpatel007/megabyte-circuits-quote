@@ -71,7 +71,7 @@ const ColorCirclePill = ({ color, name, active, onClick }: { color: string; name
 );
 
 const ConfigRow = ({ label, children, tooltip }: { label: string; children: React.ReactNode; tooltip?: string }) => (
-    <div className="flex flex-col sm:flex-row py-4 border-b border-slate-100 gap-4 sm:gap-0">
+    <div className="flex flex-col sm:flex-row py-2.5 border-b border-slate-100 gap-4 sm:gap-0">
         <div className="w-full sm:w-[180px] shrink-0 flex items-center gap-1.5 text-sm text-gray-600 font-semibold">
             {label}
             {tooltip && (
