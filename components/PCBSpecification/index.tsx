@@ -8,8 +8,6 @@ import GerberPreview from "../GerberPreview";
 import QuoteForm from "../QuoteForm";
 import { GerberFile, PCBInfo, QuoteFormData, UploadResponse, ParsedGerberFile } from "../../lib/gerber/types";
 import { ParsedGerberFile as TracespaceParsedFile, PCBInfo as TracespacePCBInfo } from "../../src/lib/gerber/types";
-import { handleZip } from "../../lib/gerber-renderer/jsZip";
-import convertToSvg, { ConvertResult } from "../../lib/gerber-renderer/convertToSvg";
 
 
 const INITIAL_FORM_DATA: QuoteFormData = {
@@ -473,7 +471,6 @@ export default function PCBSpecification() {
     const [parsedGerberFiles, setParsedGerberFiles] = useState<ParsedGerberFile[]>([]);
     const [tracespaceFiles, setTracespaceFiles] = useState<TracespaceParsedFile[]>([]);
     const [pcbInfo, setPcbInfo] = useState<TracespacePCBInfo | null>(null);
-    const [svgResult, setSvgResult] = useState<ConvertResult | null>(null);
 
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
     const [specsOpen, setSpecsOpen] = useState(true);
@@ -638,14 +635,6 @@ export default function PCBSpecification() {
         if (res.tracespaceFiles) {
             setTracespaceFiles(res.tracespaceFiles);
         }
-
-        try {
-            const extracted = await handleZip(file, { gerberOnly: true });
-            const result = await convertToSvg(extracted);
-            setSvgResult(result);
-        } catch (err) {
-            console.error("Client side SVG rendering failed", err);
-        }
     };
 
     const handleReset = () => {
@@ -656,7 +645,6 @@ export default function PCBSpecification() {
         setPcbInfo(null);
         setFormData(INITIAL_FORM_DATA);
         setSelectedDay(null);
-        setSvgResult(null);
     };
 
     const handleOrderSubmit = (day: number, unitPrice: string, orderValue: string) => {
@@ -774,11 +762,10 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                             <GerberUploader onUploadSuccess={handleUploadSuccess} onReset={handleReset} />
 
                             {uploadedFile && pcbInfo && (
-                                <GerberPreview 
-                                    parsedFiles={tracespaceFiles} 
-                                    info={pcbInfo} 
-                                    pcbColor={formData.pcbColor} 
-                                    svgResult={svgResult} 
+                                <GerberPreview
+                                    parsedFiles={tracespaceFiles}
+                                    info={pcbInfo}
+                                    pcbColor={formData.pcbColor}
                                 />
                             )}
 

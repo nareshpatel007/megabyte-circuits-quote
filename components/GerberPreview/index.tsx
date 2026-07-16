@@ -10,83 +10,52 @@ import {
     RefreshCw
 } from "lucide-react";
 import { ParsedGerberFile, PCBInfo } from "../../src/lib/gerber/types";
-import { ConvertResult } from "../../lib/gerber-renderer/convertToSvg";
-import handleColorChange from "../../lib/gerber-renderer/svgColorChange";
+import { calculateDimensions } from "../../src/lib/gerber/dimension";
+import { renderPCBToSVG } from "../../src/lib/gerber/renderer";
 
 interface GerberPreviewProps {
     parsedFiles: ParsedGerberFile[];
     info: PCBInfo;
     pcbColor: string;
-    svgResult: ConvertResult | null;
 }
 
-export default function GerberPreview({ parsedFiles, info, pcbColor, svgResult }: GerberPreviewProps) {
+export default function GerberPreview({ parsedFiles, info, pcbColor }: GerberPreviewProps) {
     const inchesWidth = (info.width / 25.4).toFixed(2);
     const inchesHeight = (info.height / 25.4).toFixed(2);
-
-    // Option state
-    const [selectedColor, setSelectedColor] = useState<string>("original");
 
     // Custom processed SVGs
     const [renderedTopSvg, setRenderedTopSvg] = useState<SVGElement | null>(null);
     const [renderedBottomSvg, setRenderedBottomSvg] = useState<SVGElement | null>(null);
 
-    // Sync external pcbColor form field selection to selectedColor state
-    useEffect(() => {
-        const colorMap: Record<string, string> = {
-            "#52c41a": "green",
-            "#722ed1": "original",
-            "#f5222d": "red",
-            "#fadb14": "yellow",
-            "#1677ff": "blue",
-            "#ffffff": "white",
-            "#000000": "black"
-        };
-        const mapped = colorMap[pcbColor.toLowerCase()];
-        if (mapped) {
-            setSelectedColor(mapped);
-        }
-    }, [pcbColor]);
-
     // Apply configuration changes to SVGs reactively
     useEffect(() => {
-        if (!svgResult) {
+        if (!parsedFiles || parsedFiles.length === 0) {
             setRenderedTopSvg(null);
             setRenderedBottomSvg(null);
             return;
         }
 
-        // Clone SVGs
-        const topClone = svgResult.topSvg.cloneNode(true) as SVGElement;
-        const bottomClone = svgResult.bottomSvg.cloneNode(true) as SVGElement;
-        const fullClone = svgResult.fullStackSvg.cloneNode(true) as SVGElement;
+        try {
+            const outlineFile = parsedFiles.find(f => f.type === "outline");
+            const dimensions = calculateDimensions(outlineFile || null, parsedFiles);
 
-        // Apply colors
-        handleColorChange({
-            color: selectedColor,
-            id: svgResult.id || "board",
-            soldermask: true,
-            svgs: [topClone, bottomClone, fullClone]
-        });
+            const svgTopString = renderPCBToSVG(parsedFiles, "top", pcbColor, dimensions);
+            const svgBottomString = renderPCBToSVG(parsedFiles, "bottom", pcbColor, dimensions);
 
-        // Ensure all layers are visible by default
-        const allLayers = {
-            trace: true,
-            pads: true,
-            silkscreen: true,
-            soldermask: true,
-            outline: true,
-            drill: true
-        };
-        applyCustomToggles(topClone, allLayers);
-        applyCustomToggles(bottomClone, allLayers);
-        applyCustomToggles(fullClone, allLayers);
+            const parser = new DOMParser();
+            const topDoc = parser.parseFromString(svgTopString, "image/svg+xml");
+            const bottomDoc = parser.parseFromString(svgBottomString, "image/svg+xml");
 
-        setRenderedTopSvg(topClone);
-        setRenderedBottomSvg(bottomClone);
-    }, [svgResult, selectedColor]);
+            setRenderedTopSvg(topDoc.documentElement as unknown as SVGElement);
+            setRenderedBottomSvg(bottomDoc.documentElement as unknown as SVGElement);
+        } catch (err) {
+            console.error("Client side Gerber rendering failed:", err);
+            setRenderedTopSvg(null);
+            setRenderedBottomSvg(null);
+        }
+    }, [parsedFiles, pcbColor]);
 
-    if (!svgResult) {
+    if (!renderedTopSvg || !renderedBottomSvg) {
         return (
             <div className="flex flex-col items-center justify-center p-12 border border-slate-200/85 rounded-3xl bg-slate-50/50 space-y-3">
                 <RefreshCw className="w-8 h-8 text-cyan-600 animate-spin" />
@@ -327,36 +296,5 @@ function InteractiveSVGViewer({ svg, side }: InteractiveViewerProps) {
     );
 }
 
-function applyCustomToggles(
-    svg: SVGElement,
-    toggles: {
-        trace: boolean;
-        pads: boolean;
-        silkscreen: boolean;
-        soldermask: boolean;
-        outline: boolean;
-        drill: boolean;
-    }
-) {
-    svg.querySelectorAll('g').forEach((g) => {
-        if (g.hasAttribute('id')) {
-            const id = g.getAttribute('id') || '';
-            let show = true;
-            if (id.includes('_cu') || id.includes('copper')) {
-                show = toggles.trace;
-            } else if (id.includes('_cf') || id.includes('finish')) {
-                show = toggles.pads;
-            } else if (id.includes('_ss') || id.includes('silkscreen')) {
-                show = toggles.silkscreen;
-            } else if (id.includes('_sm') || id.includes('soldermask')) {
-                show = toggles.soldermask;
-            } else if (id.includes('_out') || id.includes('outline')) {
-                show = toggles.outline;
-            } else if (id.includes('_dr') || id.includes('drill')) {
-                show = toggles.drill;
-            }
-            g.style.display = show ? 'block' : 'none';
-        }
-    });
-}
+
 

@@ -13,56 +13,56 @@ const PCB_COLOR_THEMES: Record<string, SolderMaskTheme> = {
     "#52c41a": {
         baseColor: "#195628",
         maskColor: "#2d7834",
-        copperColor: "#c49486", // Raw copper
+        copperColor: "#cca43b", // Golden finish
         silkscreenColor: "#FFFFFF"
     },
     // Purple
     "#722ed1": {
         baseColor: "#2E0854",
         maskColor: "#5B21B6",
-        copperColor: "#c49486",
+        copperColor: "#cca43b", // Golden finish
         silkscreenColor: "#FFFFFF"
     },
     // Red
     "#f5222d": {
         baseColor: "#4A0E0E",
         maskColor: "#991B1B",
-        copperColor: "#c49486",
+        copperColor: "#cca43b", // Golden finish
         silkscreenColor: "#FFFFFF"
     },
     // Yellow
     "#fadb14": {
         baseColor: "#5C3E00",
         maskColor: "#D97706",
-        copperColor: "#c49486",
+        copperColor: "#cca43b", // Golden finish
         silkscreenColor: "#0F172A"
     },
     // Blue
     "#1677ff": {
         baseColor: "#0A2540",
         maskColor: "#1E3A8A",
-        copperColor: "#c49486",
+        copperColor: "#cca43b", // Golden finish
         silkscreenColor: "#FFFFFF"
     },
     // White
     "#ffffff": {
         baseColor: "#D1D5DB",
         maskColor: "#F3F4F6",
-        copperColor: "#c49486",
+        copperColor: "#cca43b", // Golden finish
         silkscreenColor: "#1F2937"
     },
     // Black
     "#000000": {
         baseColor: "#111827",
         maskColor: "#1F2937",
-        copperColor: "#c49486",
+        copperColor: "#cca43b", // Golden finish
         silkscreenColor: "#F3F4F6"
     },
     // Matte Black
     "#18181b": {
         baseColor: "#09090B",
         maskColor: "#18181B",
-        copperColor: "#c49486",
+        copperColor: "#cca43b", // Golden finish
         silkscreenColor: "#F3F4F6"
     }
 };
@@ -126,8 +126,8 @@ export function renderPCBToSVG(
     }
 
     // 1. Add FR4 substrate base shape (masked to cut out physical drill holes)
-    svgElements.push(`<g mask="url(#board-mask)">`);
-    svgElements.push(`<path d="${substratePath}" fill="${theme.baseColor}" filter="url(#shadow)" />`);
+    svgElements.push(`<g mask="url(#board-mask-${side})">`);
+    svgElements.push(`<path d="${substratePath}" fill="${theme.baseColor}" filter="url(#shadow-${side})" />`);
 
     // 2. Copper Layer (under mask, drawn in raw copper color)
     if (copperFile) {
@@ -138,13 +138,13 @@ export function renderPCBToSVG(
 
     // 3. Solder Mask Overlay (semi-transparent green overlay with 3D glossy highlights)
     svgElements.push(`<path d="${substratePath}" fill="${theme.maskColor}" opacity="0.75" />`);
-    svgElements.push(`<path d="${substratePath}" fill="url(#shine)" />`);
-    svgElements.push(`<path d="${substratePath}" fill="url(#vignette)" />`);
+    svgElements.push(`<path d="${substratePath}" fill="url(#shine-${side})" />`);
+    svgElements.push(`<path d="${substratePath}" fill="url(#vignette-${side})" />`);
 
-    // 4. Exposed Pads (rendered in gold/copper `#c49486` above the solder mask)
+    // 4. Exposed Pads (rendered in gold/copper themed color above the solder mask)
     const renderSourceFile = maskFile || copperFile;
     if (renderSourceFile) {
-        svgElements.push(`<g fill="#c49486" stroke="#c49486">`);
+        svgElements.push(`<g fill="${theme.copperColor}" stroke="${theme.copperColor}">`);
         renderLayerContent(renderSourceFile, maskFile ? "all" : "flash-only");
         svgElements.push(`</g>`);
     }
@@ -156,9 +156,9 @@ export function renderPCBToSVG(
         svgElements.push(`</g>`);
     }
 
-    // 6. Drill Plated Rings (rendered in gold/copper `#c49486` above mask)
+    // 6. Drill Plated Rings (rendered in gold/copper themed color above mask)
     if (drillFile) {
-        svgElements.push(`<g fill="#c49486">`);
+        svgElements.push(`<g fill="${theme.copperColor}">`);
         drillFile.imageTree.children.forEach(child => {
             if (child.type === "imageShape" && child.shape?.type === "circle") {
                 const shape = child.shape as any;
@@ -302,25 +302,25 @@ export function renderPCBToSVG(
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${viewW} ${viewH}" width="100%" height="100%" style="background-color: transparent;">
         <defs>
             <!-- Mask to dynamically cut drill holes out of the board substrate -->
-            <mask id="board-mask">
+            <mask id="board-mask-${side}">
                 <rect x="-10" y="-10" width="${viewW + 20}" height="${viewH + 20}" fill="white" />
                 ${maskHoles.join("\n")}
             </mask>
 
             <!-- Drop shadow for the PCB board -->
-            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <filter id="shadow-${side}" x="-20%" y="-20%" width="140%" height="140%">
                 <feDropShadow dx="0.5" dy="1.0" stdDeviation="0.8" flood-color="#000000" flood-opacity="0.4" />
             </filter>
 
             <!-- Shiny glossy reflection highlight -->
-            <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id="shine-${side}" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08" />
                 <stop offset="40%" stop-color="#ffffff" stop-opacity="0.0" />
                 <stop offset="85%" stop-color="#000000" stop-opacity="0.12" />
             </linearGradient>
 
             <!-- Subtle vignette shadow towards the edges -->
-            <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+            <radialGradient id="vignette-${side}" cx="50%" cy="50%" r="70%">
                 <stop offset="60%" stop-color="#000000" stop-opacity="0.0" />
                 <stop offset="100%" stop-color="#000000" stop-opacity="0.25" />
             </radialGradient>
