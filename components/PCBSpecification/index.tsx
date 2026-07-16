@@ -8,7 +8,7 @@ import GerberUploader from "../GerberUploader";
 import GerberStackupPreview from "../GerberStackupPreview";
 import QuoteForm from "../QuoteForm";
 import { GerberFile, QuoteFormData, UploadResponse } from "../../lib/gerber/types";
-import { loadLayers, type RenderOptions, COLORS, FINISHES } from "../../lib/gerber/clientRenderer";
+import { loadLayers, renderStack, type RenderOptions, COLORS, FINISHES } from "../../lib/gerber/clientRenderer";
 import { type InputLayer } from "pcb-stackup";
 
 
@@ -619,9 +619,39 @@ export default function PCBSpecification() {
             const copperLayers = layers.filter(l => l.type === 'copper');
             const detectedLayersCount = copperLayers.length;
 
+            const stack = await renderStack(layers, {
+                sm: "green",
+                cf: "gold",
+                sp: false
+            });
+
+            const topSide = stack.top || stack.bottom;
+            let widthVal = "";
+            let heightVal = "";
+            let unitVal: "mm" | "inches" = "mm";
+
+            if (topSide) {
+                const rawWidth = topSide.width;
+                const rawHeight = topSide.height;
+                const units = topSide.units;
+
+                if (units === 'in') {
+                    widthVal = rawWidth.toFixed(2);
+                    heightVal = rawHeight.toFixed(2);
+                    unitVal = "inches";
+                } else {
+                    widthVal = rawWidth.toFixed(1);
+                    heightVal = rawHeight.toFixed(1);
+                    unitVal = "mm";
+                }
+            }
+
             setFormData(prev => ({
                 ...prev,
-                layers: detectedLayersCount > 0 ? Math.max(2, detectedLayersCount).toString() : "2"
+                layers: detectedLayersCount > 0 ? Math.max(2, detectedLayersCount).toString() : "2",
+                width: widthVal || prev.width,
+                height: heightVal || prev.height,
+                unit: unitVal || prev.unit
             }));
         } catch (err) {
             console.error("Failed to extract layers:", err);
