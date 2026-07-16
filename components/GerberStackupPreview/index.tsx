@@ -1,41 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { type InputLayer } from "pcb-stackup";
-import { renderStack, type RenderOptions } from "../../lib/gerber/clientRenderer";
+import React from "react";
 
 interface GerberStackupPreviewProps {
-    layers: InputLayer[];
-    renderOptions: RenderOptions;
+    topSvg: string;
+    bottomSvg: string;
+    loading: boolean;
 }
 
-export default function GerberStackupPreview({ layers, renderOptions }: GerberStackupPreviewProps) {
-    const [topSvg, setTopSvg] = useState<string>("");
-    const [bottomSvg, setBottomSvg] = useState<string>("");
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        let active = true;
-        async function runRender() {
-            if (layers.length === 0) return;
-            setLoading(true);
-            try {
-                const stack = await renderStack(layers, renderOptions);
-                if (!active) return;
-                setTopSvg(stack.top?.svg || "");
-                setBottomSvg(stack.bottom?.svg || "");
-            } catch (err) {
-                console.error("Failed to render stackup:", err);
-            } finally {
-                setLoading(false);
-            }
-        }
-        runRender();
-        return () => {
-            active = false;
-        };
-    }, [layers, renderOptions]);
-
+export default function GerberStackupPreview({ topSvg, bottomSvg, loading }: GerberStackupPreviewProps) {
     return (
         <div className="space-y-6">
             <div className="relative">

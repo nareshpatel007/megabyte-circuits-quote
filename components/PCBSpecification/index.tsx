@@ -488,6 +488,32 @@ export default function PCBSpecification() {
     const [tempOptions, setTempOptions] = useState<RenderOptions>({ ...renderOptions });
     const [isConfigOpen, setIsConfigOpen] = useState(false);
 
+    const [topSvg, setTopSvg] = useState<string>("");
+    const [bottomSvg, setBottomSvg] = useState<string>("");
+    const [previewLoading, setPreviewLoading] = useState(false);
+
+    React.useEffect(() => {
+        let active = true;
+        async function runRender() {
+            if (clientLayers.length === 0) return;
+            setPreviewLoading(true);
+            try {
+                const stack = await renderStack(clientLayers, renderOptions);
+                if (!active) return;
+                setTopSvg(stack.top?.svg || "");
+                setBottomSvg(stack.bottom?.svg || "");
+            } catch (err) {
+                console.error("Failed to render stackup:", err);
+            } finally {
+                setPreviewLoading(false);
+            }
+        }
+        runRender();
+        return () => {
+            active = false;
+        };
+    }, [clientLayers, renderOptions]);
+
     // Dynamic lead time-based pricing calculation
     const getLeadTimePricing = () => {
         const layers = parseInt(formData.layers, 10) || 1;
@@ -799,8 +825,9 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
 
                             {uploadedFile && clientLayers.length > 0 && (
                                 <GerberStackupPreview
-                                    layers={clientLayers}
-                                    renderOptions={renderOptions}
+                                    topSvg={topSvg}
+                                    bottomSvg={bottomSvg}
+                                    loading={previewLoading}
                                 />
                             )}
 
@@ -813,6 +840,8 @@ Shipping Address: ${formData.shippingAddress || "N/A"}
                                 setHighSpecsOpen={setHighSpecsOpen}
                                 isUploaded={!!uploadedFile}
                                 parsedFiles={[]}
+                                topSvg={topSvg}
+                                bottomSvg={bottomSvg}
                             />
                         </div>
                     </div>

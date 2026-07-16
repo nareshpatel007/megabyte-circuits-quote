@@ -14,6 +14,8 @@ interface QuoteFormProps {
     setHighSpecsOpen: (val: boolean) => void;
     isUploaded: boolean;
     parsedFiles: ParsedGerberFile[];
+    topSvg?: string;
+    bottomSvg?: string;
 }
 
 const Pill = ({
@@ -99,7 +101,9 @@ export default function QuoteForm({
     highSpecsOpen,
     setHighSpecsOpen,
     isUploaded,
-    parsedFiles
+    parsedFiles,
+    topSvg = "",
+    bottomSvg = ""
 }: QuoteFormProps) {
     const updateField = (field: keyof QuoteFormData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -219,6 +223,24 @@ export default function QuoteForm({
         }
         ctx.restore();
     };
+
+    const [panelImage, setPanelImage] = useState<HTMLImageElement | null>(null);
+
+    useEffect(() => {
+        const svgStr = tempModalSide === "top" ? topSvg : bottomSvg;
+        if (!svgStr) {
+            setPanelImage(null);
+            return;
+        }
+        const img = new Image();
+        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgStr);
+        img.onload = () => {
+            setPanelImage(img);
+        };
+        img.onerror = () => {
+            setPanelImage(null);
+        };
+    }, [tempModalSide, topSvg, bottomSvg]);
 
     // Draw dynamic panel simulation
     useEffect(() => {
@@ -361,8 +383,8 @@ export default function QuoteForm({
                     ctx.lineWidth = 1.5 / drawScale;
                     ctx.strokeRect(bx, by, singleW, singleH);
                 } else {
-                    if (offscreenCanvas) {
-                        ctx.drawImage(offscreenCanvas, bx, by, singleW, singleH);
+                    if (panelImage) {
+                        ctx.drawImage(panelImage, bx, by, singleW, singleH);
                     } else {
                         // Fallback green PCB
                         ctx.fillStyle = greenBaseTheme; 
@@ -376,7 +398,7 @@ export default function QuoteForm({
         }
 
         ctx.restore();
-    }, [showMegabytesModal, tempColumns, tempRows, tempColSpacing, tempRowSpacing, tempEdgeRails, tempRailWidth, modalActiveTab, tempModalSide, singleWidth, singleHeight, parsedFiles, formData.pcbColor]);
+    }, [showMegabytesModal, tempColumns, tempRows, tempColSpacing, tempRowSpacing, tempEdgeRails, tempRailWidth, modalActiveTab, tempModalSide, singleWidth, singleHeight, parsedFiles, formData.pcbColor, panelImage]);
 
     const handleModalSubmit = () => {
         setPanelColumns(tempColumns);
