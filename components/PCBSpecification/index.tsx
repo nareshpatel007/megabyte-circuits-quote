@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { ShoppingCart, ChevronDown, ChevronUp, Cpu, Layers, Search, Menu, X, Settings } from "lucide-react";
 import Link from "next/link";
@@ -489,6 +490,7 @@ export default function PCBSpecification() {
     const [topSvg, setTopSvg] = useState<string>("");
     const [bottomSvg, setBottomSvg] = useState<string>("");
     const [previewLoading, setPreviewLoading] = useState(false);
+    const router = useRouter();
 
     React.useEffect(() => {
         let active = true;
@@ -810,25 +812,21 @@ export default function PCBSpecification() {
         const response = await submitOrder(orderData);
 
         if (response.success) {
-            const orderSummary = `
-Order Submitted Successfully!
------------------------------
-Order Number: ${response.data?.order_number}
-Order ID: ${response.data?.order_id}
-Lead Time: ${day} Days
-Unit Price: ₹${unitPrice}
-Order Value: ₹${orderValue}
-Delivery Date: ${response.data?.delivery_date}
-Board Name: ${formData.boardName}
-Mobile: ${formData.userMobile}
-Email: ${formData.userEmail}
-Customer Name: ${formData.customerName || "N/A"}
-GST Number: ${formData.gstNumber || "N/A"}
-Billing Address: ${formData.billingAddress || "N/A"}
-Shipping Address: ${formData.shippingAddress || "N/A"}
-            `;
-            alert(orderSummary);
-            handleReset();
+            // Save order data to localStorage for thank you page
+            const orderDataForThankYou = {
+                order_id: response.data?.order_id,
+                order_number: response.data?.order_number,
+                status: response.data?.status,
+                total_value: response.data?.total_value,
+                delivery_date: response.data?.delivery_date,
+                board_name: formData.boardName,
+                user_email: formData.userEmail,
+                user_mobile: formData.userMobile,
+            };
+            localStorage.setItem('lastOrder', JSON.stringify(orderDataForThankYou));
+
+            // Redirect to thank you page without reload
+            router.push('/thank-you');
         } else {
             alert(`Failed to submit order: ${response.message}`);
             if (response.errors) {
