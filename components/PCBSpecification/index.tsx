@@ -10,7 +10,7 @@ import QuoteForm from "../QuoteForm";
 import { GerberFile, QuoteFormData, UploadResponse } from "../../lib/gerber/types";
 import { loadLayers, renderStack, type RenderOptions, COLORS, FINISHES } from "../../lib/gerber/clientRenderer";
 import { type InputLayer } from "pcb-stackup";
-
+import { submitOrder, OrderFormData } from "../../lib/api/orderService";
 
 const INITIAL_FORM_DATA: QuoteFormData = {
     baseMaterial: "FR-4",
@@ -688,7 +688,7 @@ export default function PCBSpecification() {
         setSelectedDay(null);
     };
 
-    const handleOrderSubmit = (day: number, unitPrice: string, orderValue: string) => {
+    const handleOrderSubmit = async (day: number, unitPrice: string, orderValue: string) => {
         if (!formData.boardName) {
             alert('Please Enter Board Name');
             return;
@@ -727,12 +727,98 @@ export default function PCBSpecification() {
             return;
         }
 
-        const orderSummary = `
+        // Calculate delivery date
+        const deliveryDate = new Date();
+        deliveryDate.setDate(deliveryDate.getDate() + day);
+
+        // Calculate total area in sqm
+        const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
+        const length = width * unitMultiplier;
+        const widthMm = height * unitMultiplier;
+        const areaPerBoard = (length * widthMm) / 1000000;
+        const totalAreaInSqM = areaPerBoard * qty;
+
+        // Prepare order data
+        const orderData: OrderFormData = {
+            // Basic PCB Specifications
+            base_material: formData.baseMaterial,
+            layers: formData.layers,
+            width: formData.width,
+            height: formData.height,
+            unit: formData.unit,
+            qty: formData.qty,
+            product_type: formData.productType,
+            different_design: formData.differentDesign,
+            
+            // PCB Specifications
+            thickness: formData.thickness,
+            pcb_color: formData.pcbColor,
+            silkscreen: formData.silkscreen,
+            material_type: formData.materialType,
+            surface_finish: formData.surfaceFinish,
+            
+            // High-spec Options
+            copper_weight: formData.copperWeight,
+            via_covering: formData.viaCovering,
+            via_plating: formData.viaPlating,
+            min_hole: formData.minHole,
+            tolerance: formData.tolerance,
+            confirm_file: formData.confirmFile,
+            mark_on_pcb: formData.markOnPcb,
+            elec_test: formData.elecTest,
+            gold_fingers: formData.goldFingers,
+            castellated: formData.castellated,
+            edge_plating: formData.edgePlating,
+            blind_slots: formData.blindSlots,
+            ul_marking: formData.ulMarking,
+            humidity: formData.humidity,
+            
+            // Advanced Options
+            kelvin_test: formData.kelvinTest,
+            paper_between: formData.paperBetween,
+            appearance_quality: formData.appearanceQuality,
+            silkscreen_tech: formData.silkscreenTech,
+            inspection_report: formData.inspectionReport,
+            pcb_remark: formData.pcbRemark,
+            
+            // Additional Options
+            assembly_on: formData.assemblyOn,
+            stencil_on: formData.stencilOn,
+            build_time: formData.buildTime,
+            
+            // Customer Information
+            board_name: formData.boardName,
+            user_mobile: formData.userMobile,
+            user_email: formData.userEmail,
+            gst_number: formData.gstNumber,
+            customer_name: formData.customerName,
+            billing_address: formData.billingAddress,
+            shipping_address: formData.shippingAddress,
+            
+            // Pricing Information
+            lead_time_days: day,
+            unit_price: unitPrice,
+            order_value: orderValue,
+            delivery_date: deliveryDate.toISOString().split('T')[0],
+            total_area_sqm: totalAreaInSqM,
+            
+            // File Upload
+            gerber_file: uploadedFile || undefined,
+        };
+
+        // Submit to backend
+        const response = await submitOrder(orderData);
+
+        if (response.success) {
+            const orderSummary = `
 Order Submitted Successfully!
 -----------------------------
+Order Number: ${response.data?.order_number}
+Order ID: ${response.data?.order_id}
 Lead Time: ${day} Days
 Unit Price: ₹${unitPrice}
 Order Value: ₹${orderValue}
+Delivery Date: ${response.data?.delivery_date}
 Board Name: ${formData.boardName}
 Mobile: ${formData.userMobile}
 Email: ${formData.userEmail}
@@ -740,9 +826,15 @@ Customer Name: ${formData.customerName || "N/A"}
 GST Number: ${formData.gstNumber || "N/A"}
 Billing Address: ${formData.billingAddress || "N/A"}
 Shipping Address: ${formData.shippingAddress || "N/A"}
-        `;
-        alert(orderSummary);
-        handleReset();
+            `;
+            alert(orderSummary);
+            handleReset();
+        } else {
+            alert(`Failed to submit order: ${response.message}`);
+            if (response.errors) {
+                console.error('Validation errors:', response.errors);
+            }
+        }
     };
 
     return (
