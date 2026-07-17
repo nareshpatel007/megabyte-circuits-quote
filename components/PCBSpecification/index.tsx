@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { ShoppingCart, ChevronDown, ChevronUp, Cpu, Layers, Search, Menu, X, Settings } from "lucide-react";
+import { ShoppingCart, ChevronDown, ChevronUp, Cpu, Layers, Search, Menu, X, Settings, Loader2, Check } from "lucide-react";
 import Link from "next/link";
 import GerberUploader from "../GerberUploader";
 import GerberStackupPreview from "../GerberStackupPreview";
@@ -12,6 +12,7 @@ import { GerberFile, QuoteFormData, UploadResponse } from "../../lib/gerber/type
 import { loadLayers, renderStack, type RenderOptions, COLORS, FINISHES } from "../../lib/gerber/clientRenderer";
 import { type InputLayer } from "pcb-stackup";
 import { submitOrder, OrderFormData } from "../../lib/api/orderService";
+import Toast, { ToastType } from "../Toast";
 
 const INITIAL_FORM_DATA: QuoteFormData = {
     baseMaterial: "FR-4",
@@ -491,6 +492,8 @@ export default function PCBSpecification() {
     const [bottomSvg, setBottomSvg] = useState<string>("");
     const [previewLoading, setPreviewLoading] = useState(false);
     const router = useRouter();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
     React.useEffect(() => {
         let active = true;
@@ -692,40 +695,40 @@ export default function PCBSpecification() {
 
     const handleOrderSubmit = async (day: number, unitPrice: string, orderValue: string) => {
         if (!formData.boardName) {
-            alert('Please Enter Board Name');
+            setToast({ message: 'Please Enter Board Name', type: 'warning' });
             return;
         }
         if (!formData.userMobile) {
-            alert('Please Enter Mobile Number');
+            setToast({ message: 'Please Enter Mobile Number', type: 'warning' });
             return;
         }
         if (!/^\d{10}$/.test(formData.userMobile)) {
-            alert('Please enter a valid 10-digit mobile number.');
+            setToast({ message: 'Please enter a valid 10-digit mobile number.', type: 'warning' });
             return;
         }
         if (!formData.userEmail) {
-            alert('Please Enter Email');
+            setToast({ message: 'Please Enter Email', type: 'warning' });
             return;
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.userEmail)) {
-            alert('Please enter a valid email address.');
+            setToast({ message: 'Please enter a valid email address.', type: 'warning' });
             return;
         }
 
         const qty = parseInt(formData.qty, 10);
         if (isNaN(qty) || qty < 3) {
-            alert('Minimum order quantity is 3');
+            setToast({ message: 'Minimum order quantity is 3', type: 'warning' });
             return;
         }
 
         const width = parseFloat(formData.width) || 0;
         const height = parseFloat(formData.height) || 0;
         if (width <= 0) {
-            alert('Please Enter Length');
+            setToast({ message: 'Please Enter Length', type: 'warning' });
             return;
         }
         if (height <= 0) {
-            alert('Please Enter Width');
+            setToast({ message: 'Please Enter Width', type: 'warning' });
             return;
         }
 
@@ -809,9 +812,13 @@ export default function PCBSpecification() {
         };
 
         // Submit to backend
+        setIsSubmitting(true);
         const response = await submitOrder(orderData);
+        setIsSubmitting(false);
 
         if (response.success) {
+            setToast({ message: 'Order submitted successfully!', type: 'success' });
+            
             // Save order data to localStorage for thank you page
             const orderDataForThankYou = {
                 order_id: response.data?.order_id,
@@ -826,9 +833,11 @@ export default function PCBSpecification() {
             localStorage.setItem('lastOrder', JSON.stringify(orderDataForThankYou));
 
             // Redirect to thank you page without reload
-            router.push('/thank-you');
+            setTimeout(() => {
+                router.push('/thank-you');
+            }, 1000);
         } else {
-            alert(`Failed to submit order: ${response.message}`);
+            setToast({ message: response.message || 'Failed to submit order', type: 'error' });
             if (response.errors) {
                 console.error('Validation errors:', response.errors);
             }
@@ -1172,9 +1181,17 @@ export default function PCBSpecification() {
                                 onClick={() => {
                                     handleOrderSubmit(checkoutData.day, checkoutData.unitPrice, checkoutData.orderValue);
                                 }}
-                                className="w-full h-11 bg-primary hover:bg-secondary text-white font-extrabold rounded-xl shadow-md transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                                disabled={isSubmitting}
+                                className="w-full h-11 bg-primary hover:bg-secondary disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-extrabold rounded-xl shadow-md transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                             >
-                                Confirm and Place Order
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    "Confirm and Place Order"
+                                )}
                             </button>
                         </div>
                     </div>
@@ -1278,6 +1295,15 @@ export default function PCBSpecification() {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* Toast Notifications */}
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
             )}
         </div>
     );
