@@ -14,9 +14,10 @@ export async function handleApiProxy(
         const referer = req.headers.get("referer");
 
         // Remove this when we have a proper authentication system
-        const isValidOrigin = origin === ALLOWED_ORIGIN || (referer && referer.startsWith(ALLOWED_ORIGIN));
+        const isValidOrigin = origin === ALLOWED_ORIGIN || (referer && referer.startsWith(ALLOWED_ORIGIN)) || !ALLOWED_ORIGIN;
 
-        if (!isValidOrigin) {
+        if (!isValidOrigin && ALLOWED_ORIGIN) {
+            console.error('Origin validation failed:', { origin, referer, ALLOWED_ORIGIN });
             return NextResponse.json(
                 { success: false, message: "Unauthorized token" },
                 { status: 403 }
@@ -66,8 +67,8 @@ export async function handleApiProxy(
         }
 
         // Call backend API
-        const apiRes = await fetch(`${process.env.API_URL}${endpoint}`, fetchOptions);
-
+        const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";        
+        const apiRes = await fetch(`${apiUrl}${endpoint}`, fetchOptions);
         const text = await apiRes.text();
 
         return new NextResponse(text, {
@@ -78,8 +79,9 @@ export async function handleApiProxy(
             },
         });
     } catch (error) {
+        console.error('API Proxy error:', error);
         return NextResponse.json(
-            { success: false, message: "Internal Server Error" },
+            { success: false, message: "Internal Server Error", error: error instanceof Error ? error.message : String(error) },
             { status: 500 }
         );
     }
