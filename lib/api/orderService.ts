@@ -93,6 +93,9 @@ export async function submitOrder(formData: OrderFormData): Promise<OrderRespons
             const value = formData[key as keyof OrderFormData];
             if (key === 'gerber_file' && value instanceof File) {
                 formDataToSend.append('gerber_file', value);
+            } else if (key === 'assembly_on' || key === 'stencil_on') {
+                // Always send boolean fields as '1' or '0'
+                formDataToSend.append(key, String(value === true ? '1' : '0'));
             } else if (value !== undefined && value !== null && value !== '') {
                 formDataToSend.append(key, String(value));
             }
