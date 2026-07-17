@@ -1171,7 +1171,6 @@ export default function PCBSpecification() {
                                 type="button"
                                 onClick={() => {
                                     handleOrderSubmit(checkoutData.day, checkoutData.unitPrice, checkoutData.orderValue);
-                                    setIsModalOpen(false);
                                 }}
                                 className="w-full h-11 bg-primary hover:bg-secondary text-white font-extrabold rounded-xl shadow-md transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                             >
