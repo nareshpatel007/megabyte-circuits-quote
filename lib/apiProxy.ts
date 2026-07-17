@@ -6,7 +6,8 @@ const API_TOKEN = process.env.NEXT_PUBLIC_API_TOKEN || "";
 export async function handleApiProxy(
     req: NextRequest,
     endpoint: string,
-    method: string = "POST"
+    method: string = "POST",
+    body?: BodyInit | null
 ) {
     try {
         // Validate origin
@@ -44,24 +45,36 @@ export async function handleApiProxy(
 
         // Don't pass a body for GET or HEAD requests
         if (method !== "GET" && method !== "HEAD") {
-            const contentType = req.headers.get("content-type");
-            
-            if (contentType && contentType.includes("multipart/form-data")) {
-                // Handle FormData (file uploads)
-                const formData = await req.formData();
-                fetchOptions.body = formData;
-                // Remove Content-Type to let browser set it with boundary
-                const headersObj = headers as Record<string, string>;
-                delete headersObj["Content-Type"];
-                fetchOptions.headers = headersObj;
-            } else {
-                // Handle JSON
-                const body = await req.json().catch(() => null);
-                if (body) {
-                    fetchOptions.body = JSON.stringify(body);
+            // If body is provided directly (for FormData that's already been read)
+            if (body) {
+                fetchOptions.body = body;
+                // If it's FormData, remove Content-Type to let browser set it with boundary
+                if (body instanceof FormData) {
                     const headersObj = headers as Record<string, string>;
-                    headersObj["Content-Type"] = "application/json";
+                    delete headersObj["Content-Type"];
                     fetchOptions.headers = headersObj;
+                }
+            } else {
+                // Otherwise, read from request
+                const contentType = req.headers.get("content-type");
+                
+                if (contentType && contentType.includes("multipart/form-data")) {
+                    // Handle FormData (file uploads)
+                    const formData = await req.formData();
+                    fetchOptions.body = formData;
+                    // Remove Content-Type to let browser set it with boundary
+                    const headersObj = headers as Record<string, string>;
+                    delete headersObj["Content-Type"];
+                    fetchOptions.headers = headersObj;
+                } else {
+                    // Handle JSON
+                    const requestBody = await req.json().catch(() => null);
+                    if (requestBody) {
+                        fetchOptions.body = JSON.stringify(requestBody);
+                        const headersObj = headers as Record<string, string>;
+                        headersObj["Content-Type"] = "application/json";
+                        fetchOptions.headers = headersObj;
+                    }
                 }
             }
         }

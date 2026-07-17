@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ALLOWED_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || "";
-const API_TOKEN = process.env.NEXT_PUBLIC_API_TOKEN || "";
+import { handleApiProxy } from "@/lib/apiProxy";
 
 export async function POST(req: NextRequest) {
     try {
@@ -33,34 +31,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Prepare headers with authentication
-        const headers: HeadersInit = {
-            "Requested-Domain": ALLOWED_ORIGIN,
-            "X-Api-Token": API_TOKEN,
-            "Authorization": `Bearer ${API_TOKEN}`
-        };
-
-        // Upload to Laravel storage
-        const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
-        const response = await fetch(`${apiUrl}/api/upload`, {
-            method: 'POST',
-            headers,
-            body: formData,
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || data.message || "Upload failed");
-        }
-
-        return NextResponse.json({
-            success: true,
-            folder: data.folder || "gerber-files",
-            imageUrl: data.url,
-            fileName: data.fileName,
-            originalName: data.originalName
-        });
+        // Use handleApiProxy with the FormData that's already been read
+        return handleApiProxy(req, "/api/upload", "POST", formData);
 
     } catch (err: any) {
         console.error("Upload API Error:", err);
