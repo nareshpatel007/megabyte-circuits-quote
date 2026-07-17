@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const IMAGEKIT_PRIVATE_KEY = "private_QfLkdkXBHX5OPw3VBNH8Zg64Mek=";
+import { handleApiProxy } from "@/lib/apiProxy";
 
 export async function POST(req: NextRequest) {
     try {
@@ -32,33 +31,27 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // 1. Upload Gerber ZIP to ImageKit
-        const imageKitForm = new FormData();
-        imageKitForm.append("file", file);
-        imageKitForm.append("fileName", file.name);
-        imageKitForm.append("folder", "megabytes");
+        // Upload to Laravel storage via API proxy
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", file);
+        uploadFormData.append("fileName", file.name);
+        uploadFormData.append("folder", "gerber-files");
 
-        const authHeader = "Basic " + Buffer.from(IMAGEKIT_PRIVATE_KEY + ":").toString("base64");
-        const uploadRes = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+        const response = await fetch(`${process.env.API_URL || process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
             method: "POST",
-            headers: {
-                "Authorization": authHeader
-            },
-            body: imageKitForm
+            body: uploadFormData,
         });
 
-        if (!uploadRes.ok) {
-            const errBody = await uploadRes.text();
-            throw new Error(`ImageKit upload failed: ${errBody}`);
-        }
+        const data = await response.json();
 
-        const uploadData = await uploadRes.json();
-        const zipUrl = uploadData.url;
+        if (!response.ok) {
+            throw new Error(data.error || "Upload failed");
+        }
 
         return NextResponse.json({
             success: true,
-            folder: uploadData.filePath || `uploads/${uploadData.fileId}`,
-            imageUrl: zipUrl
+            folder: data.folder || "gerber-files",
+            imageUrl: data.url
         });
 
     } catch (err: any) {
