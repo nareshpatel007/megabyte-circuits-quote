@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const ALLOWED_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || "";
-const API_TOKEN = process.env.NEXT_API_TOKEN || "";
+const API_TOKEN = process.env.NEXT_PUBLIC_API_TOKEN || "";
 
 export async function handleApiProxy(
     req: NextRequest,
