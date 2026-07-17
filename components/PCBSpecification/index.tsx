@@ -1190,7 +1190,10 @@ export default function PCBSpecification() {
                                         Processing...
                                     </>
                                 ) : (
-                                    "Confirm and Place Order"
+                                    <>
+                                        <Check className="h-4 w-4" />
+                                        Confirm and Place Order
+                                    </>
                                 )}
                             </button>
                         </div>
