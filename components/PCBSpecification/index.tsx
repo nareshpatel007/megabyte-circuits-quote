@@ -820,12 +820,13 @@ export default function PCBSpecification() {
             setToast({ message: 'Order submitted successfully!', type: 'success' });
 
             // Save order data to localStorage for thank you page
+            const formattedDeliveryDate = response.data?.delivery_date || deliveryDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             const orderDataForThankYou = {
                 order_id: response.data?.order_id,
                 order_number: response.data?.order_number,
-                status: response.data?.status,
-                total_value: response.data?.total_value,
-                delivery_date: response.data?.delivery_date,
+                status: response.data?.status || 'Submitted',
+                total_value: response.data?.total_value || orderValue,
+                delivery_date: formattedDeliveryDate,
                 board_name: formData.boardName,
                 user_email: formData.userEmail,
                 user_mobile: formData.userMobile,
