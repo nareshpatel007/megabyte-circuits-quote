@@ -754,14 +754,14 @@ export default function PCBSpecification() {
             qty: formData.qty,
             product_type: formData.productType,
             different_design: formData.differentDesign,
-            
+
             // PCB Specifications
             thickness: formData.thickness,
             pcb_color: formData.pcbColor,
             silkscreen: formData.silkscreen,
             material_type: formData.materialType,
             surface_finish: formData.surfaceFinish,
-            
+
             // High-spec Options
             copper_weight: formData.copperWeight,
             via_covering: formData.viaCovering,
@@ -777,7 +777,7 @@ export default function PCBSpecification() {
             blind_slots: formData.blindSlots,
             ul_marking: formData.ulMarking,
             humidity: formData.humidity,
-            
+
             // Advanced Options
             kelvin_test: formData.kelvinTest,
             paper_between: formData.paperBetween,
@@ -785,12 +785,12 @@ export default function PCBSpecification() {
             silkscreen_tech: formData.silkscreenTech,
             inspection_report: formData.inspectionReport,
             pcb_remark: formData.pcbRemark,
-            
+
             // Additional Options
             assembly_on: formData.assemblyOn,
             stencil_on: formData.stencilOn,
             build_time: formData.buildTime,
-            
+
             // Customer Information
             board_name: formData.boardName,
             user_mobile: formData.userMobile,
@@ -799,14 +799,14 @@ export default function PCBSpecification() {
             customer_name: formData.customerName,
             billing_address: formData.billingAddress,
             shipping_address: formData.shippingAddress,
-            
+
             // Pricing Information
             lead_time_days: day,
             unit_price: unitPrice,
             order_value: orderValue,
             delivery_date: deliveryDate.toISOString().split('T')[0],
             total_area_sqm: totalAreaInSqM,
-            
+
             // File Upload
             gerber_file: uploadedFile || undefined,
         };
@@ -818,7 +818,7 @@ export default function PCBSpecification() {
 
         if (response.success) {
             setToast({ message: 'Order submitted successfully!', type: 'success' });
-            
+
             // Save order data to localStorage for thank you page
             const orderDataForThankYou = {
                 order_id: response.data?.order_id,
@@ -1236,8 +1236,8 @@ export default function PCBSpecification() {
                                             type="button"
                                             onClick={() => setTempOptions(prev => ({ ...prev, sm: cName as any }))}
                                             className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all capitalize cursor-pointer ${tempOptions.sm === cName
-                                                    ? "border-slate-900 bg-slate-900 text-white"
-                                                    : "border-slate-200 hover:border-slate-400 text-slate-700 bg-white"
+                                                ? "border-slate-900 bg-slate-900 text-white"
+                                                : "border-slate-200 hover:border-slate-400 text-slate-700 bg-white"
                                                 }`}
                                         >
                                             {cName}
@@ -1256,8 +1256,8 @@ export default function PCBSpecification() {
                                             type="button"
                                             onClick={() => setTempOptions(prev => ({ ...prev, cf: fName as any }))}
                                             className={`py-2.5 px-4 text-xs font-bold rounded-xl border text-center transition-all capitalize cursor-pointer ${tempOptions.cf === fName
-                                                    ? "border-slate-900 bg-slate-900 text-white"
-                                                    : "border-slate-200 hover:border-slate-400 text-slate-700 bg-white"
+                                                ? "border-slate-900 bg-slate-900 text-white"
+                                                : "border-slate-200 hover:border-slate-400 text-slate-700 bg-white"
                                                 }`}
                                         >
                                             {fName === "gold" ? "Gold (ENIG)" : "HASL (Tin)"}
