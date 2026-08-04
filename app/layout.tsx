@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/toaster";
 import Providers from "./providers";
 import Script from "next/script";
 
-
 const geistSans = Geist({
     variable: "--font-geist-sans",
     subsets: ["latin"],
