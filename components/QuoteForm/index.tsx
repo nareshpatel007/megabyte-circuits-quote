@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Info, Check, ChevronUp, ChevronDown } from "lucide-react";
+import { Info, Check, ChevronUp, ChevronDown, Pencil } from "lucide-react";
 import { QuoteFormData, ParsedGerberFile } from "../../lib/gerber/types";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
@@ -54,6 +54,42 @@ const Pill = ({
                 <span className="absolute -top-2 -right-2 bg-[#52c41a] text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase">
                     {badge}
                 </span>
+            )}
+        </button>
+    );
+};
+
+const MaterialPill = ({
+    name,
+    img,
+    active,
+    onClick
+}: {
+    name: string;
+    img: string;
+    active: boolean;
+    onClick: () => void;
+}) => {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`relative flex flex-col items-center justify-between p-2 sm:px-4 sm:py-2.5 rounded-lg border transition-all cursor-pointer min-w-[95px] sm:min-w-[110px] select-none overflow-hidden ${active
+                ? "border-primary bg-primary/5 text-primary font-bold shadow-xs"
+                : "border-gray-200 bg-white text-gray-700 font-semibold hover:border-primary/50 hover:text-primary"
+                }`}
+        >
+            <div className="w-12 h-8 sm:w-14 sm:h-9 mb-1.5 flex items-center justify-center overflow-hidden">
+                <img src={img} alt={name} className="w-full h-full object-contain transform scale-110" />
+            </div>
+            <span className="text-xs sm:text-sm text-center leading-tight tracking-tight">{name}</span>
+
+            {active && (
+                <div className="absolute bottom-0 right-0 w-0 h-0 border-t-[14px] border-t-transparent border-r-[14px] border-r-primary">
+                    <svg className="absolute -top-[5px] right-[0px] w-2 h-2 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M2.5 6L5 8.5L9.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </div>
             )}
         </button>
     );
@@ -153,8 +189,9 @@ export default function QuoteForm({
         }
     };
 
-    // Keep state track for advanced options accordion
+    // Keep state track for advanced options accordion & PCB remark toggle
     const [advancedOpen, setAdvancedOpen] = useState(true);
+    const [showRemarkTextarea, setShowRemarkTextarea] = useState(false);
 
 
 
@@ -167,22 +204,121 @@ export default function QuoteForm({
         <TooltipProvider>
             <div className="space-y-4">
 
+                {/* SMT Stencil Specifications Section */}
+                {formData.stencilOn && (
+                    <div className="bg-blue-50/50 p-4 sm:p-5 rounded-xl border border-blue-200/90 mb-5 space-y-3.5 shadow-sm">
+                        <div className="flex items-center justify-between pb-3 border-b border-blue-200/60">
+                            <h3 className="text-sm font-bold text-blue-950 flex items-center gap-2">
+                                <span className="text-base">📐</span> SMT Stencil Parameters
+                            </h3>
+                            <span className="text-xs font-semibold text-blue-700 bg-blue-100/90 px-2.5 py-0.5 rounded-full border border-blue-200/60">
+                                High Precision Laser Cut
+                            </span>
+                        </div>
+
+                        <ConfigRow label="Stencil Type" tooltip="Framework comes with an aluminum frame; Frameless is a bare stainless steel sheet.">
+                            {["Frameless", "Framework"].map(t => (
+                                <Pill
+                                    key={t}
+                                    active={(formData.stencilType || "Frameless") === t}
+                                    onClick={() => updateField("stencilType", t)}
+                                >
+                                    {t === "Frameless" ? "Frameless (Bare Sheet)" : "Framework (With Aluminum Frame)"}
+                                </Pill>
+                            ))}
+                        </ConfigRow>
+
+                        <ConfigRow label="Stencil Side" tooltip="Select component side for SMD pad apertures.">
+                            {["Top", "Bottom", "Top & Bottom"].map(s => (
+                                <Pill
+                                    key={s}
+                                    active={(formData.stencilSide || "Top") === s}
+                                    onClick={() => updateField("stencilSide", s)}
+                                >
+                                    {s}
+                                </Pill>
+                            ))}
+                        </ConfigRow>
+
+                        <ConfigRow label="Stencil Size" tooltip="Outer frame or sheet size dimensions.">
+                            {[
+                                { label: "290 × 370 mm", val: "290x370mm" },
+                                { label: "370 × 470 mm", val: "370x470mm" },
+                                { label: "420 × 520 mm", val: "420x520mm" },
+                                { label: "450 × 550 mm", val: "450x550mm" },
+                                { label: "584 × 584 mm", val: "584x584mm" }
+                            ].map(sz => (
+                                <Pill
+                                    key={sz.val}
+                                    active={(formData.stencilSize || "290x370mm") === sz.val}
+                                    onClick={() => updateField("stencilSize", sz.val)}
+                                >
+                                    {sz.label}
+                                </Pill>
+                            ))}
+                        </ConfigRow>
+
+                        <ConfigRow label="Thickness" tooltip="Stainless steel foil thickness. 0.12mm is industry standard.">
+                            {["0.10mm", "0.12mm", "0.13mm", "0.15mm", "0.18mm", "0.20mm"].map(th => (
+                                <Pill
+                                    key={th}
+                                    active={(formData.stencilThickness || "0.12mm") === th}
+                                    onClick={() => updateField("stencilThickness", th)}
+                                >
+                                    {th}
+                                </Pill>
+                            ))}
+                        </ConfigRow>
+
+                        <ConfigRow label="Fiducial Badges" tooltip="Optical alignment fiducials cut method.">
+                            {["Half Cut", "Through Cut", "None"].map(f => (
+                                <Pill
+                                    key={f}
+                                    active={(formData.stencilFiducials || "Half Cut") === f}
+                                    onClick={() => updateField("stencilFiducials", f)}
+                                >
+                                    {f}
+                                </Pill>
+                            ))}
+                        </ConfigRow>
+
+                        <ConfigRow label="Electropolishing" tooltip="Smoothes aperture walls for crisp paste release.">
+                            {["No", "Yes"].map(ep => (
+                                <Pill
+                                    key={ep}
+                                    active={(formData.electropolishing || "No") === ep}
+                                    onClick={() => updateField("electropolishing", ep)}
+                                >
+                                    {ep}
+                                </Pill>
+                            ))}
+                        </ConfigRow>
+                    </div>
+                )}
+
                 {/* Basic specs */}
                 <ConfigRow label="Base Material" tooltip="Standard FR-4 is recommended for most digital circuit designs.">
-                    {["FR-4", "Flex", "Aluminum", "Rogers", "PTFE Teflon"].map(m => (
-                        <Pill
-                            key={m}
-                            active={formData.baseMaterial === m}
-                            onClick={() => updateField("baseMaterial", m)}
-                        >
-                            {m}
-                        </Pill>
+                    {[
+                        { name: "FR-4", img: "/images/materials/fr4.png" },
+                        // { name: "Flex", img: "/images/materials/flex.png" },
+                        // { name: "Aluminum", img: "/images/materials/aluminum.png" },
+                        // { name: "Copper Core", img: "/images/materials/copper.png" },
+                        // { name: "Rogers", img: "/images/materials/rogers.png" },
+                        // { name: "PTFE Teflon", img: "/images/materials/ptfe.png" }
+                    ].map(m => (
+                        <MaterialPill
+                            key={m.name}
+                            name={m.name}
+                            img={m.img}
+                            active={formData.baseMaterial === m.name}
+                            onClick={() => updateField("baseMaterial", m.name)}
+                        />
                     ))}
                 </ConfigRow>
 
                 <ConfigRow label="Layers" tooltip="Total layers count. Matches coordinates in drill outline files.">
                     <div className="flex items-center gap-2">
-                        {["1", "2"].map(l => (
+                        {["1", "2", "4"].map(l => (
                             <Pill
                                 key={l}
                                 active={formData.layers === l}
@@ -196,12 +332,12 @@ export default function QuoteForm({
                         ))}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2.5 px-3 py-1.5 bg-[#fefce8]/60 border border-yellow-400 rounded-lg shadow-sm">
-                        <span className="text-xs font-bold text-amber-700 flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-2.5 px-3 py-1.5 bg-primary/5 border border-primary/30 rounded-lg shadow-2xs">
+                        <span className="text-xs font-bold text-primary flex items-center gap-1">
                             ✨ High Precision PCB
                         </span>
                         <div className="flex items-center gap-1.5">
-                            {["4", "6", "8", "10", "12", "14", "16"].map(l => (
+                            {["6", "8", "10", "12", "14", "16"].map(l => (
                                 <Pill
                                     key={l}
                                     active={formData.layers === l}
@@ -253,14 +389,37 @@ export default function QuoteForm({
                     </div>
                 </ConfigRow>
 
-                <ConfigRow label="PCB Qty" tooltip="Order quantities. Higher volumes reduce unit costs substantially.">
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="number"
-                            value={formData.qty}
-                            onChange={(e) => updateField("qty", e.target.value)}
-                            className="w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary outline-none shadow-sm font-semibold"
-                        />
+                <ConfigRow label="PCB Qty" tooltip="Order quantities must be in multiples of 5 (5, 10, 15, 20...).">
+                    <div className="flex flex-wrap items-center gap-2">
+                        {["5", "10", "15", "20", "25", "30", "50", "100"].map(q => (
+                            <Pill
+                                key={q}
+                                active={formData.qty === q}
+                                onClick={() => updateField("qty", q)}
+                            >
+                                {q}
+                            </Pill>
+                        ))}
+                        <div className="flex items-center gap-1.5 ml-1">
+                            <span className="text-xs text-gray-500 font-semibold">Other:</span>
+                            <input
+                                type="number"
+                                min="5"
+                                step="5"
+                                value={formData.qty}
+                                onChange={(e) => updateField("qty", e.target.value)}
+                                onBlur={(e) => {
+                                    let val = parseInt(e.target.value, 10);
+                                    if (isNaN(val) || val < 5) val = 5;
+                                    else {
+                                        const remainder = val % 5;
+                                        if (remainder !== 0) val = Math.ceil(val / 5) * 5;
+                                    }
+                                    updateField("qty", val.toString());
+                                }}
+                                className="w-20 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary outline-none shadow-sm font-semibold"
+                            />
+                        </div>
                     </div>
                 </ConfigRow>
 
@@ -277,18 +436,18 @@ export default function QuoteForm({
                 </ConfigRow>
 
                 {/* Specs Accordion */}
-                <div className="mt-8 border border-gray-200/80 rounded-2xl overflow-hidden shadow-sm bg-white">
+                <div className="mt-6">
                     <button
                         type="button"
                         onClick={() => setSpecsOpen(!specsOpen)}
-                        className="w-full flex items-center justify-between px-6 py-4.5 bg-slate-50/60 hover:bg-slate-50 transition-colors border-b border-gray-200/80 cursor-pointer"
+                        className="w-full flex items-center justify-between px-4 py-2 bg-[#f0f4f8] hover:bg-[#e4ebf3] transition-colors rounded-xs cursor-pointer select-none"
                     >
-                        <span className="text-sm font-bold text-slate-800">PCB Specifications</span>
-                        {specsOpen ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
+                        <span className="text-sm font-bold text-gray-900">PCB Specifications</span>
+                        {specsOpen ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                     </button>
 
                     {specsOpen && (
-                        <div className="p-6 pt-2 space-y-1">
+                        <div className="py-2 space-y-1">
                             <ConfigRow label="Different Design">
                                 {["1", "2", "3", "4"].map(d => (
                                     <Pill
@@ -302,10 +461,9 @@ export default function QuoteForm({
                             </ConfigRow>
 
                             <ConfigRow label="PCB Thickness">
-                                {["0.4mm", "0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(t => (
+                                {["1.6mm", "0.6mm", "0.8mm", "1.0mm", "1.2mm"].map(t => (
                                     <Pill
                                         key={t}
-                                        disabled={t === "0.6mm"}
                                         active={formData.thickness === t}
                                         onClick={() => updateField("thickness", t)}
                                     >
@@ -317,11 +475,8 @@ export default function QuoteForm({
                             <ConfigRow label="PCB Color">
                                 <div className="flex flex-wrap gap-2.5">
                                     <ColorCirclePill color="#52c41a" name="Green" active={formData.pcbColor === "#52c41a"} onClick={() => updateField("pcbColor", "#52c41a")} />
-                                    <ColorCirclePill color="#722ed1" name="Purple" active={formData.pcbColor === "#722ed1"} onClick={() => updateField("pcbColor", "#722ed1")} />
                                     <ColorCirclePill color="#f5222d" name="Red" active={formData.pcbColor === "#f5222d"} onClick={() => updateField("pcbColor", "#f5222d")} />
-                                    <ColorCirclePill color="#fadb14" name="Yellow" active={formData.pcbColor === "#fadb14"} onClick={() => updateField("pcbColor", "#fadb14")} />
                                     <ColorCirclePill color="#1677ff" name="Blue" active={formData.pcbColor === "#1677ff"} onClick={() => updateField("pcbColor", "#1677ff")} />
-                                    <ColorCirclePill color="#ffffff" name="White" active={formData.pcbColor === "#ffffff"} onClick={() => updateField("pcbColor", "#ffffff")} />
                                     <ColorCirclePill color="#000000" name="Black" active={formData.pcbColor === "#000000"} onClick={() => updateField("pcbColor", "#000000")} />
                                 </div>
                             </ConfigRow>
@@ -335,7 +490,7 @@ export default function QuoteForm({
                                 </Pill>
                             </ConfigRow>
 
-                            <ConfigRow label="Material Type">
+                            {/* <ConfigRow label="Material Type">
                                 {["FR4 TG135", "KB6164 - TG135", "Nan Ya NP-140F", "S1141 TG140", "S1000H TG155"].map(m => (
                                     <Pill
                                         key={m}
@@ -345,10 +500,10 @@ export default function QuoteForm({
                                         {m}
                                     </Pill>
                                 ))}
-                            </ConfigRow>
+                            </ConfigRow> */}
 
                             <ConfigRow label="Surface Finish">
-                                {["HASL(with lead)", "LeadFree HASL", "ENIG"].map(s => (
+                                {["HASL(Leaded)", "Roller Tin"].map(s => (
                                     <Pill
                                         key={s}
                                         active={formData.surfaceFinish === s}
@@ -363,24 +518,23 @@ export default function QuoteForm({
                 </div>
 
                 {/* High-spec Options Accordion */}
-                <div className="mt-4 border border-gray-200/80 rounded-2xl overflow-hidden bg-white shadow-sm">
+                <div className="mt-4">
                     <button
                         type="button"
                         onClick={() => setHighSpecsOpen(!highSpecsOpen)}
-                        className="w-full flex items-center justify-between px-6 py-4.5 bg-slate-50/60 hover:bg-slate-50 transition-colors border-b border-gray-200/80 cursor-pointer"
+                        className="w-full flex items-center justify-between px-4 py-2 bg-[#f0f4f8] hover:bg-[#e4ebf3] transition-colors rounded-xs cursor-pointer select-none"
                     >
-                        <span className="text-sm font-bold text-slate-800">High-spec Options</span>
-                        {highSpecsOpen ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
+                        <span className="text-sm font-bold text-gray-900">High-spec Options</span>
+                        {highSpecsOpen ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                     </button>
 
                     {highSpecsOpen && (
-                        <div className="p-6 pt-2 space-y-1">
+                        <div className="py-2 space-y-1">
                             <ConfigRow label="Outer Copper Weight">
-                                {["1 oz", "2 oz", "2.5 oz", "3.5 oz", "4.5 oz"].map(w => (
+                                {["1 oz", "2 oz"].map(w => (
                                     <Pill
                                         key={w}
-                                        disabled={w === "2.5 oz" || w === "3.5 oz" || w === "4.5 oz"}
-                                        active={formData.copperWeight === w}
+                                        active={formData.copperWeight === w || (w === "1 oz" && (!formData.copperWeight || formData.copperWeight === "1oz"))}
                                         onClick={() => updateField("copperWeight", w)}
                                     >
                                         {w}
@@ -388,7 +542,7 @@ export default function QuoteForm({
                                 ))}
                             </ConfigRow>
 
-                            <ConfigRow label="Via Covering">
+                            {/* <ConfigRow label="Via Covering">
                                 {["Tented", "Untented", "Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map(v => (
                                     <Pill
                                         key={v}
@@ -402,7 +556,7 @@ export default function QuoteForm({
                             </ConfigRow>
 
                             <ConfigRow label="Via Plating Method">
-                                <div className="w-full flex flex-col gap-2">
+                                <div className="w-fulflex flex-col gap-2">
                                     <div className="flex flex-wrap gap-2.5">
                                         {["Not Specified", "Conductive Adhesive", "Horizontal Electroless Copper Plating"].map(v => (
                                             <Pill
@@ -413,10 +567,6 @@ export default function QuoteForm({
                                                 {v}
                                             </Pill>
                                         ))}
-                                    </div>
-                                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-gray-500 flex items-center justify-between">
-                                        <span>Epoxy-filled or copper-paste-filled vias require Horizontal Electroless Copper Plating.</span>
-                                        <button type="button" className="text-gray-400 hover:text-gray-600 text-sm font-bold">×</button>
                                     </div>
                                 </div>
                             </ConfigRow>
@@ -550,24 +700,24 @@ export default function QuoteForm({
                                         {h}
                                     </Pill>
                                 ))}
-                            </ConfigRow>
+                            </ConfigRow> */}
                         </div>
                     )}
                 </div>
 
                 {/* Advanced Options Accordion */}
-                <div className="mt-4 border border-gray-200/80 rounded-2xl overflow-hidden bg-white shadow-sm">
+                {/* <div className="mt-4">
                     <button
                         type="button"
                         onClick={() => setAdvancedOpen(!advancedOpen)}
-                        className="w-full flex items-center justify-between px-6 py-4.5 bg-slate-50/60 hover:bg-slate-50 transition-colors border-b border-gray-200/80 cursor-pointer"
+                        className="w-full flex items-center justify-between px-4 py-2 bg-[#f0f4f8] hover:bg-[#e4ebf3] transition-colors rounded-xs cursor-pointer select-none"
                     >
-                        <span className="text-sm font-bold text-slate-800">Advanced Options</span>
-                        {advancedOpen ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
+                        <span className="text-sm font-bold text-gray-900">Advanced Options</span>
+                        {advancedOpen ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                     </button>
 
                     {advancedOpen && (
-                        <div className="p-6 pt-2 space-y-1">
+                        <div className="py-2 space-y-1">
                             <ConfigRow label="4-Wire Kelvin Test">
                                 {["No", "Yes"].map(k => (
                                     <Pill
@@ -631,21 +781,31 @@ export default function QuoteForm({
                                 ))}
                             </ConfigRow>
 
-                            <div className="flex flex-col py-4 gap-2">
-                                <label className="text-sm text-gray-600 font-semibold flex items-center gap-1">
-                                    PCB Remark 📝
-                                </label>
-                                <textarea
-                                    rows={3}
-                                    value={formData.pcbRemark}
-                                    onChange={(e) => updateField("pcbRemark", e.target.value)}
-                                    placeholder="Enter additional remarks or request special design specifications here..."
-                                    className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all"
-                                />
+                            <div className="py-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowRemarkTextarea(!showRemarkTextarea)}
+                                    className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-primary transition-colors cursor-pointer group"
+                                >
+                                    <span>PCB Remark</span>
+                                    <Pencil className="w-3.5 h-3.5 text-gray-400 group-hover:text-primary transition-colors" />
+                                </button>
+
+                                {(showRemarkTextarea || formData.pcbRemark) && (
+                                    <div className="mt-2.5">
+                                        <textarea
+                                            rows={3}
+                                            value={formData.pcbRemark}
+                                            onChange={(e) => updateField("pcbRemark", e.target.value)}
+                                            placeholder="Enter additional remarks or request special design specifications here..."
+                                            className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all bg-white"
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
-                </div>
+                </div> */}
 
 
             </div>

@@ -45,11 +45,12 @@ export async function handleApiProxy(
 
         // Don't pass a body for GET or HEAD requests
         if (method !== "GET" && method !== "HEAD") {
-            // If body is provided directly (for FormData that's already been read)
+            // If body is provided directly (for FormData or string that's already been read)
             if (body) {
                 fetchOptions.body = body;
-                // If it's FormData, remove Content-Type to let browser set it with boundary
-                if (body instanceof FormData) {
+                if (typeof body === "string") {
+                    (headers as Record<string, string>)["Content-Type"] = "application/json";
+                } else if (body instanceof FormData) {
                     const headersObj = headers as Record<string, string>;
                     delete headersObj["Content-Type"];
                     fetchOptions.headers = headersObj;
@@ -80,8 +81,17 @@ export async function handleApiProxy(
         }
 
         // Call backend API
-        const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";        
-        const apiRes = await fetch(`${apiUrl}${endpoint}`, fetchOptions);
+        let apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "https://localhost/megabyte-circuits-api/public";
+        if (apiUrl.endsWith("/")) {
+            apiUrl = apiUrl.slice(0, -1);
+        }
+
+        let path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+        if (!apiUrl.endsWith("/api") && !path.startsWith("/api/")) {
+            path = `/api${path}`;
+        }
+
+        const apiRes = await fetch(`${apiUrl}${path}`, fetchOptions);
         const text = await apiRes.text();
 
         return new NextResponse(text, {

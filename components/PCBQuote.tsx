@@ -16,6 +16,7 @@ import {
     ChevronUp,
     Lock,
     Edit2,
+    Pencil,
     Check,
     Eye,
     RefreshCw,
@@ -171,7 +172,7 @@ const PCBPreviewCanvas = ({
             ctx.strokeStyle = "rgba(0, 191, 255, 0.35)";
             ctx.lineWidth = 2.5;
             ctx.beginPath();
-            
+
             // Bottom Trace 1
             ctx.moveTo(50, 100);
             ctx.lineTo(140, 140);
@@ -194,7 +195,7 @@ const PCBPreviewCanvas = ({
             const icX = canvas.width / 2;
             const icY = canvas.height / 2;
             ctx.fillRect(icX - 35, icY - 35, 70, 70);
-            
+
             // Draw pins
             for (let i = -25; i <= 25; i += 12) {
                 ctx.fillRect(icX + i - 3, icY - 48, 6, 10); // top pins
@@ -206,18 +207,18 @@ const PCBPreviewCanvas = ({
             // Draw copper traces (Top Copper)
             ctx.lineWidth = 2.5;
             ctx.beginPath();
-            
+
             // Trace 1
             ctx.moveTo(50, 60);
             ctx.lineTo(130, 60);
             ctx.lineTo(icX - 25, icY - 45);
-            
+
             // Trace 2
             ctx.moveTo(50, 90);
             ctx.lineTo(90, 90);
             ctx.lineTo(90, 160);
             ctx.lineTo(icX - 45, icY);
-            
+
             // Trace 3
             ctx.moveTo(canvas.width - 50, 60);
             ctx.lineTo(canvas.width - 130, 60);
@@ -251,7 +252,7 @@ const PCBPreviewCanvas = ({
                 ctx.beginPath();
                 ctx.arc(x, y, 2.5, 0, Math.PI * 2);
                 ctx.fill();
-                
+
                 // Add silver annular ring around drill
                 ctx.strokeStyle = "#94a3b8";
                 ctx.lineWidth = 1;
@@ -272,7 +273,7 @@ const PCBPreviewCanvas = ({
             const icX = canvas.width / 2;
             const icY = canvas.height / 2;
             ctx.strokeRect(icX - 42, icY - 42, 84, 84);
-            
+
             // Draw pin 1 indicator dot
             ctx.beginPath();
             ctx.arc(icX - 35, icY - 35, 2, 0, Math.PI * 2);
@@ -294,7 +295,7 @@ const PCBPreviewCanvas = ({
             // Large logo/label
             ctx.font = "bold 11px sans-serif";
             ctx.fillText("MEGABYTE CIRCUITS", icX - 60, icY - 95);
-            
+
             ctx.beginPath();
             ctx.moveTo(icX - 60, icY - 90);
             ctx.lineTo(icX + 60, icY - 90);
@@ -323,13 +324,15 @@ export default function PCBQuote() {
     const [activeTab, setActiveTab] = useState("standard");
     const [isDragging, setIsDragging] = useState(false);
     const [specsOpen, setSpecsOpen] = useState(true);
-    const [highSpecsOpen, setHighSpecsOpen] = useState(false);
-    const [advancedOpen, setAdvancedOpen] = useState(false);
+    const [highSpecsOpen, setHighSpecsOpen] = useState(true);
+    const [advancedOpen, setAdvancedOpen] = useState(true);
+    const [showRemarkTextarea, setShowRemarkTextarea] = useState(false);
 
     // Dimension States bound to inputs
     const [pcbWidth, setPcbWidth] = useState("100");
     const [pcbHeight, setPcbHeight] = useState("100");
     const [pcbUnit, setPcbUnit] = useState("mm");
+    const [pcbRemark, setPcbRemark] = useState("");
     const [detectionAlert, setDetectionAlert] = useState<string | null>(null);
 
     // File Upload State
@@ -376,7 +379,7 @@ export default function PCBQuote() {
             try {
                 const zip = await JSZip.loadAsync(file);
                 const fileNames = Object.keys(zip.files);
-                
+
                 const layersObj = {
                     topCopper: { name: "Top Copper Layer", detected: false, file: "" },
                     bottomCopper: { name: "Bottom Copper Layer", detected: false, file: "" },
@@ -449,7 +452,7 @@ export default function PCBQuote() {
                 if (layersObj.outline.file) {
                     try {
                         const outlineContent = await zip.files[layersObj.outline.file].async("string");
-                        
+
                         let isMetric = true;
                         if (outlineContent.includes("G70") || outlineContent.includes("%MOIN*%")) {
                             isMetric = false;
@@ -523,8 +526,8 @@ export default function PCBQuote() {
                 const headerBlob = file.slice(0, 7);
                 const buffer = await headerBlob.arrayBuffer();
                 const view = new Uint8Array(buffer);
-                const isRar = view[0] === 0x52 && view[1] === 0x61 && view[2] === 0x72 && 
-                              view[3] === 0x21 && view[4] === 0x1a && view[5] === 0x07;
+                const isRar = view[0] === 0x52 && view[1] === 0x61 && view[2] === 0x72 &&
+                    view[3] === 0x21 && view[4] === 0x1a && view[5] === 0x07;
 
                 if (!isRar) {
                     setUploadError("The file does not appear to be a valid RAR archive.");
@@ -589,8 +592,8 @@ export default function PCBQuote() {
     const [pcbColor, setPcbColor] = useState("#52c41a"); // green hex
     const [silkscreen, setSilkscreen] = useState("White");
     const [materialType, setMaterialType] = useState("FR4-TG135");
-    const [surfaceFinish, setSurfaceFinish] = useState("HASL(with lead)");
-    const [copperWeight, setCopperWeight] = useState("1oz");
+    const [surfaceFinish, setSurfaceFinish] = useState("HASL(Leaded)");
+    const [copperWeight, setCopperWeight] = useState("1 oz");
     const [viaCovering, setViaCovering] = useState("Not Specified");
     const [viaPlating, setViaPlating] = useState("Not Specified");
     const [minHole, setMinHole] = useState("0.3mm");
@@ -779,12 +782,12 @@ export default function PCBQuote() {
                                             <span className="text-xs text-gray-400 font-medium">Preview Theme:</span>
                                             <span className="inline-block w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: pcbColor }} />
                                             <span className="text-xs font-semibold text-gray-700 capitalize">
-                                                {pcbColor === "#52c41a" ? "Green" : 
-                                                 pcbColor === "#722ed1" ? "Purple" : 
-                                                 pcbColor === "#f5222d" ? "Red" : 
-                                                 pcbColor === "#fadb14" ? "Yellow" : 
-                                                 pcbColor === "#1677ff" ? "Blue" : 
-                                                 pcbColor === "#ffffff" ? "White" : "Black"}
+                                                {pcbColor === "#52c41a" ? "Green" :
+                                                    pcbColor === "#722ed1" ? "Purple" :
+                                                        pcbColor === "#f5222d" ? "Red" :
+                                                            pcbColor === "#fadb14" ? "Yellow" :
+                                                                pcbColor === "#1677ff" ? "Blue" :
+                                                                    pcbColor === "#ffffff" ? "White" : "Black"}
                                             </span>
                                         </div>
                                     </div>
@@ -845,22 +848,20 @@ export default function PCBQuote() {
                                                 <button
                                                     type="button"
                                                     onClick={() => setPreviewActiveTab("layout")}
-                                                    className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
-                                                        previewActiveTab === "layout"
-                                                            ? "bg-white text-gray-900 shadow-sm"
-                                                            : "text-gray-500 hover:text-gray-900"
-                                                    }`}
+                                                    className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${previewActiveTab === "layout"
+                                                        ? "bg-white text-gray-900 shadow-sm"
+                                                        : "text-gray-500 hover:text-gray-900"
+                                                        }`}
                                                 >
                                                     PCB 2D Layout Preview
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => setPreviewActiveTab("schematic")}
-                                                    className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
-                                                        previewActiveTab === "schematic"
-                                                            ? "bg-white text-gray-900 shadow-sm"
-                                                            : "text-gray-500 hover:text-gray-900"
-                                                    }`}
+                                                    className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${previewActiveTab === "schematic"
+                                                        ? "bg-white text-gray-900 shadow-sm"
+                                                        : "text-gray-500 hover:text-gray-900"
+                                                        }`}
                                                 >
                                                     Circuit Schematic Diagram
                                                 </button>
@@ -902,7 +903,7 @@ export default function PCBQuote() {
                                             key={l}
                                             active={layers === l}
                                             onClick={() => setLayers(l)}
-                                            badge={l === "4" ? "High Precision PCB" : undefined}
+                                            badge={l === "6" ? "High Precision PCB" : undefined}
                                         >
                                             {l}
                                         </Pill>
@@ -951,17 +952,18 @@ export default function PCBQuote() {
                             </div>
 
                             {/* Accordion: PCB Specifications */}
-                            <div className="mt-8 border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="mt-6">
                                 <button
+                                    type="button"
                                     onClick={() => setSpecsOpen(!specsOpen)}
-                                    className="w-full flex items-center justify-between px-6 py-4 bg-gray-50/50 hover:bg-gray-50 transition-colors border-b border-gray-200 cursor-pointer"
+                                    className="w-full flex items-center justify-between px-4 py-2 bg-[#f0f4f8] hover:bg-[#e4ebf3] transition-colors rounded-xs cursor-pointer select-none"
                                 >
-                                    <span className="text-base font-bold text-gray-900">PCB Specifications</span>
-                                    {specsOpen ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+                                    <span className="text-sm font-bold text-gray-900">PCB Specifications</span>
+                                    {specsOpen ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                                 </button>
 
                                 {specsOpen && (
-                                    <div className="p-6 pt-2 space-y-1">
+                                    <div className="py-2 space-y-1">
                                         <ConfigRow label="Different Design">
                                             {["1", "2", "3", "4"].map(d => (
                                                 <Pill key={d} active={differentDesign === d} onClick={() => setDifferentDesign(d)}>{d}</Pill>
@@ -981,15 +983,12 @@ export default function PCBQuote() {
                                         </ConfigRow>
 
                                         <ConfigRow label="PCB Color">
-                                            <div className="flex gap-3">
-                                                <ColorCircle color="#52c41a" active={pcbColor === "#52c41a"} onClick={() => setPcbColor("#52c41a")} />
-                                                <ColorCircle color="#722ed1" active={pcbColor === "#722ed1"} onClick={() => setPcbColor("#722ed1")} />
-                                                <ColorCircle color="#f5222d" active={pcbColor === "#f5222d"} onClick={() => setPcbColor("#f5222d")} />
-                                                <ColorCircle color="#fadb14" active={pcbColor === "#fadb14"} onClick={() => setPcbColor("#fadb14")} checkColor="black" />
-                                                <ColorCircle color="#1677ff" active={pcbColor === "#1677ff"} onClick={() => setPcbColor("#1677ff")} />
-                                                <ColorCircle color="#ffffff" active={pcbColor === "#ffffff"} onClick={() => setPcbColor("#ffffff")} checkColor="black" />
-                                                <ColorCircle color="#000000" active={pcbColor === "#000000"} onClick={() => setPcbColor("#000000")} />
-                                            </div>
+                                             <div className="flex gap-3">
+                                                 <ColorCircle color="#52c41a" active={pcbColor === "#52c41a"} onClick={() => setPcbColor("#52c41a")} />
+                                                 <ColorCircle color="#f5222d" active={pcbColor === "#f5222d"} onClick={() => setPcbColor("#f5222d")} />
+                                                 <ColorCircle color="#1677ff" active={pcbColor === "#1677ff"} onClick={() => setPcbColor("#1677ff")} />
+                                                 <ColorCircle color="#000000" active={pcbColor === "#000000"} onClick={() => setPcbColor("#000000")} />
+                                             </div>
                                         </ConfigRow>
 
                                         <ConfigRow label="Silkscreen">
@@ -1003,7 +1002,7 @@ export default function PCBQuote() {
                                         </ConfigRow>
 
                                         <ConfigRow label="Surface Finish">
-                                            {["HASL(with lead)", "LeadFree HASL", "ENIG"].map(s => (
+                                            {["HASL(Leaded)", "Roller Tin"].map(s => (
                                                 <Pill key={s} active={surfaceFinish === s} onClick={() => setSurfaceFinish(s)} activeColor="blue">{s}</Pill>
                                             ))}
                                         </ConfigRow>
@@ -1012,13 +1011,14 @@ export default function PCBQuote() {
                             </div>
 
                             {/* Accordion: High-spec Options */}
-                            <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="mt-4">
                                 <button
+                                    type="button"
                                     onClick={() => setHighSpecsOpen(!highSpecsOpen)}
-                                    className={`w-full flex items-center justify-between px-6 py-4 bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer ${highSpecsOpen ? "border-b border-gray-200" : ""}`}
+                                    className="w-full flex items-center justify-between px-4 py-2 bg-[#f0f4f8] hover:bg-[#e4ebf3] transition-colors rounded-xs cursor-pointer select-none"
                                 >
-                                    <span className="text-base font-bold text-gray-900">High-spec Options</span>
-                                    {highSpecsOpen ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+                                    <span className="text-sm font-bold text-gray-900">High-spec Options</span>
+                                    {highSpecsOpen ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                                 </button>
 
                                 {highSpecsOpen && (
@@ -1057,22 +1057,37 @@ export default function PCBQuote() {
                             </div>
 
                             {/* Accordion: Advanced Options */}
-                            <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden mb-6">
+                            <div className="mt-4 mb-6">
                                 <button
+                                    type="button"
                                     onClick={() => setAdvancedOpen(!advancedOpen)}
-                                    className={`w-full flex items-center justify-between px-6 py-4 bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer ${advancedOpen ? "border-b border-gray-200" : ""}`}
+                                    className="w-full flex items-center justify-between px-4 py-2 bg-[#f0f4f8] hover:bg-[#e4ebf3] transition-colors rounded-xs cursor-pointer select-none"
                                 >
-                                    <span className="text-base font-bold text-gray-900">Advanced Options</span>
-                                    {advancedOpen ? <ChevronUp className="w-5 h-5 text-gray-500" /> : <ChevronDown className="w-5 h-5 text-gray-500" />}
+                                    <span className="text-sm font-bold text-gray-900">Advanced Options</span>
+                                    {advancedOpen ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                                 </button>
 
-                                {advancedOpen && (
-                                    <div className="p-6 pt-4 space-y-4">
+                                 {advancedOpen && (
+                                    <div className="py-2 space-y-4">
                                         <div className="w-full">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                                PCB Remark <Edit2 className="w-3.5 h-3.5 text-gray-400" />
-                                            </label>
-                                            <textarea rows={4} className="w-full p-3 border border-gray-300 rounded focus:border-primary outline-none text-sm resize-y" placeholder="Add your PCB remarks here..." />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowRemarkTextarea(!showRemarkTextarea)}
+                                                className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-primary transition-colors cursor-pointer group mb-2"
+                                            >
+                                                <span>PCB Remark</span>
+                                                <Pencil className="w-3.5 h-3.5 text-gray-400 group-hover:text-primary transition-colors" />
+                                            </button>
+
+                                            {(showRemarkTextarea || pcbRemark) && (
+                                                <textarea
+                                                    rows={3}
+                                                    value={pcbRemark}
+                                                    onChange={(e) => setPcbRemark(e.target.value)}
+                                                    className="w-full p-3 border border-gray-300 rounded-xl focus:border-primary outline-none text-sm resize-y"
+                                                    placeholder="Add your PCB remarks here..."
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                 )}

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { ShoppingCart, ChevronDown, ChevronUp, Cpu, Layers, Search, Menu, X, Settings, Loader2, Check } from "lucide-react";
+import { ShoppingCart, ChevronDown, ChevronUp, Cpu, Layers, Search, Menu, X, Settings, Loader2, Check, Upload } from "lucide-react";
 import Link from "next/link";
 import GerberUploader from "../GerberUploader";
 import GerberStackupPreview from "../GerberStackupPreview";
@@ -13,6 +13,8 @@ import { loadLayers, renderStack, type RenderOptions, COLORS, FINISHES } from ".
 import { type InputLayer } from "pcb-stackup";
 import { submitOrder, OrderFormData } from "../../lib/api/orderService";
 import Toast, { ToastType } from "../Toast";
+import { saveCartToBackend } from "@/lib/cartSession";
+import { useCurrency } from "../../context/CurrencyContext";
 
 const INITIAL_FORM_DATA: QuoteFormData = {
     baseMaterial: "FR-4",
@@ -27,8 +29,8 @@ const INITIAL_FORM_DATA: QuoteFormData = {
     pcbColor: "#52c41a",
     silkscreen: "White",
     materialType: "FR4-TG135",
-    surfaceFinish: "HASL(with lead)",
-    copperWeight: "1oz",
+    surfaceFinish: "HASL(Leaded)",
+    copperWeight: "1 oz",
     viaCovering: "Not Specified",
     viaPlating: "Not Specified",
     minHole: "0.3mm",
@@ -50,6 +52,12 @@ const INITIAL_FORM_DATA: QuoteFormData = {
     pcbRemark: "",
     assemblyOn: false,
     stencilOn: false,
+    stencilType: "Frameless",
+    stencilSide: "Top",
+    stencilSize: "290x370mm",
+    stencilThickness: "0.12mm",
+    stencilFiducials: "Half Cut",
+    electropolishing: "No",
     buildTime: "2 days",
     boardName: "",
     userMobile: "",
@@ -467,15 +475,28 @@ function getPriceTiers(mask: string, weight: string, thickness: number) {
     return tiers[mask]?.[weight]?.[thicknessKey] ?? tiers[mask]?.[weight]?.['other'] ?? tiers['Other']?.[weight]?.['other'] ?? null;
 }
 
-export default function PCBSpecification() {
+export default function PCBSpecification({ selectedProduct = "pcb" }: { selectedProduct?: "pcb" | "stencil" }) {
+    const { formatPrice } = useCurrency();
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [clientLayers, setClientLayers] = useState<InputLayer[]>([]);
+    const [detectedInfo, setDetectedInfo] = useState<{ layers: string; width: string; height: string } | null>(null);
 
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
-    const [specsOpen, setSpecsOpen] = useState(true);
-    const [highSpecsOpen, setHighSpecsOpen] = useState(false);
 
-    // Sticky Notes Calendar states
+    React.useEffect(() => {
+        if (selectedProduct === "stencil") {
+            setFormData(prev => ({ ...prev, stencilOn: true }));
+        } else {
+            setFormData(prev => ({ ...prev, stencilOn: false }));
+        }
+    }, [selectedProduct]);
+
+    const [specsOpen, setSpecsOpen] = useState(true);
+    const [highSpecsOpen, setHighSpecsOpen] = useState(true);
+
+    // Charge Details & Build Time state
+    const [isChargeDetailsOpen, setIsChargeDetailsOpen] = useState(true);
+    const [selectedBuildTime, setSelectedBuildTime] = useState<"3days" | "24hours" | "24hours_pcba">("3days");
     const [selectedDay, setSelectedDay] = useState<number | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [checkoutData, setCheckoutData] = useState<{ day: number; unitPrice: string; orderValue: string; dateStr: string } | null>(null);
@@ -493,7 +514,28 @@ export default function PCBSpecification() {
     const [previewLoading, setPreviewLoading] = useState(false);
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSavingCart, setIsSavingCart] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+    // Sync Gerber preview soldermask color and surface finish with form selections
+    React.useEffect(() => {
+        const hexToMask: Record<string, RenderOptions["sm"]> = {
+            "#52c41a": "green",
+            "#722ed1": "purple",
+            "#f5222d": "red",
+            "#fadb14": "yellow",
+            "#1677ff": "blue",
+            "#ffffff": "white",
+            "#000000": "black"
+        };
+        const targetSm = hexToMask[formData.pcbColor] || "green";
+        const targetCf: RenderOptions["cf"] = formData.surfaceFinish === "ENIG" ? "gold" : "tin";
+
+        setRenderOptions(prev => {
+            if (prev.sm === targetSm && prev.cf === targetCf) return prev;
+            return { ...prev, sm: targetSm, cf: targetCf };
+        });
+    }, [formData.pcbColor, formData.surfaceFinish]);
 
     React.useEffect(() => {
         let active = true;
@@ -524,7 +566,7 @@ export default function PCBSpecification() {
         const length = (parseFloat(formData.width) || 0) * unitMultiplier;
         const width = (parseFloat(formData.height) || 0) * unitMultiplier;
         const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
-        const solderMask = formData.pcbColor === "#52c41a" ? "Green" : "Non-Green";
+        const solderMask = formData.pcbColor === "#52c41a" ? "Green" : "Other";
         const copperWeight = formData.copperWeight.replace(" ", "");
         const thickness = parseFloat(formData.thickness) || 1.6;
 
@@ -537,8 +579,8 @@ export default function PCBSpecification() {
         const areaInSqCm = totalAreaInSqM * 10000;
 
         const fixedCosts: Record<string, Record<number, number>> = {
-            '1': { 1: 3100, 3: 2100, 5: 1600, 7: 1500, 10: 1400 },
-            '2': { 1: 8100, 3: 4100, 5: 2600, 7: 2200, 10: 1900 },
+            '1': { 1: 3100, 3: 2100, 5: 1600, 7: 1500, 10: 1400, 20: 1000 },
+            '2': { 1: 8100, 3: 4100, 5: 2600, 7: 2200, 10: 1900, 20: 1400 },
             '4': { 20: 6000 },
             '6': { 20: 7000 },
             '8': { 20: 8000 },
@@ -568,7 +610,13 @@ export default function PCBSpecification() {
         // Days setup
         const daysList = [1, 3, 5, 7, 10, 20];
         const options = daysList.map((day, idx) => {
-            const costPerSqCm = day === 20 ? applicablePrices[0] : applicablePrices[idx];
+            let costPerSqCm = applicablePrices[idx];
+            if (day === 20) {
+                costPerSqCm = (layers >= 4 && layers <= 10)
+                    ? applicablePrices[0]
+                    : (applicablePrices[4] ?? applicablePrices[0]) * 0.85;
+            }
+
             const fixedCost = fixedCosts[layers.toString()]?.[day];
             if (fixedCost === undefined) {
                 return { day, unitPrice: "0.00", orderValue: "0.00", visible: false };
@@ -592,10 +640,6 @@ export default function PCBSpecification() {
                 if (opt.day !== 20) opt.visible = false;
             });
         } else if (layers === 1 || layers === 2) {
-            options.forEach(opt => {
-                if (opt.day === 20) opt.visible = false;
-            });
-
             if (layers === 2 && totalAreaInSqM > 7) {
                 options.forEach(opt => opt.visible = false);
                 showContact = true;
@@ -648,11 +692,7 @@ export default function PCBSpecification() {
             const copperLayers = layers.filter(l => l.type === 'copper');
             const detectedLayersCount = copperLayers.length;
 
-            const stack = await renderStack(layers, {
-                sm: "green",
-                cf: "gold",
-                sp: false
-            });
+            const stack = await renderStack(layers, renderOptions);
 
             const topSide = stack.top || stack.bottom;
             let widthVal = "";
@@ -673,22 +713,43 @@ export default function PCBSpecification() {
                 unitVal = "mm";
             }
 
+            let detectedLayersStr = "0";
+            if (detectedLayersCount === 0) {
+                detectedLayersStr = "0";
+            } else if (detectedLayersCount === 1) {
+                detectedLayersStr = "1";
+            } else if (detectedLayersCount > 1) {
+                const evenCount = detectedLayersCount % 2 !== 0 ? detectedLayersCount + 1 : detectedLayersCount;
+                detectedLayersStr = Math.min(16, evenCount).toString();
+            }
+
+            setDetectedInfo({
+                layers: detectedLayersStr,
+                width: widthVal || formData.width,
+                height: heightVal || formData.height
+            });
+
             setFormData(prev => ({
                 ...prev,
-                layers: detectedLayersCount > 0 ? Math.max(2, detectedLayersCount).toString() : "2",
+                layers: detectedLayersStr,
                 width: widthVal || prev.width,
                 height: heightVal || prev.height,
                 unit: unitVal || prev.unit
             }));
         } catch (err) {
             console.error("Failed to extract layers:", err);
-            alert("Failed to parse Gerber files.");
+            setDetectedInfo({
+                layers: "0",
+                width: "0.00",
+                height: "0.00"
+            });
         }
     };
 
     const handleReset = () => {
         setUploadedFile(null);
         setClientLayers([]);
+        setDetectedInfo(null);
         setFormData(INITIAL_FORM_DATA);
         setSelectedDay(null);
     };
@@ -845,6 +906,133 @@ export default function PCBSpecification() {
         }
     };
 
+    const getCalculatedOrderPrice = (targetDay: number | null): number => {
+        if (!targetDay) return 0;
+
+        const { options } = getLeadTimePricing();
+        const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
+        const length = (parseFloat(formData.width) || 0) * unitMultiplier;
+        const width = (parseFloat(formData.height) || 0) * unitMultiplier;
+        const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
+        const layers = parseInt(formData.layers, 10) || 1;
+
+        const defaultOrderValue = Math.max(Math.round(length * width * 0.05 * quantity), 100);
+        const getOption = (dayNum: number) => options.find(o => o.day === dayNum && o.visible);
+
+        const daysAhead = targetDay;
+        let matchedOrderValue = defaultOrderValue;
+
+        if (layers >= 4 && layers <= 10) {
+            const opt20 = getOption(20);
+            if (opt20) {
+                matchedOrderValue = parseFloat(opt20.orderValue);
+            }
+        } else {
+            const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
+                const o1 = getOption(d1);
+                const o2 = getOption(d2);
+                if (o1 && o2) {
+                    const val1 = parseFloat(o1.orderValue);
+                    const val2 = parseFloat(o2.orderValue);
+                    return val1 + (val2 - val1) * ratio;
+                } else if (o2) {
+                    return parseFloat(o2.orderValue);
+                } else if (o1) {
+                    return parseFloat(o1.orderValue);
+                }
+                return null;
+            };
+
+            if (daysAhead === 1) {
+                const o = getOption(1);
+                if (o) matchedOrderValue = parseFloat(o.orderValue);
+            } else if (daysAhead === 2) {
+                const res = interpolate(1, 3, 0.5);
+                if (res !== null) matchedOrderValue = res;
+            } else if (daysAhead === 3) {
+                const o = getOption(3);
+                if (o) matchedOrderValue = parseFloat(o.orderValue);
+            } else if (daysAhead === 4) {
+                const res = interpolate(3, 5, 0.5);
+                if (res !== null) matchedOrderValue = res;
+            } else if (daysAhead === 5) {
+                const o = getOption(5);
+                if (o) matchedOrderValue = parseFloat(o.orderValue);
+            } else if (daysAhead === 6) {
+                const res = interpolate(5, 7, 0.5);
+                if (res !== null) matchedOrderValue = res;
+            } else if (daysAhead === 7) {
+                const o = getOption(7);
+                if (o) matchedOrderValue = parseFloat(o.orderValue);
+            } else if (daysAhead === 8) {
+                const res = interpolate(7, 10, 1 / 3);
+                if (res !== null) matchedOrderValue = res;
+            } else if (daysAhead === 9) {
+                const res = interpolate(7, 10, 2 / 3);
+                if (res !== null) matchedOrderValue = res;
+            } else if (daysAhead >= 10 && daysAhead <= 20) {
+                const ratio = (daysAhead - 10) / 10;
+                const res = interpolate(10, 20, ratio);
+                if (res !== null) matchedOrderValue = res;
+            }
+        }
+
+        return Math.round(matchedOrderValue);
+    };
+
+    const handleSaveToCart = async () => {
+        setIsSavingCart(true);
+        try {
+            const savedCart = localStorage.getItem("megabyte_cart");
+            const existingCart = savedCart ? JSON.parse(savedCart) : [];
+            const calculatedPrice = getCalculatedOrderPrice(selectedDay);
+
+            const hexToColorName: Record<string, string> = {
+                "#52c41a": "Green",
+                "#722ed1": "Purple",
+                "#f5222d": "Red",
+                "#fadb14": "Yellow",
+                "#1677ff": "Blue",
+                "#ffffff": "White",
+                "#000000": "Black"
+            };
+
+            const pcbColorName = hexToColorName[formData.pcbColor] || "Green";
+            const gerberName = uploadedFile
+                ? (typeof uploadedFile === 'string' ? uploadedFile : (uploadedFile.name || (uploadedFile as any).filename || "Gerber_Board.zip"))
+                : (formData.boardName || "Gerber_Board.zip");
+            const previewSvg = topSvg || bottomSvg || "";
+            const generatedBoardId = "Y2-" + Math.floor(10000000 + Math.random() * 90000000);
+
+            const newItem = {
+                id: 'cart_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                productType: selectedProduct || "pcb",
+                boardName: formData.boardName || gerberName,
+                gerberFileName: gerberName,
+                gerberPreview: previewSvg,
+                boardId: generatedBoardId,
+                pcbColor: pcbColorName,
+                layers: `${formData.layers || '2'} Layer${(Number(formData.layers) || 2) > 1 ? 's' : ''}`,
+                dimensions: `${formData.width || 100}x${formData.height || 100}mm`,
+                qty: Number(formData.qty) || 5,
+                buildTime: `${selectedDay || 3} days`,
+                price: Number(calculatedPrice) || 100,
+                material: formData.materialType || "FR-4",
+                thickness: `${formData.thickness || '1.6mm'}`,
+                surfaceFinish: formData.surfaceFinish || "HASL(Leaded)",
+                copperWeight: formData.copperWeight || "1 oz",
+                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            };
+            const updatedCart = [...existingCart, newItem];
+            await saveCartToBackend(updatedCart);
+            setToast({ message: "Item saved to cart!", type: "success" });
+        } catch (e) {
+            console.error("Failed to save item to cart", e);
+        } finally {
+            setIsSavingCart(false);
+        }
+    };
+
     return (
         <div className="bg-[#f0f2f5] font-sans">
             {/* Main grid */}
@@ -855,34 +1043,51 @@ export default function PCBSpecification() {
                     <div className="flex-1 space-y-6">
                         <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
                             <div className="flex flex-wrap items-center justify-between gap-4">
-                                <h1 className="text-lg font-bold text-gray-900">Online PCB Quote</h1>
-                            </div>
+                                <h1 className="text-lg font-bold text-gray-900">
+                                    {selectedProduct === "stencil" ? "Online SMT Stencil Quote" : "Online PCB Quote"}
+                                </h1>
 
-                            <GerberUploader
-                                onUploadSuccess={handleUploadSuccess}
-                                onReset={handleReset}
-                                extraActions={
-                                    uploadedFile && (
+                                {uploadedFile ? (
+                                    <div className="flex items-center gap-5 text-sm font-semibold text-gray-600">
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setTempOptions({ ...renderOptions });
-                                                setIsConfigOpen(true);
-                                            }}
-                                            className="px-4 py-2 bg-slate-900 text-white font-semibold text-xs rounded-xl shadow hover:bg-slate-800 transition-all flex items-center gap-1.5 cursor-pointer"
+                                            onClick={handleReset}
+                                            className="flex items-center gap-1.5 text-gray-700 hover:text-blue-600 transition-colors cursor-pointer"
                                         >
-                                            <Settings className="w-3.5 h-3.5" /> Configuration Preview
+                                            <Upload className="w-4 h-4 text-gray-500" /> Re-Upload
                                         </button>
-                                    )
-                                }
-                            />
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-5 text-xs sm:text-sm font-medium text-gray-600">
+                                    </div>
+                                )}
+                            </div>
 
-                            {uploadedFile && clientLayers.length > 0 && (
-                                <GerberStackupPreview
-                                    topSvg={topSvg}
-                                    bottomSvg={bottomSvg}
-                                    loading={previewLoading}
+                            {!uploadedFile ? (
+                                <GerberUploader
+                                    onUploadSuccess={handleUploadSuccess}
+                                    onReset={handleReset}
                                 />
+                            ) : (detectedInfo?.layers === "0" || (!topSvg && !bottomSvg && !previewLoading)) ? (
+                                <div className="p-5 bg-amber-50/90 border border-amber-200/90 rounded-2xl text-center space-y-1 shadow-2xs">
+                                    <p className="text-sm font-extrabold text-amber-900">
+                                        {detectedInfo?.layers === "0" ? "Detected 0 layers board." : "No preview detected."}
+                                    </p>
+                                    <p className="text-xs font-bold text-amber-700">Please reupload Gerber file.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="bg-[#f0f4f8] rounded-2xl p-6 sm:p-8 flex items-center justify-center border border-gray-100">
+                                        <GerberStackupPreview
+                                            topSvg={topSvg}
+                                            bottomSvg={bottomSvg}
+                                            loading={previewLoading}
+                                        />
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-500">
+                                        Detected {detectedInfo?.layers ?? formData.layers} layer board of {detectedInfo?.width || formData.width}×{detectedInfo?.height || formData.height}mm({((parseFloat(detectedInfo?.width || formData.width) || 0) / 25.4).toFixed(2)}×{((parseFloat(detectedInfo?.height || formData.height) || 0) / 25.4).toFixed(2)} inches).
+                                    </p>
+                                </div>
                             )}
 
                             <QuoteForm
@@ -892,7 +1097,7 @@ export default function PCBSpecification() {
                                 setSpecsOpen={setSpecsOpen}
                                 highSpecsOpen={highSpecsOpen}
                                 setHighSpecsOpen={setHighSpecsOpen}
-                                isUploaded={!!uploadedFile}
+                                isUploaded={!!uploadedFile && detectedInfo?.layers !== "0"}
                                 parsedFiles={[]}
                                 topSvg={topSvg}
                                 bottomSvg={bottomSvg}
@@ -902,163 +1107,238 @@ export default function PCBSpecification() {
                     {/* Right Quote Cost Summary */}
                     <div className="w-full lg:w-[420px] shrink-0">
                         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-lg sticky top-24 overflow-hidden">
-                            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                                <h2 className="text-[16px] font-bold text-slate-800">Delivery Calendar</h2>
-                                <span className="text-xs bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
-                                    INR (₹)
-                                </span>
-                            </div>
+                            <div className="p-4 space-y-4 bg-white">                                 {/* Sticky Notes Board Delivery Calendar */}
+                                {(() => {
+                                    const { options, showContact } = getLeadTimePricing();
 
-                            <div className="p-5 space-y-5 bg-white">
-                                {/* Simple 10-Day Grid Calendar */}
-                                <div className="space-y-3">
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                        Estimated Delivery (Next 10 Days)
-                                    </h3>
-                                    {(() => {
-                                        const { options, showContact } = getLeadTimePricing();
+                                    if (showContact) {
+                                        return (
+                                            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-center shadow-sm">
+                                                <p className="text-xs font-bold text-red-800">
+                                                    For larger orders, please contact us at:
+                                                </p>
+                                                <p className="text-sm font-extrabold text-red-900 mt-2">
+                                                    <a href="tel:9898842942" className="hover:underline">9898842942</a> or <a href="tel:8160282840" className="hover:underline">8160282840</a>
+                                                </p>
+                                            </div>
+                                        );
+                                    }
 
-                                        if (showContact) {
-                                            return (
-                                                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-center shadow-sm">
-                                                    <p className="text-xs font-bold text-red-800">
-                                                        For larger orders, please contact us at:
-                                                    </p>
-                                                    <p className="text-sm font-extrabold text-red-900 mt-2">
-                                                        <a href="tel:9898842942" className="hover:underline">9898842942</a> or <a href="tel:8160282840" className="hover:underline">8160282840</a>
-                                                    </p>
-                                                </div>
-                                            );
+                                    const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
+                                    const length = (parseFloat(formData.width) || 0) * unitMultiplier;
+                                    const width = (parseFloat(formData.height) || 0) * unitMultiplier;
+                                    const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
+                                    const layers = parseInt(formData.layers, 10) || 1;
+
+                                    const defaultOrderValue = Math.max(Math.round(length * width * 0.05 * quantity), 100);
+                                    const defaultUnitPrice = (defaultOrderValue / quantity).toFixed(2);
+
+                                    // Generate 20 days with interpolated/averaged pricing for intermediate days
+                                    const getOption = (dayNum: number) => options.find(o => o.day === dayNum && o.visible);
+
+                                    const next20Days = Array.from({ length: 20 }, (_, i) => {
+                                        const daysAhead = i + 1;
+                                        const date = new Date();
+                                        date.setDate(date.getDate() + daysAhead);
+
+                                        let matchedOrderValue = defaultOrderValue;
+                                        let matchedUnitPrice = parseFloat(defaultUnitPrice);
+                                        let visible = false;
+
+                                        if (layers >= 4 && layers <= 10) {
+                                            const opt20 = getOption(20);
+                                            if (opt20) {
+                                                matchedOrderValue = parseFloat(opt20.orderValue);
+                                                matchedUnitPrice = parseFloat(opt20.unitPrice);
+                                                visible = true;
+                                            }
+                                        } else {
+                                            const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
+                                                const o1 = getOption(d1);
+                                                const o2 = getOption(d2);
+                                                if (o1 && o2) {
+                                                    const val1 = parseFloat(o1.orderValue);
+                                                    const val2 = parseFloat(o2.orderValue);
+                                                    const u1 = parseFloat(o1.unitPrice);
+                                                    const u2 = parseFloat(o2.unitPrice);
+                                                    return {
+                                                        orderValue: val1 + (val2 - val1) * ratio,
+                                                        unitPrice: u1 + (u2 - u1) * ratio,
+                                                        visible: true
+                                                    };
+                                                } else if (o2) {
+                                                    return { orderValue: parseFloat(o2.orderValue), unitPrice: parseFloat(o2.unitPrice), visible: true };
+                                                } else if (o1) {
+                                                    return { orderValue: parseFloat(o1.orderValue), unitPrice: parseFloat(o1.unitPrice), visible: true };
+                                                }
+                                                return null;
+                                            };
+
+                                            if (daysAhead === 1) {
+                                                const o = getOption(1);
+                                                if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
+                                            } else if (daysAhead === 2) {
+                                                const res = interpolate(1, 3, 0.5); // Average of day 1 & day 3
+                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                            } else if (daysAhead === 3) {
+                                                const o = getOption(3);
+                                                if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
+                                            } else if (daysAhead === 4) {
+                                                const res = interpolate(3, 5, 0.5); // Average of day 3 & day 5
+                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                            } else if (daysAhead === 5) {
+                                                const o = getOption(5);
+                                                if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
+                                            } else if (daysAhead === 6) {
+                                                const res = interpolate(5, 7, 0.5); // Average of day 5 & day 7
+                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                            } else if (daysAhead === 7) {
+                                                const o = getOption(7);
+                                                if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
+                                            } else if (daysAhead === 8) {
+                                                const res = interpolate(7, 10, 1 / 3); // Step 1 between 7 and 10
+                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                            } else if (daysAhead === 9) {
+                                                const res = interpolate(7, 10, 2 / 3); // Step 2 between 7 and 10
+                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                            } else if (daysAhead >= 10 && daysAhead <= 20) {
+                                                const ratio = (daysAhead - 10) / 10;
+                                                const res = interpolate(10, 20, ratio);
+                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                            }
                                         }
 
-                                        const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
-                                        const length = (parseFloat(formData.width) || 0) * unitMultiplier;
-                                        const width = (parseFloat(formData.height) || 0) * unitMultiplier;
-                                        const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
+                                        return {
+                                            day: daysAhead,
+                                            dateNum: date.getDate(),
+                                            monthStr: date.toLocaleDateString("en-IN", { month: "short" }),
+                                            weekday: date.toLocaleDateString("en-IN", { weekday: "short" }),
+                                            formattedDate: date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                                            orderValue: matchedOrderValue.toFixed(2),
+                                            unitPrice: matchedUnitPrice.toFixed(2),
+                                            visible
+                                        };
+                                    });
 
-                                        // Calculate default pricing values
-                                        const defaultOrderValue = Math.max(Math.round(length * width * 0.05 * quantity), 100);
-                                        const defaultUnitPrice = (defaultOrderValue / quantity).toFixed(2);
+                                    const selectedDayData = next20Days.find(item => item.day === selectedDay);
+                                    const hasValidGerber = !!uploadedFile && detectedInfo?.layers !== "0" && (!!topSvg || !!bottomSvg || previewLoading);
 
-                                        // Generate tomorrow to +10 days
-                                        const next10Days = Array.from({ length: 10 }, (_, i) => {
-                                            const daysAhead = i + 1;
-                                            const date = new Date();
-                                            date.setDate(date.getDate() + daysAhead);
+                                    return (
+                                        <div className="space-y-4">
+                                            <div className="bg-[#f0f4f8] p-4 rounded-2xl border border-slate-200/90 shadow-2xs relative overflow-hidden">
+                                                <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-slate-200/80">
+                                                    <div>
+                                                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                                            Select Delivery Date
+                                                        </h3>
+                                                        <p className="text-[10px] text-slate-500 font-medium">
+                                                            Tap any note to pick a date
+                                                        </p>
+                                                    </div>
+                                                    <div className="bg-white text-primary px-2.5 py-1 rounded-lg text-xs font-bold shadow-2xs border border-primary/20 flex items-center gap-1">
+                                                        <span>{new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" })}</span>
+                                                    </div>
+                                                </div>
 
-                                            // Map intermediate days to the higher price of the next shorter lead time
-                                            let effectiveDay = daysAhead;
-                                            if (daysAhead === 2) effectiveDay = 1;
-                                            else if (daysAhead === 4) effectiveDay = 3;
-                                            else if (daysAhead === 6) effectiveDay = 5;
-                                            else if (daysAhead === 8 || daysAhead === 9) effectiveDay = 7;
-
-                                            // Get price from computed options list
-                                            const matchedOpt = options.find(o => o.day === effectiveDay);
-
-                                            const orderValue = matchedOpt && parseFloat(matchedOpt.orderValue) > 0
-                                                ? matchedOpt.orderValue
-                                                : defaultOrderValue.toString();
-                                            const unitPrice = matchedOpt && parseFloat(matchedOpt.unitPrice) > 0
-                                                ? matchedOpt.unitPrice
-                                                : defaultUnitPrice;
-
-                                            const isLeadTimeOption = [1, 3, 5, 7, 10].includes(daysAhead);
-
-                                            return {
-                                                day: daysAhead,
-                                                dateStr: date.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
-                                                weekday: date.toLocaleDateString("en-IN", { weekday: "short" }),
-                                                formattedDate: date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-                                                orderValue,
-                                                unitPrice,
-                                                isLeadTimeOption
-                                            };
-                                        });
-
-                                        const selectedDayData = next10Days.find(item => item.day === selectedDay);
-
-                                        return (
-                                            <div className="space-y-4">
-                                                <div className="grid grid-cols-5 gap-2">
-                                                    {next10Days.map(item => {
+                                                <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+                                                    {next20Days.map((item) => {
                                                         const isSelected = selectedDay === item.day;
-
                                                         return (
                                                             <div
                                                                 key={item.day}
                                                                 onClick={() => setSelectedDay(item.day)}
-                                                                className={`p-2 border rounded-xl flex flex-col items-center justify-between text-center cursor-pointer transition-all ${isSelected
-                                                                    ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                                                    : "border-slate-200 bg-white hover:border-primary/50"
+                                                                className={`relative flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-xl transition-all duration-150 cursor-pointer select-none aspect-square border text-center ${isSelected
+                                                                    ? "bg-emerald-50 border-emerald-600 shadow-md ring-2 ring-emerald-500/20 scale-[1.03] z-10"
+                                                                    : "bg-white border-slate-200/80 hover:border-slate-300 hover:shadow-xs hover:scale-[1.01]"
                                                                     }`}
                                                             >
-                                                                <span className="text-[9px] font-black text-slate-400 uppercase leading-none">{item.weekday}</span>
-                                                                <span className="text-xs font-black text-slate-800 my-1">{item.dateStr}</span>
-                                                                <span className="text-[9px] font-black text-primary leading-none">₹{parseInt(item.orderValue)}</span>
+                                                                <span className="text-[9px] font-black uppercase text-slate-400 leading-none mt-1">{item.weekday}</span>
+                                                                <span className="text-xs font-extrabold my-0.5 leading-tight">{item.dateNum}</span>
+                                                                <span className="text-[9px] font-extrabold text-primary leading-none">
+                                                                    {hasValidGerber ? formatPrice(item.orderValue) : "--"}
+                                                                </span>
                                                             </div>
                                                         );
                                                     })}
                                                 </div>
-
-                                                {/* Selection Banner inside the dynamic render scope */}
-                                                {selectedDayData ? (
-                                                    <div className="bg-[#fffbeb] border border-amber-200 rounded-xl p-4 shadow-sm space-y-3 animate-in fade-in duration-200">
-                                                        <div className="flex justify-between items-center text-xs font-bold text-amber-800">
-                                                            <span>Delivery Option Selected:</span>
-                                                            <span className="bg-amber-100 px-2 py-0.5 rounded text-[10px] font-black">{selectedDayData.formattedDate}</span>
-                                                        </div>
-                                                        <div className="flex justify-between items-baseline">
-                                                            <span className="text-slate-500 text-xs font-semibold">Order Value:</span>
-                                                            <span className="text-lg font-black text-amber-900">₹{selectedDayData.orderValue}</span>
-                                                        </div>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setCheckoutData({
-                                                                    day: selectedDayData.day,
-                                                                    unitPrice: selectedDayData.unitPrice,
-                                                                    orderValue: selectedDayData.orderValue,
-                                                                    dateStr: selectedDayData.formattedDate
-                                                                });
-                                                                setIsModalOpen(true);
-                                                            }}
-                                                            className="w-full h-10 bg-primary hover:bg-secondary text-white font-extrabold rounded-lg shadow-sm transition-all active:scale-[0.98] text-xs flex items-center justify-center gap-1.5 cursor-pointer"
-                                                        >
-                                                            Confirm and Submit Order
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-center p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold text-slate-500 italic">
-                                                        Please tap on any delivery card in the calendar grid above to select a delivery date.
-                                                    </div>
-                                                )}
                                             </div>
-                                        );
-                                    })()}
-                                </div>
 
-                                {/* Total Square Meter */}
-                                <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-500">
-                                    <span>Total Square Meter:</span>
-                                    <span className="text-sm font-extrabold text-slate-800">
-                                        {(() => {
-                                            const { totalAreaInSqM } = getLeadTimePricing();
-                                            return totalAreaInSqM.toFixed(2);
-                                        })()} m²
-                                    </span>
-                                </div>
+                                            {selectedDayData ? (
+                                                <div className="bg-primary/5 border border-primary/20 rounded-xl p-3.5 shadow-2xs space-y-2 animate-in fade-in duration-200">
+                                                    <div className="flex justify-between items-center text-xs font-bold text-primary">
+                                                        <span>Selected Delivery:</span>
+                                                        <span className="bg-primary text-white px-2 py-0.5 rounded text-xs font-black">{selectedDayData.formattedDate}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-baseline">
+                                                        <span className="text-slate-600 text-xs font-semibold">Total Price:</span>
+                                                        <span className="text-lg font-black text-primary">
+                                                            {hasValidGerber ? formatPrice(selectedDayData.orderValue) : "Upload Gerber File"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-500 italic">
+                                                    Tap on any sticky note above to pick a delivery date.
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+
+                                {(() => {
+                                    const hasValidGerber = !!uploadedFile;
+                                    const hasValidDimensions = (parseFloat(formData.width) || 0) > 0 && (parseFloat(formData.height) || 0) > 0 && (parseInt(formData.qty, 10) || 0) > 0;
+                                    const hasSelectedDelivery = selectedDay !== null && selectedDay !== undefined;
+                                    const hasRequiredSpecs = Boolean(formData.layers && formData.thickness && formData.surfaceFinish && formData.copperWeight);
+
+                                    const isCanSaveToCart = hasValidGerber && hasValidDimensions && hasSelectedDelivery && hasRequiredSpecs;
+
+                                    let validationMessage = "";
+                                    if (!hasValidGerber) {
+                                        validationMessage = "Please upload a Gerber file";
+                                    } else if (!hasValidDimensions) {
+                                        validationMessage = "Please specify valid dimensions & quantity";
+                                    } else if (!hasSelectedDelivery) {
+                                        validationMessage = "Please pick a delivery date";
+                                    } else if (!hasRequiredSpecs) {
+                                        validationMessage = "Please complete all specification fields";
+                                    }
+
+                                    return (
+                                        <div className="mt-4">
+                                            <button
+                                                type="button"
+                                                disabled={!isCanSaveToCart || isSavingCart}
+                                                onClick={handleSaveToCart}
+                                                className={`w-full py-3.5 font-extrabold text-sm rounded-full shadow-md transition-all flex items-center justify-center gap-2 ${isCanSaveToCart && !isSavingCart
+                                                    ? "bg-primary hover:bg-secondary text-white cursor-pointer active:scale-98"
+                                                    : "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none border border-gray-300/80 opacity-80"
+                                                    }`}
+                                            >
+                                                {isSavingCart ? (
+                                                    <>
+                                                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                                        <span>SAVING...</span>
+                                                    </>
+                                                ) : (
+                                                    <span>SAVE TO CART</span>
+                                                )}
+                                            </button>
+                                            {!isCanSaveToCart && (
+                                                <></>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
                 </div>
             </main>
 
-            {/* Checkout details Modal Popup */}
             {isModalOpen && checkoutData && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
-                        {/* Modal Header */}
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <div>
                                 <h2 className="text-lg font-black text-slate-800">Complete Your Order</h2>
@@ -1072,7 +1352,6 @@ export default function PCBSpecification() {
                             </button>
                         </div>
 
-                        {/* Modal Body */}
                         <div className="p-6 space-y-4 overflow-y-auto flex-1">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="flex flex-col gap-1">
@@ -1164,7 +1443,6 @@ export default function PCBSpecification() {
                             </div>
                         </div>
 
-                        {/* Modal Footer */}
                         <div className="p-6 border-t border-slate-100 bg-slate-50/50 space-y-4">
                             <div className="flex justify-between items-center bg-amber-50/60 border border-amber-100/50 rounded-xl p-3.5">
                                 <div>
@@ -1173,7 +1451,7 @@ export default function PCBSpecification() {
                                 </div>
                                 <div className="text-right">
                                     <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider">Total Value</span>
-                                    <span className="text-lg font-black text-primary block">₹{checkoutData.orderValue}</span>
+                                    <span className="text-lg font-black text-primary block">{formatPrice(checkoutData.orderValue)}</span>
                                 </div>
                             </div>
 
@@ -1202,11 +1480,9 @@ export default function PCBSpecification() {
                 </div>
             )}
 
-            {/* Configuration Modal Popup */}
             {isConfigOpen && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in fade-in zoom-in-95 duration-150">
-                        {/* Modal Header */}
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <div>
                                 <h3 className="text-base font-bold text-slate-800">Preview Configuration</h3>

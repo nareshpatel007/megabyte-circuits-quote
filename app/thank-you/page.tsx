@@ -20,12 +20,31 @@ interface OrderData {
 
 export default function ThankYouPage() {
     const [orderData, setOrderData] = useState<OrderData | null>(null);
+    const [ordersList, setOrdersList] = useState<any[]>([]);
+    const [txnNumber, setTxnNumber] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
-        // Get order data from localStorage
+
+        const latestOrders = sessionStorage.getItem('latest_orders');
+        const latestTxn = sessionStorage.getItem('latest_txn');
+
+        if (latestOrders) {
+            try {
+                const parsed = JSON.parse(latestOrders);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setOrdersList(parsed);
+                }
+            } catch (e) {}
+        }
+
+        if (latestTxn) {
+            setTxnNumber(latestTxn);
+        }
+
+        // Fallback or single order
         const savedOrder = localStorage.getItem('lastOrder');
         if (savedOrder) {
             try {
@@ -57,7 +76,7 @@ export default function ThankYouPage() {
         );
     }
 
-    if (!orderData) {
+    if (!orderData && ordersList.length === 0) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 font-sans flex flex-col">
                 <Header />
@@ -68,7 +87,7 @@ export default function ThankYouPage() {
                         </div>
                         <h1 className="text-3xl font-black text-gray-900 mb-4">Order Not Found</h1>
                         <p className="text-gray-600 mb-8 leading-relaxed">
-                            We couldn't find your order details. Please check your email for confirmation or contact our support team.
+                            We couldn&apos;t find your order details. Please check your email for confirmation or contact our support team.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <Link
@@ -110,28 +129,54 @@ export default function ThankYouPage() {
                                 Thank You For Your Order!
                             </h1>
                             <p className="text-slate-600 text-sm md:text-base max-w-lg mx-auto font-medium">
-                                We've received your PCB manufacturing request. Our engineering team is preparing your design files for CAM review.
+                                We&apos;ve received your PCB manufacturing request and payment. Our engineering team is preparing your design files for CAM review.
                             </p>
                         </div>
 
                         {/* Main Grid Details */}
                         <div className="p-6 md:p-10 space-y-6 relative z-10">
-                            {/* Primary Order Bar */}
-                            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-sm">
-                                <div className="flex items-center gap-3.5">
-                                    <div className="w-12 h-12 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-center text-emerald-600">
-                                        <Package className="h-6 w-6" />
+                            {/* Primary Order Bar / Multi-order List */}
+                            {ordersList.length > 0 ? (
+                                <div className="space-y-3">
+                                    <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                                        Generated Orders ({ordersList.length} Items Split)
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {ordersList.map((ord: any, idx: number) => (
+                                            <div key={idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
+                                                <div>
+                                                    <span className="text-[10px] text-gray-500 font-bold uppercase block">Order #{ord.order_number}</span>
+                                                    <span className="text-sm font-extrabold text-slate-900">{ord.board_name}</span>
+                                                </div>
+                                                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg">
+                                                    ₹{ord.price}
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div>
-                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Order Reference Number</span>
-                                        <span className="text-xl font-black text-slate-900 font-mono tracking-wide">{orderData.order_number}</span>
+                                    {txnNumber && (
+                                        <p className="text-xs text-gray-500 font-mono mt-2">
+                                            Transaction Ref: <strong className="text-slate-800">{txnNumber}</strong>
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+                                    <div className="flex items-center gap-3.5">
+                                        <div className="w-12 h-12 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-center text-emerald-600">
+                                            <Package className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Order Reference Number</span>
+                                            <span className="text-xl font-black text-slate-900 font-mono tracking-wide">{orderData?.order_number}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-100/80 border border-emerald-200 rounded-xl">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping"></span>
+                                        <span className="text-xs font-extrabold text-emerald-800 capitalize">{orderData?.status || "Submitted"}</span>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-100/80 border border-emerald-200 rounded-xl">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping"></span>
-                                    <span className="text-xs font-extrabold text-emerald-800 capitalize">{orderData.status || "Submitted"}</span>
-                                </div>
-                            </div>
+                            )}
 
                             {/* 3 Metric Cards Grid */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -143,7 +188,7 @@ export default function ThankYouPage() {
                                             <IndianRupee className="w-4 h-4" />
                                         </div>
                                     </div>
-                                    <p className="text-2xl font-black text-slate-900">₹{orderData.total_value}</p>
+                                    <p className="text-2xl font-black text-slate-900">₹{orderData?.total_value || "0"}</p>
                                 </div>
 
                                 {/* Delivery Date */}
@@ -155,7 +200,7 @@ export default function ThankYouPage() {
                                         </div>
                                     </div>
                                     <p className="text-xl font-black text-slate-900 font-mono">
-                                        {orderData.delivery_date || "3-5 Business Days"}
+                                        {orderData?.delivery_date || "3-5 Business Days"}
                                     </p>
                                 </div>
 
@@ -168,7 +213,7 @@ export default function ThankYouPage() {
                                         </div>
                                     </div>
                                     <p className="text-base font-bold text-slate-900 truncate">
-                                        {orderData.board_name || "PCB Manufacturing"}
+                                        {orderData?.board_name || "PCB Manufacturing"}
                                     </p>
                                 </div>
                             </div>
@@ -181,13 +226,13 @@ export default function ThankYouPage() {
                                         <Mail className="w-4 h-4 text-emerald-600" /> Contact Details
                                     </h3>
                                     <div className="space-y-2 text-xs font-medium">
-                                        {orderData.user_email && (
+                                        {orderData?.user_email && (
                                             <div className="flex items-center gap-2 text-slate-600">
                                                 <span className="text-slate-400">Email:</span>
                                                 <span className="font-bold text-slate-900 truncate">{orderData.user_email}</span>
                                             </div>
                                         )}
-                                        {orderData.user_mobile && (
+                                        {orderData?.user_mobile && (
                                             <div className="flex items-center gap-2 text-slate-600">
                                                 <span className="text-slate-400">Phone:</span>
                                                 <span className="font-bold text-slate-900">{orderData.user_mobile}</span>

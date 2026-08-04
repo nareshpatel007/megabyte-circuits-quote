@@ -7,16 +7,37 @@ import { Buffer } from 'buffer';
 const unzip = promisify(_unzip);
 
 export async function loadLayers(file: File): Promise<InputLayer[]> {
-    const buffer = await file.arrayBuffer();
-    const entries = await unzip(new Uint8Array(buffer));
-    return await readLayers(entries);
+    try {
+        const buffer = await file.arrayBuffer();
+        const entries = await unzip(new Uint8Array(buffer));
+        return await readLayers(entries);
+    } catch (err) {
+        console.warn("Failed to unzip file:", err);
+        return [];
+    }
 }
 
 export async function readLayers(entries: Record<string, Uint8Array>): Promise<InputLayer[]> {
     const layers = <InputLayer[]>[];
     for (const name of Object.keys(entries)) {
+        // Skip hidden files, system files, or directory entries
+        if (name.startsWith('__MACOSX') || name.startsWith('.') || name.includes('/.') || name.endsWith('/')) {
+            continue;
+        }
+
+        const ext = name.split('.').pop()?.toLowerCase() || '';
+        // Skip obvious non-gerber documents & images
+        if (['pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'csv', 'bom', 'doc', 'docx', 'xlsx', 'xls', 'zip', 'rar', '7z', 'txt', 'html', 'json'].includes(ext)) {
+            // Check if txt file is a drill file
+            if (ext !== 'txt' || (!name.toLowerCase().includes('drl') && !name.toLowerCase().includes('drill'))) {
+                continue;
+            }
+        }
+
         const { type, side } = mapLayerType(name);
-        layers.push({ type, side, gerber: Buffer.from(entries[name]), filename: name });
+        if (type !== null) {
+            layers.push({ type, side, gerber: Buffer.from(entries[name]), filename: name });
+        }
     }
     return layers;
 }
@@ -39,7 +60,13 @@ export function mapLayerType(name: string): GerberProps {
         case 'gbs': return { type: 'soldermask', side: 'bottom' };
         case 'gko': return { type: 'outline', side: 'all' };
         case 'drl': return { type: 'drill', side: 'all' };
-        default: break;
+        case 'txt': return { type: 'drill', side: 'all' };
+        case 'xln': return { type: 'drill', side: 'all' };
+        default:
+            if (/^g[1-8]$/i.test(ext) || /^g[1-8]l$/i.test(ext) || /^in[1-8]$/i.test(ext) || /^l[1-8]$/i.test(ext) || /^gl[1-8]$/i.test(ext)) {
+                return { type: 'copper', side: 'inner' };
+            }
+            break;
     }
 
     if (segments.find(s => s.includes('edge')) || segments.find(s => s.includes('outline'))) {
@@ -52,7 +79,7 @@ export function mapLayerType(name: string): GerberProps {
         type = 'solderpaste';
     } else if (segments.includes('ss') || segments.find(s => s.includes('silk'))) {
         type = 'silkscreen';
-    } else if (segments.includes('cu')) {
+    } else if (segments.includes('cu') || segments.find(s => s.includes('copper'))) {
         type = 'copper';
     }
 
@@ -64,7 +91,7 @@ export function mapLayerType(name: string): GerberProps {
         side = 'bottom';
     }
 
-    if (side == 'inner' && !type) {
+    if (side === 'inner' && !type) {
         type = 'copper';
     }
 
@@ -99,11 +126,20 @@ export interface RenderOptions {
 }
 
 export async function renderStack(layers: InputLayer[], options: RenderOptions): Promise<Stackup<string, InputLayer>> {
-    const [sm, ss] = COLORS[options.sm];
-    const sp = options.sp ? PASTE : 'transparent';
-    const cf = FINISHES[options.cf];
+    if (!layers || layers.length === 0) {
+        return { top: null, bottom: null, layers: [] } as any;
+    }
 
-    return await stackup(layers, {
-        color: { sm, ss, sp, cf },
-    });
+    const [sm, ss] = COLORS[options.sm] || COLORS['green'];
+    const sp = options.sp ? PASTE : 'transparent';
+    const cf = FINISHES[options.cf] || FINISHES['tin'];
+
+    try {
+        return await stackup(layers, {
+            color: { sm, ss, sp, cf },
+        });
+    } catch (err) {
+        console.warn("Gerber parser stackup error caught safely:", err);
+        return { top: null, bottom: null, layers: [] } as any;
+    }
 }

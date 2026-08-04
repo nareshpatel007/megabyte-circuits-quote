@@ -84,6 +84,12 @@ export interface QuoteFormData {
     pcbRemark: string;
     assemblyOn: boolean;
     stencilOn: boolean;
+    stencilType?: string;
+    stencilSide?: string;
+    stencilSize?: string;
+    stencilThickness?: string;
+    stencilFiducials?: string;
+    electropolishing?: string;
     buildTime: string;
     boardName: string;
     userMobile: string;

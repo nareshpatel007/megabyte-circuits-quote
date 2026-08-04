@@ -30,7 +30,7 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
 
     const validateAndProcessFile = async (selectedFile: File) => {
         setErrorMessage(null);
-        
+
         // Size validation: 100 MB
         const maxSize = 100 * 1024 * 1024;
         if (selectedFile.size > maxSize) {
@@ -130,82 +130,55 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
                 className="hidden"
             />
 
-            {loadingState === "success" ? (
-                <div className="flex items-center justify-between px-5 py-4 bg-green-50 border border-green-200 rounded-2xl shadow-sm transition-all duration-300">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 animate-pulse">
-                            <CheckCircle className="w-5 h-5" />
-                        </div>
-                        <div className="text-left">
-                            <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                                Gerber Verification Complete!
-                                <span className="text-[9px] bg-green-200 text-green-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                    Verified
-                                </span>
-                            </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                                {file?.name} &middot; {(file ? file.size / (1024 * 1024) : 0).toFixed(2)} MB
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {extraActions}
-                        <button
-                            type="button"
-                            onClick={resetUploader}
-                            className="bg-white hover:bg-slate-50 text-gray-600 border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer hover:border-gray-300 active:scale-95"
-                        >
-                            Re-upload Gerber
-                        </button>
-                    </div>
-                </div>
-            ) : (
+            {loadingState === "success" ? null : (
                 <div
                     onDragEnter={handleDrag}
                     onDragOver={handleDrag}
                     onDragLeave={handleDrag}
                     onDrop={handleDrop}
-                    className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-300 ${
-                        dragActive
-                            ? "border-primary bg-primary/5 scale-[1.01]"
-                            : "border-gray-200 bg-white hover:border-primary/50 hover:bg-slate-50/50"
-                    } ${loadingState === "error" ? "border-red-300 bg-red-50/10" : ""}`}
+                    className={`relative rounded-xl text-center transition-all duration-300 ${loadingState === "uploading"
+                            ? "bg-primary/5"
+                            : dragActive
+                                ? "border border-dashed border-primary bg-primary/10 scale-[1.005] py-14 px-6"
+                                : loadingState === "error"
+                                    ? "border border-dashed border-red-300 bg-red-50/10 py-12 px-6"
+                                    : "border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 py-14 px-6"
+                        }`}
                 >
                     {loadingState === "idle" && (
-                        <div className="flex flex-col items-center justify-center space-y-4">
-                            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shadow-inner">
-                                <Upload className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="bg-primary hover:bg-secondary text-white px-8 py-3.5 rounded-xl font-semibold shadow-md transition-all active:scale-[0.98] cursor-pointer"
-                                >
-                                    Upload Gerber File
-                                </button>
-                                <p className="mt-3.5 text-sm text-gray-500 font-medium">
-                                    Drag & drop your ZIP archive, or <span className="text-primary hover:underline cursor-pointer" onClick={() => fileInputRef.current?.click()}>browse</span>
-                                </p>
-                                <p className="mt-1 text-xs text-gray-400">
-                                    Accepts standard Gerber file format inside a .zip (Max 100 MB)
-                                </p>
-                            </div>
+                        <div className="flex flex-col items-center justify-center">
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="bg-primary hover:opacity-90 text-white font-bold text-base px-8 py-3 rounded-full shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                            >
+                                <Upload className="w-5 h-5" /> Add gerber file
+                            </button>
+                            <p className="mt-4 text-xs sm:text-sm text-gray-400 font-medium">
+                                Only accept zip or rar, Max 100 MB
+                            </p>
+                            <p className="mt-2 text-xs sm:text-sm text-gray-400 font-medium flex items-center justify-center gap-1.5">
+                                <span className="text-sm">🔒</span> All uploads are secure and confidential.
+                            </p>
                         </div>
                     )}
 
                     {loadingState === "uploading" && (
-                        <div className="flex flex-col items-center justify-center space-y-4 py-4">
-                            <RefreshCw className="w-10 h-10 text-primary animate-spin" />
-                            <div className="w-full max-w-xs bg-slate-100 h-2 rounded-full overflow-hidden shadow-inner">
-                                <div
-                                    className="bg-primary h-full transition-all duration-200 rounded-full"
-                                    style={{ width: `${progress}%` }}
-                                />
-                            </div>
-                            <p className="text-sm font-semibold text-gray-700 animate-pulse">
-                                Uploading and processing files ({progress}%)
+                        <div className="bg-primary/5 rounded-xl p-10 sm:p-14 flex flex-col items-center justify-center space-y-6">
+                            <p className="text-gray-700 font-medium text-sm sm:text-base tracking-wide">
+                                Uploading your files....
                             </p>
+                            <div className="w-full max-w-xl flex items-center gap-4">
+                                <div className="flex-1 bg-gray-200/70 h-4 sm:h-5 rounded-full overflow-hidden">
+                                    <div
+                                        className="bg-primary h-full rounded-full transition-all duration-300 shadow-sm"
+                                        style={{ width: `${progress}%` }}
+                                    />
+                                </div>
+                                <span className="text-primary font-bold text-lg sm:text-2xl shrink-0 min-w-[55px] text-right">
+                                    {progress}%
+                                </span>
+                            </div>
                         </div>
                     )}
 
