@@ -1226,36 +1226,60 @@ export default function PCBSpecification({ selectedProduct = "pcb" }: { selected
 
                                     return (
                                         <div className="space-y-4">
-                                            <div className="bg-[#f0f4f8] p-4 rounded-2xl border border-slate-200/90 shadow-2xs relative overflow-hidden">
-                                                <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-slate-200/80">
+                                            <div className="bg-[#b58352]/20 dark:bg-[#2c2219]/60 p-4 rounded-2xl border border-[#a37243]/30 shadow-inner relative overflow-hidden">
+                                                {/* Corkboard subtle grid texture background */}
+                                                <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#8b5cf6_1px,transparent_1px)] [background-size:14px_14px] pointer-events-none" />
+
+                                                <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-amber-900/10 relative z-10">
                                                     <div>
-                                                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                                        <h3 className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                                                            <span className="w-2 h-2 rounded-full bg-amber-600 inline-block" />
                                                             Select Delivery Date
                                                         </h3>
-                                                        <p className="text-[10px] text-slate-500 font-medium">
-                                                            Tap any note to pick a date
+                                                        <p className="text-[10px] text-amber-900/70 font-semibold">
+                                                            Prices are per order
                                                         </p>
                                                     </div>
-                                                    <div className="bg-white text-primary px-2.5 py-1 rounded-lg text-xs font-bold shadow-2xs border border-primary/20 flex items-center gap-1">
+                                                    <div className="bg-[#fffbeb] text-amber-950 px-2.5 py-1 rounded-md text-xs font-black shadow-sm border border-amber-300/80 flex items-center gap-1 rotate-[-1deg]">
                                                         <span>{new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" })}</span>
                                                     </div>
                                                 </div>
 
-                                                <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
-                                                    {next20Days.map((item) => {
+                                                <div className="grid grid-cols-5 gap-2 relative z-10">
+                                                    {next20Days.map((item, idx) => {
                                                         const isSelected = selectedDay === item.day;
+                                                        // Soft sticky note colors (yellow, green, pink, cyan, orange)
+                                                        const stickyColors = [
+                                                            { bg: "bg-[#fef9c3]", border: "border-yellow-300", text: "text-yellow-950", pin: "bg-red-500", activeBg: "bg-yellow-100" },
+                                                            { bg: "bg-[#dcfce7]", border: "border-emerald-300", text: "text-emerald-950", pin: "bg-teal-500", activeBg: "bg-emerald-100" },
+                                                            { bg: "bg-[#fce7f3]", border: "border-pink-300", text: "text-pink-950", pin: "bg-purple-500", activeBg: "bg-pink-100" },
+                                                            { bg: "bg-[#e0f2fe]", border: "border-sky-300", text: "text-sky-950", pin: "bg-blue-500", activeBg: "bg-sky-100" },
+                                                            { bg: "bg-[#ffedd5]", border: "border-orange-300", text: "text-orange-950", pin: "bg-amber-500", activeBg: "bg-orange-100" },
+                                                        ];
+                                                        const color = stickyColors[idx % stickyColors.length];
+
+                                                        // Slight natural rotations
+                                                        const rotations = ["rotate-[-1.5deg]", "rotate-[1deg]", "rotate-[-0.5deg]", "rotate-[2deg]", "rotate-[-1deg]"];
+                                                        const rotation = rotations[idx % rotations.length];
+
                                                         return (
                                                             <div
                                                                 key={item.day}
                                                                 onClick={() => setSelectedDay(item.day)}
-                                                                className={`relative flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-xl transition-all duration-150 cursor-pointer select-none aspect-square border text-center ${isSelected
-                                                                    ? "bg-emerald-50 border-emerald-600 shadow-md ring-2 ring-emerald-500/20 scale-[1.03] z-10"
-                                                                    : "bg-white border-slate-200/80 hover:border-slate-300 hover:shadow-xs hover:scale-[1.01]"
-                                                                    }`}
+                                                                className={`relative flex flex-col items-center justify-between p-1.5 rounded-sm transition-all duration-200 cursor-pointer select-none aspect-square shadow-sm ${rotation} ${
+                                                                    isSelected
+                                                                        ? `${color.activeBg} ring-2 ring-amber-500 border-2 ${color.border} scale-[1.08] z-20 shadow-md rotate-0`
+                                                                        : `${color.bg} border ${color.border} hover:scale-[1.04] hover:rotate-0 hover:z-10 hover:shadow-md`
+                                                                }`}
                                                             >
-                                                                <span className="text-[9px] font-black uppercase text-slate-400 leading-none mt-1">{item.weekday}</span>
-                                                                <span className="text-xs font-extrabold my-0.5 leading-tight">{item.dateNum}</span>
-                                                                <span className="text-[9px] font-extrabold text-primary leading-none">
+                                                                {/* Push Pin */}
+                                                                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
+                                                                    <div className={`w-2.5 h-2.5 rounded-full ${color.pin} border border-white/80 shadow-xs`} />
+                                                                </div>
+
+                                                                <span className="text-[8px] font-black uppercase text-amber-900/60 leading-none mt-1">{item.weekday}</span>
+                                                                <span className={`text-xs font-black my-0.5 leading-tight ${color.text}`}>{item.dateNum}</span>
+                                                                <span className="text-[9px] font-extrabold text-amber-900 leading-none pb-0.5">
                                                                     {hasValidGerber ? formatPrice(item.orderValue) : "--"}
                                                                 </span>
                                                             </div>
