@@ -1226,21 +1226,21 @@ export default function PCBSpecification({ selectedProduct = "pcb" }: { selected
 
                                     return (
                                         <div className="space-y-4">
-                                            <div className="bg-[#b58352]/20 dark:bg-[#2c2219]/60 p-4 rounded-2xl border border-[#a37243]/30 shadow-inner relative overflow-hidden">
-                                                {/* Corkboard subtle grid texture background */}
-                                                <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#8b5cf6_1px,transparent_1px)] [background-size:14px_14px] pointer-events-none" />
+                                            <div className="bg-emerald-500/10 dark:bg-emerald-950/30 p-4 rounded-2xl border border-emerald-500/20 shadow-inner relative overflow-hidden">
+                                                {/* Subtle brand theme grid texture background */}
+                                                <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:14px_14px] pointer-events-none" />
 
-                                                <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-amber-900/10 relative z-10">
+                                                <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-emerald-900/10 dark:border-emerald-500/20 relative z-10">
                                                     <div>
-                                                        <h3 className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
-                                                            <span className="w-2 h-2 rounded-full bg-amber-600 inline-block" />
+                                                        <h3 className="text-xs font-black text-emerald-950 dark:text-emerald-100 uppercase tracking-wider flex items-center gap-1.5">
+                                                            <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block ring-2 ring-emerald-500/30" />
                                                             Select Delivery Date
                                                         </h3>
-                                                        <p className="text-[10px] text-amber-900/70 font-semibold">
+                                                        <p className="text-[10px] text-emerald-800/80 dark:text-emerald-300/80 font-semibold">
                                                             Prices are per order
                                                         </p>
                                                     </div>
-                                                    <div className="bg-[#fffbeb] text-amber-950 px-2.5 py-1 rounded-md text-xs font-black shadow-sm border border-amber-300/80 flex items-center gap-1 rotate-[-1deg]">
+                                                    <div className="bg-white dark:bg-emerald-900/90 text-emerald-950 dark:text-emerald-100 px-2.5 py-1 rounded-md text-xs font-black shadow-sm border border-emerald-300/80 dark:border-emerald-700/80 flex items-center gap-1">
                                                         <span>{new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" })}</span>
                                                     </div>
                                                 </div>
@@ -1248,13 +1248,13 @@ export default function PCBSpecification({ selectedProduct = "pcb" }: { selected
                                                 <div className="grid grid-cols-5 gap-2 relative z-10">
                                                     {next20Days.map((item, idx) => {
                                                         const isSelected = selectedDay === item.day;
-                                                        // Soft sticky note colors (yellow, green, pink, cyan, orange)
+                                                        // Soft brand theme sticky note colors (emerald, teal, green, sky, sage)
                                                         const stickyColors = [
-                                                            { bg: "bg-[#fef9c3]", border: "border-yellow-300", text: "text-yellow-950", pin: "bg-red-500", activeBg: "bg-yellow-100" },
-                                                            { bg: "bg-[#dcfce7]", border: "border-emerald-300", text: "text-emerald-950", pin: "bg-teal-500", activeBg: "bg-emerald-100" },
-                                                            { bg: "bg-[#fce7f3]", border: "border-pink-300", text: "text-pink-950", pin: "bg-purple-500", activeBg: "bg-pink-100" },
-                                                            { bg: "bg-[#e0f2fe]", border: "border-sky-300", text: "text-sky-950", pin: "bg-blue-500", activeBg: "bg-sky-100" },
-                                                            { bg: "bg-[#ffedd5]", border: "border-orange-300", text: "text-orange-950", pin: "bg-amber-500", activeBg: "bg-orange-100" },
+                                                            { bg: "bg-[#ecfdf5]", border: "border-emerald-300", text: "text-emerald-950", subtext: "text-emerald-900/80", pin: "bg-emerald-600", activeBg: "bg-emerald-100" },
+                                                            { bg: "bg-[#e6f4ea]", border: "border-teal-300", text: "text-teal-950", subtext: "text-teal-900/80", pin: "bg-teal-600", activeBg: "bg-teal-100" },
+                                                            { bg: "bg-[#f0fdf4]", border: "border-green-300", text: "text-green-950", subtext: "text-green-900/80", pin: "bg-green-600", activeBg: "bg-green-100" },
+                                                            { bg: "bg-[#e0f2fe]", border: "border-sky-300", text: "text-sky-950", subtext: "text-sky-900/80", pin: "bg-emerald-500", activeBg: "bg-sky-100" },
+                                                            { bg: "bg-[#edf7f0]", border: "border-emerald-300/80", text: "text-emerald-950", subtext: "text-emerald-900/80", pin: "bg-teal-700", activeBg: "bg-emerald-100" },
                                                         ];
                                                         const color = stickyColors[idx % stickyColors.length];
 
@@ -1268,7 +1268,7 @@ export default function PCBSpecification({ selectedProduct = "pcb" }: { selected
                                                                 onClick={() => setSelectedDay(item.day)}
                                                                 className={`relative flex flex-col items-center justify-between p-1.5 rounded-sm transition-all duration-200 cursor-pointer select-none aspect-square shadow-sm ${rotation} ${
                                                                     isSelected
-                                                                        ? `${color.activeBg} ring-2 ring-amber-500 border-2 ${color.border} scale-[1.08] z-20 shadow-md rotate-0`
+                                                                        ? `${color.activeBg} ring-2 ring-emerald-500 border-2 border-emerald-500 scale-[1.08] z-20 shadow-md rotate-0`
                                                                         : `${color.bg} border ${color.border} hover:scale-[1.04] hover:rotate-0 hover:z-10 hover:shadow-md`
                                                                 }`}
                                                             >
@@ -1277,9 +1277,9 @@ export default function PCBSpecification({ selectedProduct = "pcb" }: { selected
                                                                     <div className={`w-2.5 h-2.5 rounded-full ${color.pin} border border-white/80 shadow-xs`} />
                                                                 </div>
 
-                                                                <span className="text-[8px] font-black uppercase text-amber-900/60 leading-none mt-1">{item.weekday}</span>
+                                                                <span className="text-[8px] font-black uppercase text-emerald-950/60 leading-none mt-1">{item.weekday}</span>
                                                                 <span className={`text-xs font-black my-0.5 leading-tight ${color.text}`}>{item.dateNum}</span>
-                                                                <span className="text-[9px] font-extrabold text-amber-900 leading-none pb-0.5">
+                                                                <span className={`text-[9px] font-extrabold ${color.subtext} leading-none pb-0.5`}>
                                                                     {hasValidGerber ? formatPrice(item.orderValue) : "--"}
                                                                 </span>
                                                             </div>
