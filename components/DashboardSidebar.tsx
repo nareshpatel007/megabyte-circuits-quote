@@ -10,7 +10,8 @@ import {
     CreditCard,
     MapPin,
     User,
-    LogOut
+    LogOut,
+    Calculator
 } from "lucide-react";
 
 interface SidebarCounts {
@@ -21,7 +22,15 @@ interface SidebarCounts {
 
 export default function DashboardSidebar() {
     const pathname = usePathname();
-    const [counts, setCounts] = useState<SidebarCounts>({ orders: 0, gerber_files: 0, addresses: 0 });
+    const [counts, setCounts] = useState<SidebarCounts>(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const cached = localStorage.getItem("megabyte_sidebar_counts");
+                if (cached) return JSON.parse(cached);
+            } catch (e) {}
+        }
+        return { orders: 0, gerber_files: 0, addresses: 0 };
+    });
 
     useEffect(() => {
         try {
@@ -34,6 +43,9 @@ export default function DashboardSidebar() {
                         .then((data) => {
                             if (data.status && data.counts) {
                                 setCounts(data.counts);
+                                try {
+                                    localStorage.setItem("megabyte_sidebar_counts", JSON.stringify(data.counts));
+                                } catch (e) {}
                             }
                         })
                         .catch((err) => console.error("Sidebar counts fetch error:", err));
@@ -50,6 +62,12 @@ export default function DashboardSidebar() {
             href: "/dashboard",
             icon: LayoutDashboard,
             active: pathname === "/dashboard"
+        },
+        {
+            name: "Instant Quote",
+            href: "/quote",
+            icon: Calculator,
+            active: pathname === "/quote"
         },
         {
             name: "My Orders",

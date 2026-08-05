@@ -6,6 +6,7 @@ import { ShoppingCart, User, ChevronDown, Loader2, ClipboardList, FolderArchive,
 import { useCurrency } from "../context/CurrencyContext";
 import CartModal from "./CartModal";
 import { loadCartFromBackend } from "@/lib/cartSession";
+import { getAuthUser, clearAuthSession } from "@/lib/auth";
 
 export default function Header() {
     const { currency, setCurrency, symbol, availableCurrencies, isLoading } = useCurrency();
@@ -34,12 +35,8 @@ export default function Header() {
 
     const updateUserData = () => {
         try {
-            const savedUser = localStorage.getItem("megabyte_user");
-            if (savedUser) {
-                setUser(JSON.parse(savedUser));
-            } else {
-                setUser(null);
-            }
+            const currentUser = getAuthUser();
+            setUser(currentUser);
         } catch (e) {
             setUser(null);
         }
@@ -51,11 +48,9 @@ export default function Header() {
         } catch (e) {
             console.error("Logout API call error:", e);
         } finally {
-            localStorage.removeItem("megabyte_user_token");
-            localStorage.removeItem("megabyte_user");
+            clearAuthSession();
             localStorage.removeItem("megabyte_checkout_items");
             localStorage.removeItem("selectedCartItemIds");
-            document.cookie = "megabyte_user_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
             setUser(null);
             setIsAccountOpen(false);
             window.dispatchEvent(new Event("megabyte_auth_updated"));
@@ -201,6 +196,15 @@ export default function Header() {
                                             >
                                                 <Cpu className="w-4 h-4 text-gray-500 shrink-0" />
                                                 <span>My Dashboard</span>
+                                            </Link>
+
+                                            <Link
+                                                href="/quote"
+                                                onClick={() => setIsAccountOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 font-medium transition-colors"
+                                            >
+                                                <Ticket className="w-4 h-4 text-gray-500 shrink-0" />
+                                                <span>Instant Quote</span>
                                             </Link>
 
                                             <Link

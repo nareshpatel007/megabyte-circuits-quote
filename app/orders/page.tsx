@@ -175,11 +175,11 @@ function OrdersContent() {
                     </div>
 
                     <Link
-                        href="/"
+                        href="/quote"
                         className="px-5 py-2.5 rounded-full bg-primary hover:bg-secondary text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
                         <Plus className="w-4 h-4" />
-                        <span>New PCB Instant Quote</span>
+                        <span>Place new order</span>
                     </Link>
                 </div>
 
@@ -222,34 +222,34 @@ function OrdersContent() {
                                                 </p>
                                             </div>
 
-                                             <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                                 <div className="text-right">
-                                                     <span className="text-xs text-gray-400 font-medium block">Total Value</span>
-                                                     <span className="text-base font-extrabold text-primary">{formatPrice(ord.order_value)}</span>
-                                                 </div>
+                                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                                                <div className="text-right">
+                                                    <span className="text-xs text-gray-400 font-medium block">Total Value</span>
+                                                    <span className="text-base font-extrabold text-primary">{formatPrice(ord.order_value)}</span>
+                                                </div>
 
-                                                 {(ord.status_name?.toLowerCase() === "completed" || ord.status_name?.toLowerCase() === "ready to ship") && (
-                                                     <button
-                                                         type="button"
-                                                         onClick={() => handleRepeatOrder(ord)}
-                                                         className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                                                     >
-                                                         <RotateCw className="w-3.5 h-3.5" />
-                                                         <span>Repeat Order</span>
-                                                     </button>
-                                                 )}
+                                                {(ord.status_name?.toLowerCase() === "completed" || ord.status_name?.toLowerCase() === "ready to ship") && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRepeatOrder(ord)}
+                                                        className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                                    >
+                                                        <RotateCw className="w-3.5 h-3.5" />
+                                                        <span>Repeat Order</span>
+                                                    </button>
+                                                )}
 
-                                                 <Link
-                                                     href={`/orders/${ord.id}`}
-                                                     className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-secondary transition-all cursor-pointer"
-                                                 >
-                                                     View Details
-                                                 </Link>
-                                             </div>
-                                         </div>
-                                     ))}
-                                 </div>
-                             )}
+                                                <Link
+                                                    href={`/orders/${ord.id}`}
+                                                    className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-secondary transition-all cursor-pointer"
+                                                >
+                                                    View Details
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

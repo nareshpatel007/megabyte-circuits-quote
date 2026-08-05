@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
 import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend } from "@/lib/cartSession";
+import { getAuthToken, getAuthUser } from "@/lib/auth";
 
 interface CartItem {
     id: string;
@@ -40,6 +42,17 @@ export default function CartPage() {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    useEffect(() => {
+        try {
+            const token = getAuthToken();
+            const user = getAuthUser();
+            setIsLoggedIn(Boolean(token && user));
+        } catch (e) {
+            setIsLoggedIn(false);
+        }
+    }, []);
 
     useEffect(() => {
         const initCart = async () => {
@@ -51,6 +64,7 @@ export default function CartPage() {
                     items = backendItems;
                 }
                 setCartItems(items);
+                const allIds = items.map((item) => String(item.id));
                 const savedSelected = localStorage.getItem("selectedCartItemIds");
                 if (savedSelected) {
                     try {
@@ -59,13 +73,13 @@ export default function CartPage() {
                             setSelectedItemIds(parsed.map(String));
                             localStorage.removeItem("selectedCartItemIds");
                         } else {
-                            setSelectedItemIds([]);
+                            setSelectedItemIds(allIds);
                         }
                     } catch {
-                        setSelectedItemIds([]);
+                        setSelectedItemIds(allIds);
                     }
                 } else {
-                    setSelectedItemIds([]);
+                    setSelectedItemIds(allIds);
                 }
             } catch (e) {
                 console.error("Failed to load cart", e);
@@ -175,6 +189,7 @@ export default function CartPage() {
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-6">
+                    {isLoggedIn && <DashboardSidebar />}
                     {/* Left Column: Cart Items & Empty State */}
                     <div className="flex-1 space-y-4">
                         <div className="bg-white rounded-xl shadow-xs border border-gray-200/80 p-4 sm:p-5">

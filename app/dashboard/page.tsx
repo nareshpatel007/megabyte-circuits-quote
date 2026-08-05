@@ -84,11 +84,14 @@ function DashboardContent() {
     const [user, setUser] = useState<{ id?: string | number; name?: string; email?: string } | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    const [metrics, setMetrics] = useState<{ total_orders: number; pending_orders: number; gerber_files_count: number; total_spent: number }>({
-        total_orders: 0,
-        pending_orders: 0,
-        gerber_files_count: 0,
-        total_spent: 0
+    const [metrics, setMetrics] = useState<{ total_orders: number; pending_orders: number; gerber_files_count: number; total_spent: number }>(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const cached = localStorage.getItem("megabyte_dashboard_metrics");
+                if (cached) return JSON.parse(cached);
+            } catch (e) {}
+        }
+        return { total_orders: 0, pending_orders: 0, gerber_files_count: 0, total_spent: 0 };
     });
     const [recentOrders, setRecentOrders] = useState<OrderItem[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
@@ -160,6 +163,9 @@ function DashboardContent() {
                     if (data.status) {
                         setMetrics(data.metrics || {});
                         setRecentOrders(data.recent_orders || []);
+                        try {
+                            localStorage.setItem("megabyte_dashboard_metrics", JSON.stringify(data.metrics || {}));
+                        } catch (e) {}
                     }
                 }
             } catch (e) {
@@ -211,11 +217,11 @@ function DashboardContent() {
                     )}
 
                     <Link
-                        href="/"
+                        href="/quote"
                         className="px-5 py-2.5 rounded-full bg-primary hover:bg-secondary text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
                         <Plus className="w-4 h-4" />
-                        <span>New PCB Instant Quote</span>
+                        <span>Place new order</span>
                     </Link>
                 </div>
 
@@ -313,22 +319,22 @@ function DashboardContent() {
                                                     <td className="py-3 font-extrabold text-gray-900">{formatPrice(ord.order_value)}</td>
                                                     <td className="py-3">{getStatusBadge(ord.status_name)}</td>
                                                     <td className="py-3 text-right space-x-2">
-                                                         {(ord.status_name?.toLowerCase() === "completed" || ord.status_name?.toLowerCase() === "ready to ship") && (
-                                                             <button
-                                                                 type="button"
-                                                                 onClick={() => handleRepeatOrder(ord)}
-                                                                 className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] transition-all inline-flex items-center gap-1 cursor-pointer shadow-xs"
-                                                             >
-                                                                 <RotateCw className="w-3 h-3" />
-                                                                 <span>Repeat</span>
-                                                             </button>
-                                                         )}
-                                                         <Link
-                                                             href={`/orders/${ord.id}`}
-                                                             className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-primary hover:text-white font-bold text-[11px] transition-all cursor-pointer inline-block"
-                                                         >
-                                                             Details
-                                                         </Link>
+                                                        {(ord.status_name?.toLowerCase() === "completed" || ord.status_name?.toLowerCase() === "ready to ship") && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRepeatOrder(ord)}
+                                                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] transition-all inline-flex items-center gap-1 cursor-pointer shadow-xs"
+                                                            >
+                                                                <RotateCw className="w-3 h-3" />
+                                                                <span>Repeat</span>
+                                                            </button>
+                                                        )}
+                                                        <Link
+                                                            href={`/orders/${ord.id}`}
+                                                            className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-primary hover:text-white font-bold text-[11px] transition-all cursor-pointer inline-block"
+                                                        >
+                                                            Details
+                                                        </Link>
                                                     </td>
                                                 </tr>
                                             ))}

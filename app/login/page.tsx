@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck, Loader2, AlertCircle } from "lucide-react";
+import { setAuthSession } from "@/lib/auth";
 
 function LoginContent() {
     const router = useRouter();
@@ -62,8 +63,7 @@ function LoginContent() {
                     email: data.data?.email || data.user?.email || (viewMode === "signin" ? usernameOrEmail : email),
                 };
 
-                localStorage.setItem("megabyte_user_token", token);
-                localStorage.setItem("megabyte_user", JSON.stringify(userObj));
+                setAuthSession(token, userObj);
                 window.dispatchEvent(new Event("megabyte_auth_updated"));
 
                 setSuccessMessage(viewMode === "signin" ? "Signed in successfully!" : "Account created successfully!");

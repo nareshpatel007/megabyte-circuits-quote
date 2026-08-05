@@ -7,9 +7,11 @@ import Script from "next/script";
 import { ShieldCheck, ArrowLeft, Check, Plus, Loader2, AlertCircle } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
 import { useCurrency } from "@/context/CurrencyContext";
 import { loadCartFromBackend, saveCartToBackend } from "@/lib/cartSession";
+import { getAuthToken, getAuthUser } from "@/lib/auth";
 
 interface CartItem {
     id: string;
@@ -56,6 +58,17 @@ function CheckoutContent() {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [user, setUser] = useState<{ id?: string | number; name?: string; email?: string } | null>(null);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    useEffect(() => {
+        try {
+            const token = getAuthToken();
+            const authUser = getAuthUser();
+            setIsLoggedIn(Boolean(token && authUser));
+        } catch (e) {
+            setIsLoggedIn(false);
+        }
+    }, []);
 
     // Address Lists & Selections
     const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -411,6 +424,7 @@ function CheckoutContent() {
                 )}
 
                 <div className="flex flex-col lg:flex-row gap-6">
+                    {isLoggedIn && <DashboardSidebar />}
                     <div className="flex-1">
                         <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-7 shadow-2xs">
                             {activeFormType !== "none" ? (

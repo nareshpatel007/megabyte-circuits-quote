@@ -1026,6 +1026,7 @@ export default function PCBSpecification({ selectedProduct = "pcb" }: { selected
             const updatedCart = [...existingCart, newItem];
             await saveCartToBackend(updatedCart);
             setToast({ message: "Item saved to cart!", type: "success" });
+            window.location.href = "/cart";
         } catch (e) {
             console.error("Failed to save item to cart", e);
         } finally {
