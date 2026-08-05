@@ -75,26 +75,14 @@ function DashboardContent() {
     const [user, setUser] = useState<{ id?: string | number; name?: string; email?: string } | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    interface StatusBreakdownItem {
-        status_name: string;
-        count: number;
-        percentage: number;
-    }
-
-    const [metrics, setMetrics] = useState<{
-        total_orders: number;
-        pending_orders: number;
-        gerber_files_count: number;
-        total_spent: number;
-        status_breakdown?: StatusBreakdownItem[];
-    }>(() => {
+    const [metrics, setMetrics] = useState<{ total_orders: number; pending_orders: number; gerber_files_count: number; total_spent: number }>(() => {
         if (typeof window !== "undefined") {
             try {
                 const cached = localStorage.getItem("megabyte_dashboard_metrics");
                 if (cached) return JSON.parse(cached);
-            } catch (e) {}
+            } catch (e) { }
         }
-        return { total_orders: 0, pending_orders: 0, gerber_files_count: 0, total_spent: 0, status_breakdown: [] };
+        return { total_orders: 0, pending_orders: 0, gerber_files_count: 0, total_spent: 0 };
     });
     const [recentOrders, setRecentOrders] = useState<OrderItem[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
@@ -168,7 +156,7 @@ function DashboardContent() {
                         setRecentOrders(data.recent_orders || []);
                         try {
                             localStorage.setItem("megabyte_dashboard_metrics", JSON.stringify(data.metrics || {}));
-                        } catch (e) {}
+                        } catch (e) { }
                     }
                 }
             } catch (e) {
@@ -193,30 +181,6 @@ function DashboardContent() {
                 return <span className="px-2.5 py-1 rounded-full bg-red-50 text-red-700 text-[11px] font-extrabold border border-red-200">Cancelled</span>;
             default:
                 return <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-extrabold border border-blue-200">{name}</span>;
-        }
-    };
-
-    const getStatusColorClasses = (statusName: string) => {
-        switch (statusName.toLowerCase()) {
-            case "completed":
-            case "ready to ship":
-                return { bg: "bg-emerald-500", lightBg: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-            case "pending":
-                return { bg: "bg-amber-500", lightBg: "bg-amber-50 text-amber-700 border-amber-200" };
-            case "cancelled":
-                return { bg: "bg-red-500", lightBg: "bg-red-50 text-red-700 border-red-200" };
-            case "drilling":
-            case "outside drill":
-            case "drill done":
-                return { bg: "bg-indigo-500", lightBg: "bg-indigo-50 text-indigo-700 border-indigo-200" };
-            case "plating":
-            case "plating qc":
-                return { bg: "bg-cyan-500", lightBg: "bg-cyan-50 text-cyan-700 border-cyan-200" };
-            case "masking":
-            case "masking exposer":
-                return { bg: "bg-teal-500", lightBg: "bg-teal-50 text-teal-700 border-teal-200" };
-            default:
-                return { bg: "bg-blue-500", lightBg: "bg-blue-50 text-blue-700 border-blue-200" };
         }
     };
 
@@ -302,64 +266,6 @@ function DashboardContent() {
                                 </div>
                             </div>
                         )}
-
-                        {/* Order Status Breakdown */}
-                        <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-4">
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                                <div>
-                                    <h3 className="text-base font-extrabold text-gray-900">Order Status Breakdown</h3>
-                                    <p className="text-xs text-gray-500 font-medium mt-0.5">Real-time status percentage & distribution from database</p>
-                                </div>
-                                <span className="px-3 py-1 bg-gray-100 text-gray-700 font-extrabold text-xs rounded-full">
-                                    {metrics.total_orders} Total
-                                </span>
-                            </div>
-
-                            {!isLoaded ? (
-                                <RecentOrdersSkeleton />
-                            ) : !metrics.status_breakdown || metrics.status_breakdown.length === 0 ? (
-                                <div className="py-6 text-center text-xs text-gray-400 font-medium">
-                                    No status breakdown available yet.
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {/* Multi-segment progress bar */}
-                                    <div className="h-3.5 w-full bg-gray-100 rounded-full overflow-hidden flex gap-0.5 p-0.5">
-                                        {metrics.status_breakdown.map((item, idx) => {
-                                            const colors = getStatusColorClasses(item.status_name);
-                                            return (
-                                                <div
-                                                    key={idx}
-                                                    className={`h-full rounded-xs transition-all duration-500 ${colors.bg}`}
-                                                    style={{ width: `${Math.max(item.percentage, 1)}%` }}
-                                                    title={`${item.status_name}: ${item.count} (${item.percentage}%)`}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-
-                                    {/* Individual Status Grid */}
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-2">
-                                        {metrics.status_breakdown.map((item, idx) => {
-                                            const colors = getStatusColorClasses(item.status_name);
-                                            return (
-                                                <div key={idx} className="p-3 rounded-xl border border-gray-100 bg-gray-50/50 flex flex-col justify-between space-y-2">
-                                                    <div className="flex items-center justify-between gap-1">
-                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border truncate max-w-full ${colors.lightBg}`}>
-                                                            {item.status_name}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-baseline justify-between pt-1">
-                                                        <span className="text-lg font-black text-gray-900">{item.count}</span>
-                                                        <span className="text-xs font-bold text-gray-500">{item.percentage}%</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
 
                         {/* Recent Orders Preview */}
                         <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-4">
