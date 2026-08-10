@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck, Loader2, AlertCircle } from "lucide-react";
-import { setAuthSession } from "@/lib/auth";
+import { setAuthSession, getAuthToken } from "@/lib/auth";
 
 function LoginContent() {
     const router = useRouter();
@@ -28,6 +28,20 @@ function LoginContent() {
     const [isSocialLoading, setIsSocialLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+
+    useEffect(() => {
+        // 1. Check if error in URL from OAuth redirect
+        const urlError = searchParams.get("error");
+        if (urlError) {
+            setErrorMessage(decodeURIComponent(urlError));
+        }
+
+        // 2. Skip login if user is already authenticated (Bonus feature)
+        const token = getAuthToken() || (typeof window !== "undefined" ? localStorage.getItem("megabyte_user_token") : null);
+        if (token) {
+            router.push(redirectUrl);
+        }
+    }, [searchParams, router, redirectUrl]);
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -81,48 +95,13 @@ function LoginContent() {
         }
     };
 
-    const handleGoogleAuth = async () => {
+    const handleGoogleAuth = () => {
         setErrorMessage("");
         setSuccessMessage("");
         setIsSocialLoading(true);
 
-        try {
-            const userEmail = prompt("Enter your Google Account Email to continue:");
-            if (!userEmail || !userEmail.includes("@")) {
-                setIsSocialLoading(false);
-                return;
-            }
-
-            const userName = userEmail.split("@")[0];
-            const res = await fetch("/api/auth/google", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: userEmail,
-                    name: userName,
-                    avatar: "https://lh3.googleusercontent.com/a/default-user"
-                }),
-            });
-
-            const data = await res.json();
-
-            const token = data.token || data.data?.token || "google_sess_" + Date.now();
-            const userObj = data.user || data.data?.user || { email: userEmail, name: userName };
-
-            localStorage.setItem("megabyte_user_token", token);
-            localStorage.setItem("megabyte_user", JSON.stringify(userObj));
-            window.dispatchEvent(new Event("megabyte_auth_updated"));
-
-            setSuccessMessage("Authenticated via Google!");
-            setTimeout(() => {
-                router.push(redirectUrl);
-            }, 700);
-        } catch (err) {
-            console.error("Google auth error:", err);
-            setErrorMessage("Google Sign-In failed.");
-        } finally {
-            setIsSocialLoading(false);
-        }
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        window.location.href = `${backendUrl}/api/auth/google`;
     };
 
     return (
