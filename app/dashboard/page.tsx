@@ -185,7 +185,7 @@ function DashboardContent() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f4f6f9] flex flex-col lg:flex-row font-sans">
+        <div className="min-h-screen bg-[#f4f6f9] dark:bg-[#030712] text-gray-900 dark:text-gray-100 flex flex-col lg:flex-row font-sans transition-colors">
             <DashboardSidebar />
 
             <div className="flex-1 flex flex-col min-w-0 min-h-screen">
@@ -193,18 +193,18 @@ function DashboardContent() {
 
                 <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
                     {/* User Greeting Header */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#0b0f19] p-5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs">
                         {!isLoaded ? (
                             <div className="space-y-2 animate-pulse w-full max-w-sm">
-                                <div className="h-6 bg-gray-200 rounded w-48"></div>
-                                <div className="h-3 bg-gray-200 rounded w-64"></div>
+                                <div className="h-6 bg-gray-200 dark:bg-zinc-800 rounded w-48"></div>
+                                <div className="h-3 bg-gray-200 dark:bg-zinc-800 rounded w-64"></div>
                             </div>
                         ) : (
                             <div>
-                                <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
-                                    Welcome back, <span className="text-primary">{user?.name || "Customer"}</span>!
+                                <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">
+                                    Welcome back, <span className="text-primary dark:text-emerald-400">{user?.name || "Customer"}</span>!
                                 </h1>
-                                <p className="text-xs text-gray-500 font-medium mt-0.5">
+                                <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium mt-0.5">
                                     Overview of your PCB orders, Gerber files, and payment metrics.
                                 </p>
                             </div>
@@ -223,55 +223,55 @@ function DashboardContent() {
                         <MetricCardsSkeleton />
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                            <div className="bg-white dark:bg-[#0b0f19] p-5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs">
                                 <div className="flex items-center justify-between mb-3">
-                                    <span className="text-xs font-bold text-gray-500">Total Orders</span>
-                                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-zinc-400">Total Orders</span>
+                                    <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                                         <Package className="w-5 h-5" />
                                     </div>
                                 </div>
-                                <p className="text-2xl font-black text-gray-900">{metrics.total_orders}</p>
+                                <p className="text-2xl font-black text-gray-900 dark:text-white">{metrics.total_orders}</p>
                             </div>
 
-                            <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                            <div className="bg-white dark:bg-[#0b0f19] p-5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs">
                                 <div className="flex items-center justify-between mb-3">
-                                    <span className="text-xs font-bold text-gray-500">Pending Orders</span>
-                                    <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-zinc-400">Pending Orders</span>
+                                    <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                                         <Clock className="w-5 h-5" />
                                     </div>
                                 </div>
-                                <p className="text-2xl font-black text-gray-900">{metrics.pending_orders}</p>
+                                <p className="text-2xl font-black text-gray-900 dark:text-white">{metrics.pending_orders}</p>
                             </div>
 
-                            <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                            <div className="bg-white dark:bg-[#0b0f19] p-5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs">
                                 <div className="flex items-center justify-between mb-3">
-                                    <span className="text-xs font-bold text-gray-500">Gerber Files</span>
-                                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-zinc-400">Gerber Files</span>
+                                    <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                                         <FolderArchive className="w-5 h-5" />
                                     </div>
                                 </div>
-                                <p className="text-2xl font-black text-gray-900">{metrics.gerber_files_count}</p>
+                                <p className="text-2xl font-black text-gray-900 dark:text-white">{metrics.gerber_files_count}</p>
                             </div>
 
-                            <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                            <div className="bg-white dark:bg-[#0b0f19] p-5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs">
                                 <div className="flex items-center justify-between mb-3">
-                                    <span className="text-xs font-bold text-gray-500">Total Spent</span>
-                                    <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-zinc-400">Total Spent</span>
+                                    <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                                         <CreditCard className="w-5 h-5" />
                                     </div>
                                 </div>
-                                <p className="text-2xl font-black text-primary">{formatPrice(metrics.total_spent)}</p>
+                                <p className="text-2xl font-black text-primary dark:text-emerald-400">{formatPrice(metrics.total_spent)}</p>
                             </div>
                         </div>
                     )}
 
                     {/* Recent Orders Preview */}
-                    <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-4">
-                        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                            <h3 className="text-base font-extrabold text-gray-900">Recent Orders</h3>
+                    <div className="bg-white dark:bg-[#0b0f19] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 shadow-2xs space-y-4">
+                        <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-800 pb-3">
+                            <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Recent Orders</h3>
                             <Link
                                 href="/orders"
-                                className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                                className="text-xs font-bold text-primary dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
                             >
                                 <span>View All</span>
                                 <ChevronRight className="w-3.5 h-3.5" />
@@ -281,14 +281,14 @@ function DashboardContent() {
                         {!isLoaded ? (
                             <RecentOrdersSkeleton />
                         ) : recentOrders.length === 0 ? (
-                            <div className="py-12 text-center text-xs text-gray-400 font-medium">
+                            <div className="py-12 text-center text-xs text-gray-400 dark:text-zinc-500 font-medium">
                                 No orders placed yet.
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-xs">
                                     <thead>
-                                        <tr className="border-b border-gray-100 text-gray-400 font-extrabold uppercase">
+                                        <tr className="border-b border-gray-100 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 font-extrabold uppercase">
                                             <th className="pb-3">Order #</th>
                                             <th className="pb-3">Gerber / Product</th>
                                             <th className="pb-3">Date</th>
@@ -297,15 +297,15 @@ function DashboardContent() {
                                             <th className="pb-3 text-right">Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-100">
+                                    <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                                         {recentOrders.map((ord) => (
-                                            <tr key={ord.id} className="hover:bg-gray-50/50">
-                                                <td className="py-3 font-extrabold text-gray-900">{ord.order_number}</td>
-                                                <td className="py-3 font-semibold text-gray-700 max-w-[200px] truncate">
+                                            <tr key={ord.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/50">
+                                                <td className="py-3 font-extrabold text-gray-900 dark:text-white">{ord.order_number}</td>
+                                                <td className="py-3 font-semibold text-gray-700 dark:text-zinc-300 max-w-[200px] truncate">
                                                     {ord.gerber_name || "PCB Order"}
                                                 </td>
-                                                <td className="py-3 text-gray-500">{new Date(ord.created_at).toLocaleDateString()}</td>
-                                                <td className="py-3 font-extrabold text-gray-900">{formatPrice(ord.order_value)}</td>
+                                                <td className="py-3 text-gray-500 dark:text-zinc-400">{new Date(ord.created_at).toLocaleDateString()}</td>
+                                                <td className="py-3 font-extrabold text-gray-900 dark:text-white">{formatPrice(ord.order_value)}</td>
                                                 <td className="py-3">{getStatusBadge(ord.status_name)}</td>
                                                 <td className="py-3 text-right space-x-2">
                                                     {(ord.status_name?.toLowerCase() === "completed" || ord.status_name?.toLowerCase() === "ready to ship") && (

@@ -159,7 +159,7 @@ function OrdersContent() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f4f6f9] flex flex-col lg:flex-row font-sans">
+        <div className="min-h-screen bg-[#f4f6f9] dark:bg-[#030712] text-gray-900 dark:text-gray-100 flex flex-col lg:flex-row font-sans transition-colors">
             <DashboardSidebar />
 
             <div className="flex-1 flex flex-col min-w-0 min-h-screen">
@@ -167,12 +167,12 @@ function OrdersContent() {
 
                 <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
                     {/* Header Banner */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#0b0f19] p-5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs">
                         <div>
-                            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
+                            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">
                                 My Orders
                             </h1>
-                            <p className="text-xs text-gray-500 font-medium mt-0.5">
+                            <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium mt-0.5">
                                 Track and inspect all your PCB manufacturing orders.
                             </p>
                         </div>
@@ -186,13 +186,13 @@ function OrdersContent() {
                         </Link>
                     </div>
 
-                    <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-5">
-                        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                    <div className="bg-white dark:bg-[#0b0f19] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 shadow-2xs space-y-5">
+                        <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-800 pb-4">
                             <div>
-                                <h2 className="text-lg font-extrabold text-gray-900">My Orders</h2>
-                                <p className="text-xs text-gray-500 font-medium">Detailed log of your manufacturing items.</p>
+                                <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">My Orders</h2>
+                                <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium">Detailed log of your manufacturing items.</p>
                             </div>
-                            <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
+                            <span className="text-xs font-bold text-primary dark:text-emerald-400 bg-primary/10 dark:bg-emerald-950/60 px-3 py-1 rounded-full">
                                 {orders.length} Orders Total
                             </span>
                         </div>
@@ -200,30 +200,30 @@ function OrdersContent() {
                         {loading ? (
                             <OrdersListSkeleton />
                         ) : orders.length === 0 ? (
-                            <div className="py-16 text-center text-xs text-gray-400 font-medium">
+                            <div className="py-16 text-center text-xs text-gray-400 dark:text-zinc-500 font-medium">
                                 You have no order history yet.
                             </div>
                         ) : (
                             <div className="space-y-4">
                                 {orders.map((ord) => (
-                                    <div key={ord.id} className="p-4 rounded-xl border border-gray-200/80 hover:border-primary/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white">
+                                    <div key={ord.id} className="p-4 rounded-xl border border-gray-200/80 dark:border-white/10 hover:border-primary/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#0b0f19]">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-3">
-                                                <span className="text-sm font-black text-gray-900">{ord.order_number}</span>
+                                                <span className="text-sm font-black text-gray-900 dark:text-white">{ord.order_number}</span>
                                                 {getStatusBadge(ord.status_name)}
                                             </div>
-                                            <p className="text-xs font-bold text-gray-700">
+                                            <p className="text-xs font-bold text-gray-700 dark:text-zinc-300">
                                                 {ord.gerber_name || ord.meta?.board_name || "Standard PCB Order"}
                                             </p>
-                                            <p className="text-[11px] text-gray-400 font-medium">
+                                            <p className="text-[11px] text-gray-400 dark:text-zinc-500 font-medium">
                                                 Ordered on: {new Date(ord.created_at).toLocaleString()} | Delivery target: {ord.delivery_date}
                                             </p>
                                         </div>
 
                                         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                                             <div className="text-right">
-                                                <span className="text-xs text-gray-400 font-medium block">Total Value</span>
-                                                <span className="text-base font-extrabold text-primary">{formatPrice(ord.order_value)}</span>
+                                                <span className="text-xs text-gray-400 dark:text-zinc-500 font-medium block">Total Value</span>
+                                                <span className="text-base font-extrabold text-primary dark:text-emerald-400">{formatPrice(ord.order_value)}</span>
                                             </div>
 
                                             {(ord.status_name?.toLowerCase() === "completed" || ord.status_name?.toLowerCase() === "ready to ship") && (

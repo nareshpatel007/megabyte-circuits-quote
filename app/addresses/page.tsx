@@ -200,7 +200,7 @@ function AddressesContent() {
     const billingAddresses = addresses.filter((a) => a.address_type === "billing");
 
     return (
-        <div className="min-h-screen bg-[#f4f6f9] flex flex-col lg:flex-row font-sans">
+        <div className="min-h-screen bg-[#f4f6f9] dark:bg-[#030712] text-gray-900 dark:text-gray-100 flex flex-col lg:flex-row font-sans transition-colors">
             <DashboardSidebar />
 
             <div className="flex-1 flex flex-col min-w-0 min-h-screen">
@@ -208,12 +208,12 @@ function AddressesContent() {
 
                 <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
                     {/* Header Banner */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#0b0f19] p-5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs">
                         <div>
-                            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
+                            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">
                                 My Addresses
                             </h1>
-                            <p className="text-xs text-gray-500 font-medium mt-0.5">
+                            <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium mt-0.5">
                                 Manage your saved shipping and billing delivery addresses.
                             </p>
                         </div>
@@ -239,10 +239,10 @@ function AddressesContent() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-6">
-                        <div className="border-b border-gray-100 pb-4">
-                            <h2 className="text-lg font-extrabold text-gray-900">Address Book</h2>
-                            <p className="text-xs text-gray-500 font-medium">Keep your delivery and billing records up to date.</p>
+                    <div className="bg-white dark:bg-[#0b0f19] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 shadow-2xs space-y-6">
+                        <div className="border-b border-gray-100 dark:border-zinc-800 pb-4">
+                            <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">Address Book</h2>
+                            <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium">Keep your delivery and billing records up to date.</p>
                         </div>
 
                         {loading ? (
@@ -251,40 +251,40 @@ function AddressesContent() {
                             <div className="space-y-6">
                                 {/* Shipping Addresses Group */}
                                 <div className="space-y-3">
-                                    <h3 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider">
+                                    <h3 className="text-xs font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">
                                         Shipping Addresses ({shippingAddresses.length})
                                     </h3>
 
                                     {shippingAddresses.length === 0 ? (
-                                        <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-500">
+                                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800/40 border border-gray-200 dark:border-zinc-800 text-xs text-gray-500 dark:text-zinc-400">
                                             No shipping address stored. Click "+ Add Shipping" to create one.
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {shippingAddresses.map((addr) => (
-                                                <div key={addr.id} className="p-4 rounded-xl border border-gray-200/90 bg-white shadow-2xs space-y-3 flex flex-col justify-between">
+                                                <div key={addr.id} className="p-4 rounded-xl border border-gray-200/90 dark:border-white/10 bg-white dark:bg-[#0b0f19] shadow-2xs space-y-3 flex flex-col justify-between">
                                                     <div className="space-y-1.5">
                                                         <div className="flex items-center justify-between gap-2">
-                                                            <span className="font-extrabold text-xs text-gray-900">
+                                                            <span className="font-extrabold text-xs text-gray-900 dark:text-white">
                                                                 {addr.first_name} {addr.last_name}
                                                                 {addr.company_name ? ` (${addr.company_name})` : ""}
                                                             </span>
                                                             {Boolean(addr.is_default) && (
-                                                                <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-extrabold uppercase">
+                                                                <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold uppercase">
                                                                     DEFAULT
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                                                        <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-medium">
                                                             {addr.building_no ? `${addr.building_no}, ` : ""}{addr.street_address}, {addr.city}, {addr.state} - {addr.postal_code}, {addr.country}
                                                         </p>
-                                                        <p className="text-[11px] text-gray-500 font-bold">Mobile: {addr.mobile}</p>
+                                                        <p className="text-[11px] text-gray-500 dark:text-zinc-400 font-bold">Mobile: {addr.mobile}</p>
                                                     </div>
 
-                                                    <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2 text-xs">
+                                                    <div className="pt-3 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-end gap-2 text-xs">
                                                         <button
                                                             onClick={() => setViewingAddress(addr)}
-                                                            className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold flex items-center gap-1 transition-all cursor-pointer text-[11px]"
+                                                            className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-200 font-bold flex items-center gap-1 transition-all cursor-pointer text-[11px]"
                                                         >
                                                             <Eye className="w-3.5 h-3.5" />
                                                             <span>View</span>
@@ -292,7 +292,7 @@ function AddressesContent() {
 
                                                         <button
                                                             onClick={() => handleOpenEditAddressModal(addr)}
-                                                            className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold flex items-center gap-1 transition-all cursor-pointer text-[11px]"
+                                                            className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 font-bold flex items-center gap-1 transition-all cursor-pointer text-[11px]"
                                                         >
                                                             <Edit3 className="w-3.5 h-3.5" />
                                                             <span>Edit</span>
@@ -300,7 +300,7 @@ function AddressesContent() {
 
                                                         <button
                                                             onClick={() => handleDeleteAddress(addr.id)}
-                                                            className="px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 font-bold flex items-center gap-1 transition-all cursor-pointer text-[11px]"
+                                                            className="px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 font-bold flex items-center gap-1 transition-all cursor-pointer text-[11px]"
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
                                                             <span>Delete</span>
@@ -313,39 +313,39 @@ function AddressesContent() {
                                 </div>
 
                                 {/* Billing Addresses Group */}
-                                <div className="space-y-3 pt-4 border-t border-gray-100">
-                                    <h3 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider">
+                                <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                                    <h3 className="text-xs font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">
                                         Billing Addresses ({billingAddresses.length})
                                     </h3>
 
                                     {billingAddresses.length === 0 ? (
-                                        <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-500">
+                                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800/40 border border-gray-200 dark:border-zinc-800 text-xs text-gray-500 dark:text-zinc-400">
                                             No billing address stored. Click "+ Add Billing" to create one.
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {billingAddresses.map((addr) => (
-                                                <div key={addr.id} className="p-4 rounded-xl border border-gray-200/90 bg-white shadow-2xs space-y-3 flex flex-col justify-between">
+                                                <div key={addr.id} className="p-4 rounded-xl border border-gray-200/90 dark:border-white/10 bg-white dark:bg-[#0b0f19] shadow-2xs space-y-3 flex flex-col justify-between">
                                                     <div className="space-y-1.5">
                                                         <div className="flex items-center justify-between gap-2">
-                                                            <span className="font-extrabold text-xs text-gray-900">
+                                                            <span className="font-extrabold text-xs text-gray-900 dark:text-white">
                                                                 {addr.first_name} {addr.last_name}
                                                                 {addr.company_name ? ` (${addr.company_name})` : ""}
                                                             </span>
-                                                            <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-extrabold uppercase">
+                                                            <span className="px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[10px] font-extrabold uppercase">
                                                                 BILLING
                                                             </span>
                                                         </div>
-                                                        <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                                                        <p className="text-xs text-gray-600 dark:text-zinc-300 leading-relaxed font-medium">
                                                             {addr.building_no ? `${addr.building_no}, ` : ""}{addr.street_address}, {addr.city}, {addr.state} - {addr.postal_code}, {addr.country}
                                                         </p>
-                                                        <p className="text-[11px] text-gray-500 font-bold">Mobile: {addr.mobile}</p>
+                                                        <p className="text-[11px] text-gray-500 dark:text-zinc-400 font-bold">Mobile: {addr.mobile}</p>
                                                     </div>
 
-                                                    <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2 text-xs">
+                                                    <div className="pt-3 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-end gap-2 text-xs">
                                                         <button
                                                             onClick={() => setViewingAddress(addr)}
-                                                            className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold flex items-center gap-1 transition-all cursor-pointer text-[11px]"
+                                                            className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-200 font-bold flex items-center gap-1 transition-all cursor-pointer text-[11px]"
                                                         >
                                                             <Eye className="w-3.5 h-3.5" />
                                                             <span>View</span>

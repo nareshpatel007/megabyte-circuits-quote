@@ -1035,9 +1035,9 @@ export default function PCBSpecification({ selectedProduct = "pcb" }: { selected
     };
 
     return (
-        <div className="bg-[#f0f2f5] font-sans">
+        <div className="bg-[#f0f2f5] dark:bg-transparent font-sans">
             {/* Main grid */}
-            <main className="max-w-[1550px] mx-auto px-4 py-6">
+            <main className="w-full py-2">
                 <div className="flex flex-col lg:flex-row gap-6">
 
                     {/* Left Quote Section */}
