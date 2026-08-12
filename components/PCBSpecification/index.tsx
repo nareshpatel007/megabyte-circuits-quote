@@ -1106,7 +1106,7 @@ export default function PCBSpecification({ selectedProduct = "pcb" }: { selected
                         </div>
                     </div>
                     {/* Right Quote Cost Summary */}
-                    <div className="w-full lg:w-[420px] shrink-0">
+                    <div className="w-full lg:w-[480px] shrink-0">
                         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-lg sticky top-24 overflow-hidden">
                             <div className="p-4 space-y-4 bg-white">                                 {/* Sticky Notes Board Delivery Calendar */}
                                 {(() => {
@@ -1245,7 +1245,7 @@ export default function PCBSpecification({ selectedProduct = "pcb" }: { selected
                                                     </div>
                                                 </div>
 
-                                                <div className="grid grid-cols-5 gap-2 relative z-10">
+                                                <div className="grid grid-cols-5 gap-3 relative z-10">
                                                     {next20Days.map((item, idx) => {
                                                         const isSelected = selectedDay === item.day;
                                                         // Palette based sticky note colors using hex codes: #0F7438, #238E4E, #41A96A, #69C48A, #8DD3A5
