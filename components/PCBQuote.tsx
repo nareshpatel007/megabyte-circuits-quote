@@ -914,16 +914,50 @@ export default function PCBQuote() {
                                     <div className="flex items-center gap-2">
                                         <input
                                             type="number"
+                                            min="0.1"
+                                            step="any"
                                             value={pcbWidth}
-                                            onChange={(e) => setPcbWidth(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "-" || e.key === "e" || e.key === "E") {
+                                                    e.preventDefault();
+                                                }
+                                            }}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === "" || parseFloat(val) >= 0) {
+                                                    setPcbWidth(val);
+                                                }
+                                            }}
+                                            onBlur={(e) => {
+                                                let val = parseFloat(e.target.value);
+                                                if (isNaN(val) || val <= 0) val = 100;
+                                                setPcbWidth(val.toString());
+                                            }}
                                             placeholder="100"
                                             className="w-24 h-9 px-3 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                                         />
                                         <span className="text-gray-400">x</span>
                                         <input
                                             type="number"
+                                            min="0.1"
+                                            step="any"
                                             value={pcbHeight}
-                                            onChange={(e) => setPcbHeight(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "-" || e.key === "e" || e.key === "E") {
+                                                    e.preventDefault();
+                                                }
+                                            }}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === "" || parseFloat(val) >= 0) {
+                                                    setPcbHeight(val);
+                                                }
+                                            }}
+                                            onBlur={(e) => {
+                                                let val = parseFloat(e.target.value);
+                                                if (isNaN(val) || val <= 0) val = 100;
+                                                setPcbHeight(val.toString());
+                                            }}
                                             placeholder="100"
                                             className="w-24 h-9 px-3 border border-gray-300 rounded text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                                         />
@@ -940,7 +974,28 @@ export default function PCBQuote() {
 
                                 <ConfigRow label="PCB Qty" tooltip="Total number of boards.">
                                     <div className="flex items-center gap-2">
-                                        <input type="number" value={qty} onChange={(e) => setQty(e.target.value)} className="w-24 h-9 px-3 border border-gray-300 rounded text-sm focus:border-primary outline-none" />
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={qty}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === ".") {
+                                                    e.preventDefault();
+                                                }
+                                            }}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === "" || parseInt(val, 10) >= 0) {
+                                                    setQty(val);
+                                                }
+                                            }}
+                                            onBlur={(e) => {
+                                                let val = parseInt(e.target.value, 10);
+                                                if (isNaN(val) || val < 1) val = 1;
+                                                setQty(val.toString());
+                                            }}
+                                            className="w-24 h-9 px-3 border border-gray-300 rounded text-sm focus:border-primary outline-none"
+                                        />
                                     </div>
                                 </ConfigRow>
 

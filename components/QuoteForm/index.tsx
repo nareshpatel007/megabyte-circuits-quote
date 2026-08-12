@@ -357,9 +357,26 @@ export default function QuoteForm({
                     <div className="flex items-center gap-2.5">
                         <input
                             type="number"
+                            min="0.1"
+                            step="any"
                             value={formData.width}
-                            onChange={(e) => updateField("width", e.target.value)}
-                            onBlur={(e) => validateDimensions(parseFloat(e.target.value) || 0, parseFloat(formData.height) || 0, parseInt(formData.layers))}
+                            onKeyDown={(e) => {
+                                if (e.key === "-" || e.key === "e" || e.key === "E") {
+                                    e.preventDefault();
+                                }
+                            }}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "" || parseFloat(val) >= 0) {
+                                    updateField("width", val);
+                                }
+                            }}
+                            onBlur={(e) => {
+                                let val = parseFloat(e.target.value);
+                                if (isNaN(val) || val <= 0) val = 100;
+                                updateField("width", val.toString());
+                                validateDimensions(val, parseFloat(formData.height) || 0, parseInt(formData.layers));
+                            }}
                             placeholder="100"
                             readOnly={isUploaded}
                             className={`w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all ${isUploaded ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-100" : ""
@@ -368,9 +385,26 @@ export default function QuoteForm({
                         <span className="text-gray-400 font-semibold">×</span>
                         <input
                             type="number"
+                            min="0.1"
+                            step="any"
                             value={formData.height}
-                            onChange={(e) => updateField("height", e.target.value)}
-                            onBlur={(e) => validateDimensions(parseFloat(formData.width) || 0, parseFloat(e.target.value) || 0, parseInt(formData.layers))}
+                            onKeyDown={(e) => {
+                                if (e.key === "-" || e.key === "e" || e.key === "E") {
+                                    e.preventDefault();
+                                }
+                            }}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "" || parseFloat(val) >= 0) {
+                                    updateField("height", val);
+                                }
+                            }}
+                            onBlur={(e) => {
+                                let val = parseFloat(e.target.value);
+                                if (isNaN(val) || val <= 0) val = 100;
+                                updateField("height", val.toString());
+                                validateDimensions(parseFloat(formData.width) || 0, val, parseInt(formData.layers));
+                            }}
                             placeholder="100"
                             readOnly={isUploaded}
                             className={`w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all ${isUploaded ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-100" : ""
@@ -389,7 +423,7 @@ export default function QuoteForm({
                     </div>
                 </ConfigRow>
 
-                <ConfigRow label="PCB Qty" tooltip="Order quantities must be in multiples of 5 (5, 10, 15, 20...).">
+                <ConfigRow label="PCB Qty" tooltip="Enter any custom quantity for your PCB order.">
                     <div className="flex flex-wrap items-center gap-2">
                         {["5", "10", "15", "20", "25", "30", "50", "100"].map(q => (
                             <Pill
@@ -404,17 +438,22 @@ export default function QuoteForm({
                             <span className="text-xs text-gray-500 font-semibold">Other:</span>
                             <input
                                 type="number"
-                                min="5"
-                                step="5"
+                                min="1"
                                 value={formData.qty}
-                                onChange={(e) => updateField("qty", e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === ".") {
+                                        e.preventDefault();
+                                    }
+                                }}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === "" || parseInt(val, 10) >= 0) {
+                                        updateField("qty", val);
+                                    }
+                                }}
                                 onBlur={(e) => {
                                     let val = parseInt(e.target.value, 10);
-                                    if (isNaN(val) || val < 5) val = 5;
-                                    else {
-                                        const remainder = val % 5;
-                                        if (remainder !== 0) val = Math.ceil(val / 5) * 5;
-                                    }
+                                    if (isNaN(val) || val < 1) val = 1;
                                     updateField("qty", val.toString());
                                 }}
                                 className="w-20 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary outline-none shadow-sm font-semibold"

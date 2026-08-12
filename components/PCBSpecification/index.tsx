@@ -1280,7 +1280,7 @@ export default function PCBSpecification({ selectedProduct = "pcb" }: { selected
                                                                 <span className="text-[8px] font-black uppercase text-[#0F7438]/70 dark:text-[#8DD3A5]/70 leading-none mt-1">{item.weekday}</span>
                                                                 <span className={`text-xs font-black my-0.5 leading-tight ${color.text}`}>{item.dateNum}</span>
                                                                 <span className={`text-[9px] font-extrabold ${color.subtext} leading-none pb-0.5`}>
-                                                                    {hasValidGerber ? formatPrice(item.orderValue) : "--"}
+                                                                    {formatPrice(item.orderValue)}
                                                                 </span>
                                                             </div>
                                                         );
@@ -1297,7 +1297,7 @@ export default function PCBSpecification({ selectedProduct = "pcb" }: { selected
                                                     <div className="flex justify-between items-baseline">
                                                         <span className="text-slate-600 dark:text-slate-300 text-xs font-semibold">Total Price:</span>
                                                         <span className="text-lg font-black text-[#0F7438] dark:text-[#69C48A]">
-                                                            {hasValidGerber ? formatPrice(selectedDayData.orderValue) : "Upload Gerber File"}
+                                                            {formatPrice(selectedDayData.orderValue)}
                                                         </span>
                                                     </div>
                                                 </div>
