@@ -1037,17 +1037,17 @@ export default function PCBQuote() {
                                             ))}
                                         </ConfigRow>
 
-                                         <ConfigRow label="PCB Color">
-                                              <div className="flex gap-3">
-                                                  <ColorCircle color="#52c41a" active={pcbColor === "#52c41a"} onClick={() => setPcbColor("#52c41a")} />
-                                                  <ColorCircle color="#722ed1" active={pcbColor === "#722ed1"} onClick={() => setPcbColor("#722ed1")} />
-                                                  <ColorCircle color="#f5222d" active={pcbColor === "#f5222d"} onClick={() => setPcbColor("#f5222d")} />
-                                                  <ColorCircle color="#fadb14" active={pcbColor === "#fadb14"} onClick={() => setPcbColor("#fadb14")} />
-                                                  <ColorCircle color="#1677ff" active={pcbColor === "#1677ff"} onClick={() => setPcbColor("#1677ff")} />
-                                                  <ColorCircle color="#ffffff" active={pcbColor === "#ffffff"} onClick={() => setPcbColor("#ffffff")} />
-                                                  <ColorCircle color="#000000" active={pcbColor === "#000000"} onClick={() => setPcbColor("#000000")} />
-                                              </div>
-                                         </ConfigRow>
+                                        <ConfigRow label="PCB Color">
+                                            <div className="flex gap-3">
+                                                <ColorCircle color="#52c41a" active={pcbColor === "#52c41a"} onClick={() => setPcbColor("#52c41a")} />
+                                                <ColorCircle color="#722ed1" active={pcbColor === "#722ed1"} onClick={() => setPcbColor("#722ed1")} />
+                                                <ColorCircle color="#f5222d" active={pcbColor === "#f5222d"} onClick={() => setPcbColor("#f5222d")} />
+                                                <ColorCircle color="#fadb14" active={pcbColor === "#fadb14"} onClick={() => setPcbColor("#fadb14")} />
+                                                <ColorCircle color="#1677ff" active={pcbColor === "#1677ff"} onClick={() => setPcbColor("#1677ff")} />
+                                                <ColorCircle color="#ffffff" active={pcbColor === "#ffffff"} onClick={() => setPcbColor("#ffffff")} />
+                                                <ColorCircle color="#000000" active={pcbColor === "#000000"} onClick={() => setPcbColor("#000000")} />
+                                            </div>
+                                        </ConfigRow>
 
                                         <ConfigRow label="Silkscreen">
                                             <Pill active={silkscreen === "White"} onClick={() => setSilkscreen("White")}>White</Pill>
@@ -1082,7 +1082,7 @@ export default function PCBQuote() {
                                 {highSpecsOpen && (
                                     <div className="p-6 pt-2 space-y-1">
                                         <ConfigRow label="Outer Copper Weight">
-                                            {["1oz", "2oz", "3oz", "3.5oz", "4.5oz"].map(w => (
+                                            {["1oz", "2oz"].map(w => (
                                                 <Pill key={w} active={copperWeight === w} onClick={() => setCopperWeight(w)}>{w}</Pill>
                                             ))}
                                         </ConfigRow>
@@ -1125,7 +1125,7 @@ export default function PCBQuote() {
                                     {advancedOpen ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
                                 </button>
 
-                                 {advancedOpen && (
+                                {advancedOpen && (
                                     <div className="py-2 space-y-4">
                                         <div className="w-full">
                                             <button

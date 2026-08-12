@@ -530,7 +530,7 @@ export default function QuoteForm({
                                 </Pill>
                             </ConfigRow>
 
-                             <ConfigRow label="Material Type">
+                            <ConfigRow label="Material Type">
                                 {["FR4 TG135"].map(m => (
                                     <Pill
                                         key={m}
@@ -585,7 +585,7 @@ export default function QuoteForm({
                     {highSpecsOpen && (
                         <div className="py-2 space-y-1">
                             <ConfigRow label="Outer Copper Weight">
-                                {["1 oz", "2 oz", "3.5 oz", "4.5 oz"].map(w => (
+                                {["1 oz", "2 oz"].map(w => (
                                     <Pill
                                         key={w}
                                         disabled={w === "3.5 oz" || w === "4.5 oz"}
