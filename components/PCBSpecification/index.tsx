@@ -446,11 +446,11 @@ function getOtherMask2ozOtherThicknessPrices() {
     };
 }
 
-function getPriceTiers(mask: string, weight: string, thickness: number) {
+function getPriceTiers(mask: string, weight: string, thickness: number, customTiers?: any) {
     const isThickness1_6 = Math.abs(thickness - 1.6) < 0.01;
     const thicknessKey = isThickness1_6 ? 1.6 : 'other';
 
-    const tiers: any = {
+    const defaultTiers: any = {
         'Green': {
             '1oz': {
                 1.6: getStandardPrices(),
@@ -473,6 +473,7 @@ function getPriceTiers(mask: string, weight: string, thickness: number) {
         }
     };
 
+    const tiers = customTiers || defaultTiers;
     return tiers[mask]?.[weight]?.[thicknessKey] ?? tiers[mask]?.[weight]?.['other'] ?? tiers['Other']?.[weight]?.['other'] ?? null;
 }
 
@@ -483,6 +484,25 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [detectedInfo, setDetectedInfo] = useState<{ layers: string; width: string; height: string } | null>(null);
 
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
+    const [pricingConfig, setPricingConfig] = useState<{ fixedCosts: any; priceTiers: any } | null>(null);
+
+    // Load dynamic PCB calculation parameters from backend API
+    React.useEffect(() => {
+        let active = true;
+        async function fetchPricingConfig() {
+            try {
+                const res = await fetch("/api/pcb-pricing");
+                const json = await res.json();
+                if (active && json.success && json.data) {
+                    setPricingConfig(json.data);
+                }
+            } catch (err) {
+                console.error("Failed to load PCB pricing configuration from API:", err);
+            }
+        }
+        fetchPricingConfig();
+        return () => { active = false; };
+    }, []);
 
     React.useEffect(() => {
         if (selectedProduct === "stencil") {
@@ -579,7 +599,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         const totalAreaInSqM = areaPerBoard * quantity;
         const areaInSqCm = totalAreaInSqM * 10000;
 
-        const fixedCosts: Record<string, Record<number, number>> = {
+        const fixedCosts: Record<string, Record<number, number>> = pricingConfig?.fixedCosts || {
             '1': { 1: 3100, 3: 2100, 5: 1600, 7: 1500, 10: 1400, 20: 1000 },
             '2': { 1: 8100, 3: 4100, 5: 2600, 7: 2200, 10: 1900, 20: 1400 },
             '4': { 20: 6000 },
@@ -588,7 +608,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             '10': { 20: 9000 }
         };
 
-        const priceTiers = getPriceTiers(solderMask, copperWeight, thickness);
+        const priceTiers = getPriceTiers(solderMask, copperWeight, thickness, pricingConfig?.priceTiers);
         if (!priceTiers) {
             return { options: [], showContact: false, totalAreaInSqM };
         }
