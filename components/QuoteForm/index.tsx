@@ -300,11 +300,9 @@ export default function QuoteForm({
                 <ConfigRow label="Base Material" tooltip="Standard FR-4 is recommended for most digital circuit designs.">
                     {[
                         { name: "FR-4", img: "/images/materials/fr4.png" },
-                        // { name: "Flex", img: "/images/materials/flex.png" },
-                        // { name: "Aluminum", img: "/images/materials/aluminum.png" },
-                        // { name: "Copper Core", img: "/images/materials/copper.png" },
-                        // { name: "Rogers", img: "/images/materials/rogers.png" },
-                        // { name: "PTFE Teflon", img: "/images/materials/ptfe.png" }
+                        { name: "Flex", img: "/images/materials/flex.png" },
+                        { name: "Rogers", img: "/images/materials/rogers.png" },
+                        { name: "PTFE Teflon", img: "/images/materials/ptfe.png" }
                     ].map(m => (
                         <MaterialPill
                             key={m.name}
@@ -500,7 +498,7 @@ export default function QuoteForm({
                             </ConfigRow>
 
                             <ConfigRow label="PCB Thickness">
-                                {["1.6mm", "0.6mm", "0.8mm", "1.0mm", "1.2mm"].map(t => (
+                                {["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(t => (
                                     <Pill
                                         key={t}
                                         active={formData.thickness === t}
@@ -514,8 +512,11 @@ export default function QuoteForm({
                             <ConfigRow label="PCB Color">
                                 <div className="flex flex-wrap gap-2.5">
                                     <ColorCirclePill color="#52c41a" name="Green" active={formData.pcbColor === "#52c41a"} onClick={() => updateField("pcbColor", "#52c41a")} />
+                                    <ColorCirclePill color="#722ed1" name="Purple" active={formData.pcbColor === "#722ed1"} onClick={() => updateField("pcbColor", "#722ed1")} />
                                     <ColorCirclePill color="#f5222d" name="Red" active={formData.pcbColor === "#f5222d"} onClick={() => updateField("pcbColor", "#f5222d")} />
+                                    <ColorCirclePill color="#fadb14" name="Yellow" active={formData.pcbColor === "#fadb14"} onClick={() => updateField("pcbColor", "#fadb14")} />
                                     <ColorCirclePill color="#1677ff" name="Blue" active={formData.pcbColor === "#1677ff"} onClick={() => updateField("pcbColor", "#1677ff")} />
+                                    <ColorCirclePill color="#ffffff" name="White" active={formData.pcbColor === "#ffffff"} onClick={() => updateField("pcbColor", "#ffffff")} />
                                     <ColorCirclePill color="#000000" name="Black" active={formData.pcbColor === "#000000"} onClick={() => updateField("pcbColor", "#000000")} />
                                 </div>
                             </ConfigRow>
@@ -529,20 +530,20 @@ export default function QuoteForm({
                                 </Pill>
                             </ConfigRow>
 
-                            {/* <ConfigRow label="Material Type">
-                                {["FR4 TG135", "KB6164 - TG135", "Nan Ya NP-140F", "S1141 TG140", "S1000H TG155"].map(m => (
+                             <ConfigRow label="Material Type">
+                                {["FR4 TG135"].map(m => (
                                     <Pill
                                         key={m}
-                                        active={formData.materialType === m}
+                                        active={(formData.materialType || "FR4 TG135") === m}
                                         onClick={() => updateField("materialType", m)}
                                     >
                                         {m}
                                     </Pill>
                                 ))}
-                            </ConfigRow> */}
+                            </ConfigRow>
 
                             <ConfigRow label="Surface Finish">
-                                {["HASL(Leaded)", "Roller Tin"].map(s => (
+                                {["OSP", "HASL(with lead)", "LeadFree HASL", "ENIG"].map(s => (
                                     <Pill
                                         key={s}
                                         active={formData.surfaceFinish === s}
@@ -552,6 +553,20 @@ export default function QuoteForm({
                                     </Pill>
                                 ))}
                             </ConfigRow>
+
+                            {formData.surfaceFinish === "ENIG" && (
+                                <ConfigRow label="Gold Thickness">
+                                    {["1 U*", "2 U*"].map(gt => (
+                                        <Pill
+                                            key={gt}
+                                            active={(formData.goldThickness || "1 U*") === gt}
+                                            onClick={() => updateField("goldThickness", gt)}
+                                        >
+                                            {gt}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
                         </div>
                     )}
                 </div>
@@ -570,9 +585,10 @@ export default function QuoteForm({
                     {highSpecsOpen && (
                         <div className="py-2 space-y-1">
                             <ConfigRow label="Outer Copper Weight">
-                                {["1 oz", "2 oz"].map(w => (
+                                {["1 oz", "2 oz", "3.5 oz", "4.5 oz"].map(w => (
                                     <Pill
                                         key={w}
+                                        disabled={w === "3.5 oz" || w === "4.5 oz"}
                                         active={formData.copperWeight === w || (w === "1 oz" && (!formData.copperWeight || formData.copperWeight === "1oz"))}
                                         onClick={() => updateField("copperWeight", w)}
                                     >
@@ -581,8 +597,8 @@ export default function QuoteForm({
                                 ))}
                             </ConfigRow>
 
-                            {/* <ConfigRow label="Via Covering">
-                                {["Tented", "Untented", "Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map(v => (
+                            <ConfigRow label="Via Covering">
+                                {["Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map(v => (
                                     <Pill
                                         key={v}
                                         disabled={v === "Copper paste Filled & Capped"}
@@ -595,7 +611,7 @@ export default function QuoteForm({
                             </ConfigRow>
 
                             <ConfigRow label="Via Plating Method">
-                                <div className="w-fulflex flex-col gap-2">
+                                <div className="w-full flex flex-col gap-2">
                                     <div className="flex flex-wrap gap-2.5">
                                         {["Not Specified", "Conductive Adhesive", "Horizontal Electroless Copper Plating"].map(v => (
                                             <Pill
@@ -620,51 +636,6 @@ export default function QuoteForm({
                                         {h}
                                     </Pill>
                                 ))}
-                            </ConfigRow>
-
-                            <ConfigRow label="Board Outline Tolerance">
-                                {["±0.2mm(Regular)", "±0.1mm(Precision)"].map(t => (
-                                    <Pill
-                                        key={t}
-                                        active={formData.tolerance === t}
-                                        onClick={() => updateField("tolerance", t)}
-                                    >
-                                        {t}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
-
-                            <ConfigRow label="Confirm Production file">
-                                {["No", "Yes"].map(c => (
-                                    <Pill
-                                        key={c}
-                                        active={formData.confirmFile === c}
-                                        onClick={() => updateField("confirmFile", c)}
-                                    >
-                                        {c}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
-
-                            <ConfigRow label="Mark on PCB">
-                                {["Remove Mark", "2D barcode (Serial Number)"].map(m => (
-                                    <Pill
-                                        key={m}
-                                        active={formData.markOnPcb === m}
-                                        onClick={() => updateField("markOnPcb", m)}
-                                    >
-                                        {m}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
-
-                            <ConfigRow label="Electrical Test">
-                                <Pill
-                                    active={formData.elecTest === "Flying Probe Fully Test"}
-                                    onClick={() => updateField("elecTest", "Flying Probe Fully Test")}
-                                >
-                                    Flying Probe Fully Test
-                                </Pill>
                             </ConfigRow>
 
                             <ConfigRow label="Gold Fingers">
@@ -728,18 +699,6 @@ export default function QuoteForm({
                                     </Pill>
                                 ))}
                             </ConfigRow>
-
-                            <ConfigRow label="Humidity Indicator Card">
-                                {["No", "Yes"].map(h => (
-                                    <Pill
-                                        key={h}
-                                        active={formData.humidity === h}
-                                        onClick={() => updateField("humidity", h)}
-                                    >
-                                        {h}
-                                    </Pill>
-                                ))}
-                            </ConfigRow> */}
                         </div>
                     )}
                 </div>

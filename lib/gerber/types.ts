@@ -62,6 +62,7 @@ export interface QuoteFormData {
     silkscreen: string;
     materialType: string;
     surfaceFinish: string;
+    goldThickness?: string;
     copperWeight: string;
     viaCovering: string;
     viaPlating: string;

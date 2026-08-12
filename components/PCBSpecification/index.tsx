@@ -30,6 +30,7 @@ const INITIAL_FORM_DATA: QuoteFormData = {
     silkscreen: "White",
     materialType: "FR4-TG135",
     surfaceFinish: "HASL(Leaded)",
+    goldThickness: "1 U*",
     copperWeight: "1 oz",
     viaCovering: "Not Specified",
     viaPlating: "Not Specified",
