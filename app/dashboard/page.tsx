@@ -85,6 +85,7 @@ function DashboardContent() {
         return { total_orders: 0, pending_orders: 0, gerber_files_count: 0, total_spent: 0 };
     });
     const [recentOrders, setRecentOrders] = useState<OrderItem[]>([]);
+    const [recentPayments, setRecentPayments] = useState<any[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
 
     const handleRepeatOrder = (ord: OrderItem) => {
@@ -154,6 +155,7 @@ function DashboardContent() {
                     if (data.status) {
                         setMetrics(data.metrics || {});
                         setRecentOrders(data.recent_orders || []);
+                        setRecentPayments(data.recent_payments || []);
                         try {
                             localStorage.setItem("megabyte_dashboard_metrics", JSON.stringify(data.metrics || {}));
                         } catch (e) { }
@@ -327,6 +329,75 @@ function DashboardContent() {
                                                 </td>
                                             </tr>
                                         ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Recent Payments Section */}
+                    <div className="bg-white dark:bg-[#0b0f19] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 shadow-2xs space-y-4">
+                        <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-800 pb-3">
+                            <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Recent Payments</h3>
+                            <Link
+                                href="/payments"
+                                className="text-xs font-bold text-primary dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                                <span>View All</span>
+                                <ChevronRight className="w-3.5 h-3.5" />
+                            </Link>
+                        </div>
+
+                        {!isLoaded ? (
+                            <RecentOrdersSkeleton />
+                        ) : recentPayments.length === 0 ? (
+                            <div className="py-12 text-center text-xs text-gray-400 dark:text-zinc-500 font-medium">
+                                No payment transactions recorded yet.
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                    <thead>
+                                        <tr className="border-b border-gray-100 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 font-extrabold uppercase">
+                                            <th className="pb-3">Transaction ID</th>
+                                            <th className="pb-3">Order #</th>
+                                            <th className="pb-3">Date</th>
+                                            <th className="pb-3">Amount</th>
+                                            <th className="pb-3">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                                        {recentPayments.map((p) => {
+                                            const status = (p.status || "").toLowerCase();
+                                            const isSuccess = status === "success" || status === "paid";
+                                            return (
+                                                <tr key={p.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/50">
+                                                    <td className="py-3 font-extrabold text-gray-900 dark:text-white font-mono">
+                                                        {p.transaction_number || p.razorpay_payment_id || `TXN-${p.id}`}
+                                                    </td>
+                                                    <td className="py-3 font-semibold text-gray-700 dark:text-zinc-300">
+                                                        {p.order_number ? `#${p.order_number}` : "-"}
+                                                    </td>
+                                                    <td className="py-3 text-gray-500 dark:text-zinc-400">
+                                                        {new Date(p.created_at).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="py-3 font-extrabold text-gray-900 dark:text-white">
+                                                        {formatPrice(p.amount)}
+                                                    </td>
+                                                    <td className="py-3">
+                                                        {isSuccess ? (
+                                                            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-extrabold border border-emerald-200">
+                                                                SUCCESS
+                                                            </span>
+                                                        ) : (
+                                                            <span className="px-2.5 py-1 rounded-full bg-red-50 text-red-700 text-[11px] font-extrabold border border-red-200">
+                                                                {(p.status || "FAILED").toUpperCase()}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
