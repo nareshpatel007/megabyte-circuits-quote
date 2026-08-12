@@ -151,72 +151,76 @@ export default function Header() {
 
                     {/* Right Side Options (Pushed to Right End) */}
                     <div className="flex items-center gap-2 sm:gap-3 ml-auto">
-                        {/* Theme toggle (Exact Admin Panel Icons & Animations) */}
-                        <button
-                            type="button"
-                            onClick={toggleThemeMode}
-                            className="relative p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-300 transition-all duration-200 cursor-pointer flex items-center justify-center"
-                            title={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
-                        >
-                            <Sun
-                                className={`w-4 h-4 absolute transition-all duration-300 ${
-                                    isDarkMode ? "opacity-0 rotate-90 scale-0 text-amber-400" : "opacity-100 rotate-0 scale-100 text-gray-700"
-                                }`}
-                            />
-                            <Moon
-                                className={`w-4 h-4 transition-all duration-300 ${
-                                    isDarkMode ? "opacity-100 rotate-0 scale-100 text-emerald-400" : "opacity-0 -rotate-90 scale-0 text-gray-700"
-                                }`}
-                            />
-                        </button>
+                        {user && (
+                            <>
+                                {/* Theme toggle (Exact Admin Panel Icons & Animations) */}
+                                <button
+                                    type="button"
+                                    onClick={toggleThemeMode}
+                                    className="relative p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-300 transition-all duration-200 cursor-pointer flex items-center justify-center"
+                                    title={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+                                >
+                                    <Sun
+                                        className={`w-4 h-4 absolute transition-all duration-300 ${
+                                            isDarkMode ? "opacity-0 rotate-90 scale-0 text-amber-400" : "opacity-100 rotate-0 scale-100 text-gray-700"
+                                        }`}
+                                    />
+                                    <Moon
+                                        className={`w-4 h-4 transition-all duration-300 ${
+                                            isDarkMode ? "opacity-100 rotate-0 scale-100 text-emerald-400" : "opacity-0 -rotate-90 scale-0 text-gray-700"
+                                        }`}
+                                    />
+                                </button>
 
-                        {/* Notifications Bell Option */}
-                        <div ref={bellRef} className="relative">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setIsBellOpen(!isBellOpen);
-                                    setIsAccountOpen(false);
-                                }}
-                                className="relative p-2 rounded-lg text-gray-600 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all flex items-center justify-center cursor-pointer"
-                                title="Notifications"
-                            >
-                                <Bell className="w-4.5 h-4.5" />
-                                {unreadCount > 0 && (
-                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900 animate-pulse" />
-                                )}
-                            </button>
+                                {/* Notifications Bell Option */}
+                                <div ref={bellRef} className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsBellOpen(!isBellOpen);
+                                            setIsAccountOpen(false);
+                                        }}
+                                        className="relative p-2 rounded-lg text-gray-600 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all flex items-center justify-center cursor-pointer"
+                                        title="Notifications"
+                                    >
+                                        <Bell className="w-4.5 h-4.5" />
+                                        {unreadCount > 0 && (
+                                            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900 animate-pulse" />
+                                        )}
+                                    </button>
 
-                            {isBellOpen && (
-                                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-2xl z-50 text-xs text-gray-700 dark:text-zinc-300 animate-in fade-in zoom-in-95">
-                                    <div className="px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-gray-50/60 dark:bg-zinc-800/50">
-                                        <span className="font-extrabold text-gray-900 dark:text-white text-xs">Notifications</span>
-                                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">{unreadCount} new</span>
-                                    </div>
-                                    <div className="divide-y divide-gray-100 dark:divide-zinc-800">
-                                        {sampleNotifications.map((n) => (
-                                            <div
-                                                key={n.id}
-                                                className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer ${n.unread ? "bg-emerald-50/50 dark:bg-emerald-950/20" : ""}`}
-                                            >
-                                                <div className="flex items-start gap-2.5">
-                                                    {n.unread && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />}
-                                                    <div className={!n.unread ? "ml-4" : ""}>
-                                                        <p className="text-xs font-semibold text-gray-800 dark:text-zinc-200 leading-relaxed">{n.text}</p>
-                                                        <p className="text-[10px] text-gray-400 dark:text-zinc-500 font-medium mt-0.5">{n.time}</p>
-                                                    </div>
-                                                </div>
+                                    {isBellOpen && (
+                                        <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-2xl z-50 text-xs text-gray-700 dark:text-zinc-300 animate-in fade-in zoom-in-95">
+                                            <div className="px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-gray-50/60 dark:bg-zinc-800/50">
+                                                <span className="font-extrabold text-gray-900 dark:text-white text-xs">Notifications</span>
+                                                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">{unreadCount} new</span>
                                             </div>
-                                        ))}
-                                    </div>
-                                    <div className="px-4 py-2.5 border-t border-gray-100 dark:border-zinc-800 bg-gray-50/30 dark:bg-zinc-800/30 text-center">
-                                        <button className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">
-                                            View all notifications
-                                        </button>
-                                    </div>
+                                            <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+                                                {sampleNotifications.map((n) => (
+                                                    <div
+                                                        key={n.id}
+                                                        className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer ${n.unread ? "bg-emerald-50/50 dark:bg-emerald-950/20" : ""}`}
+                                                    >
+                                                        <div className="flex items-start gap-2.5">
+                                                            {n.unread && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />}
+                                                            <div className={!n.unread ? "ml-4" : ""}>
+                                                                <p className="text-xs font-semibold text-gray-800 dark:text-zinc-200 leading-relaxed">{n.text}</p>
+                                                                <p className="text-[10px] text-gray-400 dark:text-zinc-500 font-medium mt-0.5">{n.time}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="px-4 py-2.5 border-t border-gray-100 dark:border-zinc-800 bg-gray-50/30 dark:bg-zinc-800/30 text-center">
+                                                <button className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">
+                                                    View all notifications
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
+                            </>
+                        )}
 
                         {/* Cart Option */}
                         <div className="relative">

@@ -177,7 +177,7 @@ export default function CartPage() {
             <div className="flex-1 flex flex-col min-w-0 min-h-screen">
                 <Header />
 
-                <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+                <main className={`flex-1 w-full py-6 sm:py-8 space-y-6 ${isLoggedIn ? "px-4 sm:px-6 lg:px-8" : "max-w-[1550px] mx-auto px-4"}`}>
                     {/* Header Banner (Matching Dashboard/Orders/Quote Page Header Style) */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
                         <div>

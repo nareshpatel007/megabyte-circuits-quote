@@ -56,7 +56,7 @@ export default function QuotePage() {
                         </div>
                     )}
 
-                    <PCBSpecification selectedProduct={selectedProduct} />
+                    <PCBSpecification selectedProduct={selectedProduct} isLoggedIn={isLoggedIn} />
                 </main>
 
                 <Footer />
