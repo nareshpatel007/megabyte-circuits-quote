@@ -159,103 +159,100 @@ function OrdersContent() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f4f6f9] flex flex-col font-sans">
-            <Header />
+        <div className="min-h-screen bg-[#f4f6f9] flex flex-col lg:flex-row font-sans">
+            <DashboardSidebar />
 
-            <main className="flex-1 max-w-[1550px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                {/* Header Banner */}
-                <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-                    <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
-                            My Orders
-                        </h1>
-                        <p className="text-xs text-gray-500 font-medium mt-0.5">
-                            Track and inspect all your PCB manufacturing orders.
-                        </p>
-                    </div>
+            <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+                <Header />
 
-                    <Link
-                        href="/quote"
-                        className="px-5 py-2.5 rounded-full bg-primary hover:bg-secondary text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span>Place new order</span>
-                    </Link>
-                </div>
-
-                <div className="flex flex-col lg:flex-row gap-6">
-                    <DashboardSidebar />
-
-                    {/* Right Main Content Area */}
-                    <div className="flex-1 space-y-6">
-                        <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-5">
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                                <div>
-                                    <h2 className="text-lg font-extrabold text-gray-900">My Orders</h2>
-                                    <p className="text-xs text-gray-500 font-medium">Detailed log of your manufacturing items.</p>
-                                </div>
-                                <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
-                                    {orders.length} Orders Total
-                                </span>
-                            </div>
-
-                            {loading ? (
-                                <OrdersListSkeleton />
-                            ) : orders.length === 0 ? (
-                                <div className="py-16 text-center text-xs text-gray-400 font-medium">
-                                    You have no order history yet.
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {orders.map((ord) => (
-                                        <div key={ord.id} className="p-4 rounded-xl border border-gray-200/80 hover:border-primary/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-sm font-black text-gray-900">{ord.order_number}</span>
-                                                    {getStatusBadge(ord.status_name)}
-                                                </div>
-                                                <p className="text-xs font-bold text-gray-700">
-                                                    {ord.gerber_name || ord.meta?.board_name || "Standard PCB Order"}
-                                                </p>
-                                                <p className="text-[11px] text-gray-400 font-medium">
-                                                    Ordered on: {new Date(ord.created_at).toLocaleString()} | Delivery target: {ord.delivery_date}
-                                                </p>
-                                            </div>
-
-                                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                                <div className="text-right">
-                                                    <span className="text-xs text-gray-400 font-medium block">Total Value</span>
-                                                    <span className="text-base font-extrabold text-primary">{formatPrice(ord.order_value)}</span>
-                                                </div>
-
-                                                {(ord.status_name?.toLowerCase() === "completed" || ord.status_name?.toLowerCase() === "ready to ship") && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRepeatOrder(ord)}
-                                                        className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                                                    >
-                                                        <RotateCw className="w-3.5 h-3.5" />
-                                                        <span>Repeat Order</span>
-                                                    </button>
-                                                )}
-
-                                                <Link
-                                                    href={`/orders/${ord.id}`}
-                                                    className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-secondary transition-all cursor-pointer"
-                                                >
-                                                    View Details
-                                                </Link>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+                    {/* Header Banner */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                        <div>
+                            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
+                                My Orders
+                            </h1>
+                            <p className="text-xs text-gray-500 font-medium mt-0.5">
+                                Track and inspect all your PCB manufacturing orders.
+                            </p>
                         </div>
-                    </div>
-                </div>
-            </main>
 
-            <Footer />
+                        <Link
+                            href="/quote"
+                            className="px-5 py-2.5 rounded-full bg-primary hover:bg-secondary text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                        >
+                            <Plus className="w-4 h-4" />
+                            <span>Place new order</span>
+                        </Link>
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-5">
+                        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                            <div>
+                                <h2 className="text-lg font-extrabold text-gray-900">My Orders</h2>
+                                <p className="text-xs text-gray-500 font-medium">Detailed log of your manufacturing items.</p>
+                            </div>
+                            <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
+                                {orders.length} Orders Total
+                            </span>
+                        </div>
+
+                        {loading ? (
+                            <OrdersListSkeleton />
+                        ) : orders.length === 0 ? (
+                            <div className="py-16 text-center text-xs text-gray-400 font-medium">
+                                You have no order history yet.
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {orders.map((ord) => (
+                                    <div key={ord.id} className="p-4 rounded-xl border border-gray-200/80 hover:border-primary/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-sm font-black text-gray-900">{ord.order_number}</span>
+                                                {getStatusBadge(ord.status_name)}
+                                            </div>
+                                            <p className="text-xs font-bold text-gray-700">
+                                                {ord.gerber_name || ord.meta?.board_name || "Standard PCB Order"}
+                                            </p>
+                                            <p className="text-[11px] text-gray-400 font-medium">
+                                                Ordered on: {new Date(ord.created_at).toLocaleString()} | Delivery target: {ord.delivery_date}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                                            <div className="text-right">
+                                                <span className="text-xs text-gray-400 font-medium block">Total Value</span>
+                                                <span className="text-base font-extrabold text-primary">{formatPrice(ord.order_value)}</span>
+                                            </div>
+
+                                            {(ord.status_name?.toLowerCase() === "completed" || ord.status_name?.toLowerCase() === "ready to ship") && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRepeatOrder(ord)}
+                                                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                                >
+                                                    <RotateCw className="w-3.5 h-3.5" />
+                                                    <span>Repeat Order</span>
+                                                </button>
+                                            )}
+
+                                            <Link
+                                                href={`/orders/${ord.id}`}
+                                                className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-secondary transition-all cursor-pointer"
+                                            >
+                                                View Details
+                                            </Link>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </main>
+
+                <Footer />
+            </div>
         </div>
     );
 }

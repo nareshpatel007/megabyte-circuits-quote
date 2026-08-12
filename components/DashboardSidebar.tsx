@@ -13,6 +13,7 @@ import {
     LogOut,
     Calculator
 } from "lucide-react";
+import { getAuthToken, getAuthUser } from "@/lib/auth";
 
 interface SidebarCounts {
     orders: number;
@@ -22,6 +23,8 @@ interface SidebarCounts {
 
 export default function DashboardSidebar() {
     const pathname = usePathname();
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isAuthLoaded, setIsAuthLoaded] = useState(false);
     const [counts, setCounts] = useState<SidebarCounts>(() => {
         if (typeof window !== "undefined") {
             try {
@@ -34,9 +37,11 @@ export default function DashboardSidebar() {
 
     useEffect(() => {
         try {
-            const savedUser = localStorage.getItem("megabyte_user");
-            if (savedUser) {
-                const userObj = JSON.parse(savedUser);
+            const token = getAuthToken() || localStorage.getItem("megabyte_user_token");
+            const savedUser = getAuthUser() || localStorage.getItem("megabyte_user");
+            if (token && savedUser) {
+                setIsLoggedIn(true);
+                const userObj = typeof savedUser === "string" ? JSON.parse(savedUser) : savedUser;
                 if (userObj?.id) {
                     fetch(`/api/dashboard/sidebar-counts?user_id=${userObj.id}`)
                         .then((res) => res.json())
@@ -50,11 +55,20 @@ export default function DashboardSidebar() {
                         })
                         .catch((err) => console.error("Sidebar counts fetch error:", err));
                 }
+            } else {
+                setIsLoggedIn(false);
             }
         } catch (e) {
             console.error("Sidebar user parse error:", e);
+            setIsLoggedIn(false);
+        } finally {
+            setIsAuthLoaded(true);
         }
     }, []);
+
+    if (!isAuthLoaded || !isLoggedIn) {
+        return null;
+    }
 
     const navItems = [
         {
@@ -105,59 +119,72 @@ export default function DashboardSidebar() {
     ];
 
     return (
-        <aside className="w-full lg:w-64 shrink-0">
-            <div className="bg-white rounded-2xl border border-gray-200/80 p-3 shadow-2xs sticky top-20">
-                <nav className="space-y-1">
-                    {navItems.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                    item.active
-                                        ? "bg-primary text-white shadow-xs"
-                                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                                }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Icon className="w-4 h-4" />
-                                    <span>{item.name}</span>
-                                </div>
-                                {item.count !== undefined && item.count >= 0 && (
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${item.active ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"}`}>
-                                        {item.count}
-                                    </span>
-                                )}
-                            </Link>
-                        );
-                    })}
+        <aside className="w-full lg:w-60 lg:h-screen lg:sticky lg:top-0 shrink-0 bg-[#063319] text-white flex flex-col border-r border-emerald-900/60 shadow-xl overflow-hidden">
+            {/* Top Left Logo Header */}
+            <div className="h-[64px] px-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-emerald-950/40">
+                <Link href="/" className="flex items-center gap-2">
+                    <img
+                        src="/images/logo.png"
+                        alt="Megabyte Circuits"
+                        className="h-10 w-auto object-contain brightness-0 invert"
+                    />
+                </Link>
+            </div>
 
-                    <button
-                        type="button"
-                        onClick={async () => {
-                            try {
-                                await fetch("/api/auth/logout", { method: "POST" });
-                            } catch (e) {
-                                console.error("Logout API call error:", e);
-                            } finally {
-                                localStorage.removeItem("megabyte_user_token");
-                                localStorage.removeItem("megabyte_user");
-                                localStorage.removeItem("megabyte_checkout_items");
-                                localStorage.removeItem("selectedCartItemIds");
-                                document.cookie = "megabyte_user_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-                                window.dispatchEvent(new Event("megabyte_auth_updated"));
-                                window.location.href = "/";
-                            }
-                        }}
-                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-all cursor-pointer mt-2 border-t border-gray-100"
-                    >
-                        <div className="flex items-center gap-3">
-                            <LogOut className="w-4 h-4 text-red-500" />
-                            <span>Sign Out</span>
-                        </div>
-                    </button>
-                </nav>
+            {/* Nav Links */}
+            <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-thin">
+                {navItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                item.active
+                                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                            }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Icon className={`w-4 h-4 ${item.active ? "text-emerald-400" : "text-white/70"}`} />
+                                <span>{item.name}</span>
+                            </div>
+                            {item.count !== undefined && item.count >= 0 && (
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${item.active ? "bg-emerald-500/30 text-emerald-300" : "bg-white/10 text-white/70"}`}>
+                                    {item.count}
+                                </span>
+                            )}
+                        </Link>
+                    );
+                })}
+            </nav>
+
+            {/* Bottom Sign Out */}
+            <div className="p-3 border-t border-white/10 shrink-0 bg-emerald-950/20">
+                <button
+                    type="button"
+                    onClick={async () => {
+                        try {
+                            await fetch("/api/auth/logout", { method: "POST" });
+                        } catch (e) {
+                            console.error("Logout API call error:", e);
+                        } finally {
+                            localStorage.removeItem("megabyte_user_token");
+                            localStorage.removeItem("megabyte_user");
+                            localStorage.removeItem("megabyte_checkout_items");
+                            localStorage.removeItem("selectedCartItemIds");
+                            document.cookie = "megabyte_user_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                            window.dispatchEvent(new Event("megabyte_auth_updated"));
+                            window.location.href = "/";
+                        }
+                    }}
+                    className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all cursor-pointer"
+                >
+                    <div className="flex items-center gap-3">
+                        <LogOut className="w-4 h-4 text-red-400" />
+                        <span>Sign Out</span>
+                    </div>
+                </button>
             </div>
         </aside>
     );

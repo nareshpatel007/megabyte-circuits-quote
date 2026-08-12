@@ -68,73 +68,70 @@ function PaymentsContent() {
     const filteredPayments = payments.filter((p) => ["success", "failed", "failure"].includes(p.status?.toLowerCase()));
 
     return (
-        <div className="min-h-screen bg-[#f4f6f9] flex flex-col font-sans">
-            <Header />
+        <div className="min-h-screen bg-[#f4f6f9] flex flex-col lg:flex-row font-sans">
+            <DashboardSidebar />
 
-            <main className="flex-1 max-w-[1550px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                {/* Header Banner */}
-                <div className="mb-6 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-                    <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
-                        Payment History
-                    </h1>
-                    <p className="text-xs text-gray-500 font-medium mt-0.5">
-                        Audit log of your payment transactions and receipts.
-                    </p>
-                </div>
+            <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+                <Header />
 
-                <div className="flex flex-col lg:flex-row gap-6">
-                    <DashboardSidebar />
-
-                    {/* Right Main Content Area */}
-                    <div className="flex-1 space-y-6">
-                        <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-5">
-                            <div className="border-b border-gray-100 pb-4">
-                                <h2 className="text-lg font-extrabold text-gray-900">Payment Audit History</h2>
-                                <p className="text-xs text-gray-500 font-medium">Verify your payment transactions and receipts.</p>
-                            </div>
-
-                            {loading ? (
-                                <PaymentsTableSkeleton />
-                            ) : filteredPayments.length === 0 ? (
-                                <div className="py-16 text-center text-xs text-gray-400 font-medium">
-                                    No successful or failed payment transactions recorded yet.
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-xs">
-                                        <thead>
-                                            <tr className="border-b border-gray-100 text-gray-400 font-extrabold uppercase">
-                                                <th className="pb-3">Transaction #</th>
-                                                <th className="pb-3">Razorpay Ref</th>
-                                                <th className="pb-3">Date</th>
-                                                <th className="pb-3">Amount</th>
-                                                <th className="pb-3">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                            {filteredPayments.map((pmt) => (
-                                                <tr key={pmt.id} className="hover:bg-gray-50/50">
-                                                    <td className="py-3 font-extrabold text-gray-900">{pmt.transaction_number}</td>
-                                                    <td className="py-3 text-gray-600 font-mono text-[11px]">{pmt.razorpay_payment_id || "N/A"}</td>
-                                                    <td className="py-3 text-gray-500">{new Date(pmt.created_at).toLocaleString()}</td>
-                                                    <td className="py-3 font-extrabold text-primary">{formatPrice(pmt.amount)}</td>
-                                                    <td className="py-3">
-                                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${pmt.status?.toLowerCase() === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-                                                            {pmt.status?.toLowerCase() === "success" ? "SUCCESS" : "FAILED"}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
+                <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+                    {/* Header Banner */}
+                    <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
+                            Payment History
+                        </h1>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">
+                            Audit log of your payment transactions and receipts.
+                        </p>
                     </div>
-                </div>
-            </main>
 
-            <Footer />
+                    <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-5">
+                        <div className="border-b border-gray-100 pb-4">
+                            <h2 className="text-lg font-extrabold text-gray-900">Payment History</h2>
+                            <p className="text-xs text-gray-500 font-medium">Verify your payment transactions and receipts.</p>
+                        </div>
+
+                        {loading ? (
+                            <PaymentsTableSkeleton />
+                        ) : filteredPayments.length === 0 ? (
+                            <div className="py-16 text-center text-xs text-gray-400 font-medium">
+                                No successful or failed payment transactions recorded yet.
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                    <thead>
+                                        <tr className="border-b border-gray-100 text-gray-400 font-extrabold uppercase">
+                                            <th className="pb-3">Transaction #</th>
+                                            <th className="pb-3">Razorpay Ref</th>
+                                            <th className="pb-3">Date</th>
+                                            <th className="pb-3">Amount</th>
+                                            <th className="pb-3">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredPayments.map((pmt) => (
+                                            <tr key={pmt.id} className="hover:bg-gray-50/50">
+                                                <td className="py-3 font-extrabold text-gray-900">{pmt.transaction_number}</td>
+                                                <td className="py-3 text-gray-600 font-mono text-[11px]">{pmt.razorpay_payment_id || "N/A"}</td>
+                                                <td className="py-3 text-gray-500">{new Date(pmt.created_at).toLocaleString()}</td>
+                                                <td className="py-3 font-extrabold text-primary">{formatPrice(pmt.amount)}</td>
+                                                <td className="py-3">
+                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${pmt.status?.toLowerCase() === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                                                        {pmt.status?.toLowerCase() === "success" ? "SUCCESS" : "FAILED"}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </main>
+
+                <Footer />
+            </div>
         </div>
     );
 }

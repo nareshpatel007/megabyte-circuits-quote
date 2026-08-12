@@ -61,59 +61,56 @@ function AccountContent() {
     }, [router]);
 
     return (
-        <div className="min-h-screen bg-[#f4f6f9] flex flex-col font-sans">
-            <Header />
+        <div className="min-h-screen bg-[#f4f6f9] flex flex-col lg:flex-row font-sans">
+            <DashboardSidebar />
 
-            <main className="flex-1 max-w-[1550px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                {/* Header Banner */}
-                <div className="mb-6 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-                    <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
-                        Account Profile
-                    </h1>
-                    <p className="text-xs text-gray-500 font-medium mt-0.5">
-                        Inspect and manage your profile credentials.
-                    </p>
-                </div>
+            <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+                <Header />
 
-                <div className="flex flex-col lg:flex-row gap-6">
-                    <DashboardSidebar />
-
-                    {/* Right Main Content Area */}
-                    <div className="flex-1 space-y-6">
-                        <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-5">
-                            <div className="border-b border-gray-100 pb-4">
-                                <h2 className="text-lg font-extrabold text-gray-900">Account Details</h2>
-                                <p className="text-xs text-gray-500 font-medium">Your account personal information.</p>
-                            </div>
-
-                            {loading ? (
-                                <AccountSkeleton />
-                            ) : (
-                                <div className="max-w-md space-y-4 text-xs font-semibold">
-                                    <div className="p-4 rounded-xl bg-gray-50 space-y-1 border border-gray-200/80">
-                                        <span className="text-gray-400 font-bold block text-[10px] uppercase">Full Name</span>
-                                        <p className="text-sm font-extrabold text-gray-900">{user?.name || "Customer"}</p>
-                                    </div>
-
-                                    <div className="p-4 rounded-xl bg-gray-50 space-y-1 border border-gray-200/80">
-                                        <span className="text-gray-400 font-bold block text-[10px] uppercase">Email Address</span>
-                                        <p className="text-sm font-extrabold text-gray-900">{user?.email || "N/A"}</p>
-                                    </div>
-
-                                    {user?.created_at && (
-                                        <div className="p-4 rounded-xl bg-gray-50 space-y-1 border border-gray-200/80">
-                                            <span className="text-gray-400 font-bold block text-[10px] uppercase">Member Since</span>
-                                            <p className="text-sm font-extrabold text-gray-900">{new Date(user.created_at).toLocaleDateString()}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+                    {/* Header Banner */}
+                    <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
+                            Account Profile
+                        </h1>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">
+                            Inspect and manage your profile credentials.
+                        </p>
                     </div>
-                </div>
-            </main>
 
-            <Footer />
+                    <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-5">
+                        <div className="border-b border-gray-100 pb-4">
+                            <h2 className="text-lg font-extrabold text-gray-900">Account Details</h2>
+                            <p className="text-xs text-gray-500 font-medium">Your account personal information.</p>
+                        </div>
+
+                        {loading ? (
+                            <AccountSkeleton />
+                        ) : (
+                            <div className="max-w-md space-y-4 text-xs font-semibold">
+                                <div className="p-4 rounded-xl bg-gray-50 space-y-1 border border-gray-200/80">
+                                    <span className="text-gray-400 font-bold block text-[10px] uppercase">Full Name</span>
+                                    <p className="text-sm font-extrabold text-gray-900">{user?.name || "Customer"}</p>
+                                </div>
+
+                                <div className="p-4 rounded-xl bg-gray-50 space-y-1 border border-gray-200/80">
+                                    <span className="text-gray-400 font-bold block text-[10px] uppercase">Email Address</span>
+                                    <p className="text-sm font-extrabold text-gray-900">{user?.email || "N/A"}</p>
+                                </div>
+
+                                {user?.created_at && (
+                                    <div className="p-4 rounded-xl bg-gray-50 space-y-1 border border-gray-200/80">
+                                        <span className="text-gray-400 font-bold block text-[10px] uppercase">Member Since</span>
+                                        <p className="text-sm font-extrabold text-gray-900">{new Date(user.created_at).toLocaleDateString()}</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </main>
+
+                <Footer />
+            </div>
         </div>
     );
 }

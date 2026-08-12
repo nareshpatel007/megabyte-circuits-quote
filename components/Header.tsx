@@ -91,60 +91,23 @@ export default function Header() {
 
     return (
         <>
-            <header className="bg-white border-b border-gray-200/90 sticky top-0 z-50 shadow-xs">
-                <div className="max-w-[1550px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-                    {/* Brand Logo */}
-                    <div className="flex items-center gap-4 shrink-0">
-                        <Link href="/" className="flex items-center gap-2 group">
-                            <img
-                                src="/images/logo.png"
-                                alt="Megabyte Circuit Logo"
-                                className="h-9 sm:h-10 w-auto object-contain transition-transform group-hover:scale-[1.02]"
-                            />
-                        </Link>
-                    </div>
-
-                    {/* Right Side Options */}
-                    <div className="flex items-center gap-2.5 sm:gap-4">
-                        {/* Currency Dropdown Selector */}
-                        <div ref={currencyRef} className="relative">
-                            <button
-                                type="button"
-                                onClick={() => setIsCurrencyOpen(!isCurrencyOpen)}
-                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50/60 hover:bg-gray-100/80 text-xs sm:text-sm font-semibold text-gray-700 transition-colors cursor-pointer"
-                            >
-                                <span>{symbol.trim()} {currency}</span>
-                                {isLoading ? (
-                                    <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
-                                ) : (
-                                    <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-                                )}
-                            </button>
-
-                            {isCurrencyOpen && (
-                                <div className="absolute right-0 mt-1.5 w-36 max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-50 scrollbar-thin">
-                                    {availableCurrencies.map((curr) => {
-                                        const currSymbol = curr === "INR" ? "₹" : curr === "USD" ? "$" : curr === "EUR" ? "€" : curr === "GBP" ? "£" : curr === "AED" ? "AED" : curr;
-                                        return (
-                                            <button
-                                                key={curr}
-                                                type="button"
-                                                onClick={() => {
-                                                    setCurrency(curr);
-                                                    setIsCurrencyOpen(false);
-                                                }}
-                                                className={`w-full text-left px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors hover:bg-gray-50 flex items-center justify-between ${currency === curr ? "text-primary font-bold bg-primary/5" : "text-gray-700"
-                                                    }`}
-                                            >
-                                                <span>{curr}</span>
-                                                <span className="text-gray-400 font-normal text-xs">{currSymbol}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
+            <header className="bg-white border-b border-gray-200/90 sticky top-0 z-50 shadow-xs h-14">
+                <div className="w-full px-4 sm:px-6 h-full flex items-center justify-between gap-4">
+                    {/* Brand Logo (visible only when not logged in or in header layout) */}
+                    {!user && (
+                        <div className="flex items-center gap-4 shrink-0">
+                            <Link href="/" className="flex items-center gap-2 group">
+                                <img
+                                    src="/images/logo.png"
+                                    alt="Megabyte Circuit Logo"
+                                    className="h-9 sm:h-10 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+                                />
+                            </Link>
                         </div>
+                    )}
 
+                    {/* Right Side Options (Pushed to Right End) */}
+                    <div className="flex items-center gap-2.5 sm:gap-4 ml-auto">
                         {/* Cart Option */}
                         <div className="relative">
                             <button

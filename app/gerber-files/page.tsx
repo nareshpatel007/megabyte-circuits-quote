@@ -97,99 +97,96 @@ function GerberFilesContent() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f4f6f9] flex flex-col font-sans">
-            <Header />
+        <div className="min-h-screen bg-[#f4f6f9] flex flex-col lg:flex-row font-sans">
+            <DashboardSidebar />
 
-            <main className="flex-1 max-w-[1550px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                {/* Header Banner */}
-                <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-                    <div>
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
-                            Gerber Files Library
-                        </h1>
-                        <p className="text-xs text-gray-500 font-medium mt-0.5">
-                            Manage and download your PCB Gerber archives.
-                        </p>
+            <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+                <Header />
+
+                <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+                    {/* Header Banner */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                        <div>
+                            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
+                                Gerber Files Library
+                            </h1>
+                            <p className="text-xs text-gray-500 font-medium mt-0.5">
+                                Manage and download your PCB Gerber archives.
+                            </p>
+                        </div>
+
+                        <Link
+                            href="/"
+                            className="px-5 py-2.5 rounded-full bg-primary hover:bg-secondary text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                        >
+                            <Plus className="w-4 h-4" />
+                            <span>Upload New Gerber</span>
+                        </Link>
                     </div>
 
-                    <Link
-                        href="/"
-                        className="px-5 py-2.5 rounded-full bg-primary hover:bg-secondary text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span>Upload New Gerber</span>
-                    </Link>
-                </div>
-
-                <div className="flex flex-col lg:flex-row gap-6">
-                    <DashboardSidebar />
-
-                    {/* Right Main Content Area */}
-                    <div className="flex-1 space-y-6">
-                        <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-5">
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                                <div>
-                                    <h2 className="text-lg font-extrabold text-gray-900">Gerber Files Library</h2>
-                                    <p className="text-xs text-gray-500 font-medium">Access your uploaded PCB Gerber archives.</p>
-                                </div>
-                                <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
-                                    {gerberFiles.length} Files
-                                </span>
+                    <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-5">
+                        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                            <div>
+                                <h2 className="text-lg font-extrabold text-gray-900">Gerber Files Library</h2>
+                                <p className="text-xs text-gray-500 font-medium">Access your uploaded PCB Gerber archives.</p>
                             </div>
+                            <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
+                                {gerberFiles.length} Files
+                            </span>
+                        </div>
 
-                            {loading ? (
-                                <GerberFilesSkeleton />
-                            ) : gerberFiles.length === 0 ? (
-                                <div className="py-16 text-center text-xs text-gray-400 font-medium">
-                                    No Gerber files uploaded yet.
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {gerberFiles.map((file) => (
-                                        <div key={file.id} className="p-4 rounded-xl border border-gray-200/80 bg-gray-50/50 flex items-start justify-between gap-3 group hover:border-gray-300 transition-all">
-                                            <div className="flex items-start gap-3 min-w-0">
-                                                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#0b3818] rounded-xl border border-gray-200/90 flex items-center justify-center p-1 overflow-hidden shrink-0 relative shadow-sm">
-                                                    <GerberBoardPreview previewData={file.preview_data} originalName={file.original_name} boardName={file.board_name} />
-                                                </div>
-
-                                                <div className="min-w-0 space-y-1">
-                                                    <h4 className="text-xs font-extrabold text-gray-900 truncate max-w-[180px]" title={file.original_name}>
-                                                        {file.original_name}
-                                                    </h4>
-                                                    <p className="text-[11px] text-gray-500 font-medium">
-                                                        Uploaded: {new Date(file.created_at).toLocaleDateString()} {file.file_size ? `| ${file.file_size}` : ""}
-                                                    </p>
-                                                    {file.file_url && (
-                                                        <a
-                                                            href={file.file_url}
-                                                            download={file.original_name || "gerber_archive.zip"}
-                                                            className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline pt-0.5 cursor-pointer"
-                                                        >
-                                                            <Download className="w-3 h-3" />
-                                                            <span>Download Archive</span>
-                                                        </a>
-                                                    )}
-                                                </div>
+                        {loading ? (
+                            <GerberFilesSkeleton />
+                        ) : gerberFiles.length === 0 ? (
+                            <div className="py-16 text-center text-xs text-gray-400 font-medium">
+                                No Gerber files uploaded yet.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {gerberFiles.map((file) => (
+                                    <div key={file.id} className="p-4 rounded-xl border border-gray-200/80 bg-gray-50/50 flex items-start justify-between gap-3 group hover:border-gray-300 transition-all">
+                                        <div className="flex items-start gap-3 min-w-0">
+                                            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#0b3818] rounded-xl border border-gray-200/90 flex items-center justify-center p-1 overflow-hidden shrink-0 relative shadow-sm">
+                                                <GerberBoardPreview previewData={file.preview_data} originalName={file.original_name} boardName={file.board_name} />
                                             </div>
 
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDeleteGerberFile(file.id)}
-                                                title="Delete Gerber File"
-                                                className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer shrink-0"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                                            <div className="min-w-0 space-y-1">
+                                                <h4 className="text-xs font-extrabold text-gray-900 truncate max-w-[180px]" title={file.original_name}>
+                                                    {file.original_name}
+                                                </h4>
+                                                <p className="text-[11px] text-gray-500 font-medium">
+                                                    Uploaded: {new Date(file.created_at).toLocaleDateString()} {file.file_size ? `| ${file.file_size}` : ""}
+                                                </p>
+                                                {file.file_url && (
+                                                    <a
+                                                        href={file.file_url}
+                                                        download={file.original_name || "gerber_archive.zip"}
+                                                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline pt-0.5 cursor-pointer"
+                                                    >
+                                                        <Download className="w-3 h-3" />
+                                                        <span>Download Archive</span>
+                                                    </a>
+                                                )}
+                                            </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </main>
 
-            <Footer />
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteGerberFile(file.id)}
+                                            title="Delete Gerber File"
+                                            className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer shrink-0"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </main>
+
+                <Footer />
+            </div>
         </div>
     );
 }

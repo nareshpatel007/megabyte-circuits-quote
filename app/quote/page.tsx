@@ -35,35 +35,32 @@ export default function QuotePage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#f0f2f5] font-sans flex flex-col">
-            <Header />
-            <main className="flex-1 max-w-[1550px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                {/* Header Banner */}
-                {isLoggedIn && (
-                    <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-                        <div>
-                            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
-                                Instant Quote
-                            </h1>
-                            <p className="text-xs text-gray-500 font-medium mt-0.5">
-                                Calculate instant custom PCB specification pricing and place an order.
-                            </p>
-                        </div>
-                    </div>
-                )}
+        <div className="min-h-screen bg-[#f4f6f9] flex flex-col lg:flex-row font-sans">
+            {isLoggedIn && <DashboardSidebar />}
 
-                {isLoggedIn ? (
-                    <div className="flex flex-col lg:flex-row gap-6">
-                        <DashboardSidebar />
-                        <div className="flex-1 min-w-0">
-                            <PCBSpecification selectedProduct={selectedProduct} />
+            <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+                <Header />
+
+                <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+                    {/* Header Banner */}
+                    {isLoggedIn && (
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                            <div>
+                                <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
+                                    Instant Quote
+                                </h1>
+                                <p className="text-xs text-gray-500 font-medium mt-0.5">
+                                    Calculate instant custom PCB specification pricing and place an order.
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                ) : (
+                    )}
+
                     <PCBSpecification selectedProduct={selectedProduct} />
-                )}
-            </main>
-            <Footer />
+                </main>
+
+                <Footer />
+            </div>
         </div>
     );
 }
