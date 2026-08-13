@@ -103,11 +103,12 @@ export default function CartPage() {
 
     const handleQuantityChange = async (id: any, newQty: number) => {
         const strId = String(id);
+        const validQty = Math.max(1, isNaN(newQty) ? 1 : newQty);
         const updated = cartItems.map((item) => {
             if (String(item.id) === strId) {
                 const unitPrice = item.unitPrice || (item.qty > 0 ? item.price / item.qty : item.price);
-                const newPrice = Math.max(Math.round(unitPrice * newQty), 10);
-                return { ...item, qty: newQty, price: newPrice, unitPrice };
+                const newPrice = Math.max(Math.round(unitPrice * validQty), 10);
+                return { ...item, qty: validQty, price: newPrice, unitPrice };
             }
             return item;
         });
@@ -261,11 +262,20 @@ export default function CartPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center justify-between sm:justify-end gap-6 sm:gap-8 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100">
-                                                        <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-gray-50/50">
-                                                            <button type="button" onClick={() => handleQuantityChange(item.id, (item.qty || 5) - 5)} className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer">-</button>
-                                                            <span className="w-9 text-center text-xs font-bold text-gray-800">{item.qty}</span>
-                                                            <button type="button" onClick={() => handleQuantityChange(item.id, (item.qty || 5) + 5)} className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer">+</button>
-                                                        </div>
+                                                         <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-gray-50/50">
+                                                             <button type="button" onClick={() => handleQuantityChange(item.id, (item.qty || 1) - 1)} className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer">-</button>
+                                                             <input
+                                                                 type="number"
+                                                                 min="1"
+                                                                 value={item.qty ?? 1}
+                                                                 onChange={(e) => {
+                                                                     const val = parseInt(e.target.value, 10);
+                                                                     handleQuantityChange(item.id, val);
+                                                                 }}
+                                                                 className="w-12 text-center text-xs font-bold text-gray-800 bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                             />
+                                                             <button type="button" onClick={() => handleQuantityChange(item.id, (item.qty || 1) + 1)} className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer">+</button>
+                                                         </div>
                                                         <div className="text-xs font-semibold text-gray-600 w-20 text-center">{item.buildTime}</div>
                                                         <div className="text-sm font-extrabold text-primary w-24 text-right">{formatPrice(item.price)}</div>
                                                         <button type="button" onClick={() => handleRemoveItem(item.id)} className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"><Trash2 className="w-4 h-4" /></button>

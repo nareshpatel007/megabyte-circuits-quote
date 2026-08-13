@@ -13,6 +13,7 @@ export interface OrderFormData {
     qty: string;
     product_type: string;
     different_design: string;
+    delivery_format?: string;
 
     // PCB Specifications
     thickness: string;

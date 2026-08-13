@@ -57,6 +57,7 @@ export interface QuoteFormData {
     qty: string;
     productType: string;
     differentDesign: string;
+    deliveryFormat?: string;
     thickness: string;
     pcbColor: string;
     silkscreen: string;

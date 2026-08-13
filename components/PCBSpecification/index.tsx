@@ -25,6 +25,7 @@ const INITIAL_FORM_DATA: QuoteFormData = {
     qty: "5",
     productType: "Industrial/Consumer electronics",
     differentDesign: "1",
+    deliveryFormat: "Single PCB",
     thickness: "1.6mm",
     pcbColor: "#52c41a",
     silkscreen: "White",
@@ -836,6 +837,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             qty: formData.qty,
             product_type: formData.productType,
             different_design: formData.differentDesign,
+            delivery_format: formData.deliveryFormat || "Single PCB",
 
             // PCB Specifications
             thickness: formData.thickness,

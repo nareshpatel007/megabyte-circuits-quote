@@ -497,6 +497,18 @@ export default function QuoteForm({
                                 ))}
                             </ConfigRow>
 
+                            <ConfigRow label="Delivery Format" tooltip="Single PCB vs Panelized by Customer or Manufacturer.">
+                                {["Single PCB", "Panel by Customer", "Panel by Megabyte Circuit"].map(d => (
+                                    <Pill
+                                        key={d}
+                                        active={(formData.deliveryFormat || "Single PCB") === d}
+                                        onClick={() => updateField("deliveryFormat", d)}
+                                    >
+                                        {d}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
                             {/* Material-specific options or Substrate Type for Flex */}
                             {formData.baseMaterial === "Flex" && (
                                 <ConfigRow label="Substrate Type" tooltip="Thickness of dielectric layer.">
