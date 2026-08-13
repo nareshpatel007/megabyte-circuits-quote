@@ -91,6 +91,19 @@ export interface QuoteFormData {
     stencilThickness?: string;
     stencilFiducials?: string;
     electropolishing?: string;
+    // Dynamic Material Specific Fields
+    substrateType?: string;
+    coverlayColor?: string;
+    coverlayThickness?: string;
+    copperType?: string;
+    stiffener?: string;
+    emiShielding?: string;
+    cuttingMethod?: string;
+    edaSoftware?: string;
+    silkscreenOnStiffener?: string;
+    rogersMaterial?: string;
+    ptfeMaterial?: string;
+    datasheetLink?: string;
     buildTime: string;
     boardName: string;
     userMobile: string;

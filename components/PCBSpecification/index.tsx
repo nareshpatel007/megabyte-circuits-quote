@@ -1038,10 +1038,20 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 qty: Number(formData.qty) || 5,
                 buildTime: `${selectedDay || 3} days`,
                 price: Number(calculatedPrice) || 100,
-                material: formData.materialType || "FR-4",
-                thickness: `${formData.thickness || '1.6mm'}`,
-                surfaceFinish: formData.surfaceFinish || "HASL(Leaded)",
-                copperWeight: formData.copperWeight || "1 oz",
+                material: formData.baseMaterial || "FR-4",
+                materialType: formData.materialType || (formData.baseMaterial === "Flex" ? "Polyimide (PI)" : formData.baseMaterial === "Rogers" ? "RO4350B(Dk=3.48,Df=0.0037)" : formData.baseMaterial === "PTFE Teflon" ? "ZYF300CA-P(Dk=3.0,Df=0.0016)" : "FR4-TG135"),
+                thickness: `${formData.thickness || (formData.baseMaterial === "Flex" ? '0.12mm' : '1.6mm')}`,
+                surfaceFinish: formData.surfaceFinish || (formData.baseMaterial === "Flex" ? "ENIG" : "HASL(Leaded)"),
+                copperWeight: formData.copperWeight || (formData.baseMaterial === "Flex" ? "0.5 oz" : "1 oz"),
+                ...(formData.substrateType ? { substrateType: formData.substrateType } : {}),
+                ...(formData.coverlayColor ? { coverlayColor: formData.coverlayColor } : {}),
+                ...(formData.coverlayThickness ? { coverlayThickness: formData.coverlayThickness } : {}),
+                ...(formData.copperType ? { copperType: formData.copperType } : {}),
+                ...(formData.stiffener ? { stiffener: formData.stiffener } : {}),
+                ...(formData.emiShielding ? { emiShielding: formData.emiShielding } : {}),
+                ...(formData.cuttingMethod ? { cuttingMethod: formData.cuttingMethod } : {}),
+                ...(formData.edaSoftware ? { edaSoftware: formData.edaSoftware } : {}),
+                ...(formData.silkscreenOnStiffener ? { silkscreenOnStiffener: formData.silkscreenOnStiffener } : {}),
                 date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
             };
             const updatedCart = [...existingCart, newItem];
@@ -1234,6 +1244,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                             day: daysAhead,
                                             dateNum: date.getDate(),
                                             monthStr: date.toLocaleDateString("en-IN", { month: "short" }),
+                                            fullMonthYear: date.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
                                             weekday: date.toLocaleDateString("en-IN", { weekday: "short" }),
                                             formattedDate: date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
                                             orderValue: matchedOrderValue.toFixed(2),
@@ -1241,6 +1252,11 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                             visible
                                         };
                                     });
+
+                                    const uniqueMonths = Array.from(new Set(next20Days.map(item => item.fullMonthYear)));
+                                    const calendarHeaderTitle = uniqueMonths.length > 1
+                                        ? `${uniqueMonths[0]} - ${uniqueMonths[uniqueMonths.length - 1]}`
+                                        : uniqueMonths[0] || new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
                                     const selectedDayData = next20Days.find(item => item.day === selectedDay);
                                     const hasValidGerber = !!uploadedFile && detectedInfo?.layers !== "0" && (!!topSvg || !!bottomSvg || previewLoading);
@@ -1262,7 +1278,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                         </p>
                                                     </div>
                                                     <div className="bg-white dark:bg-[#0F7438]/80 text-[#0F7438] dark:text-[#8DD3A5] px-2.5 py-1 rounded-md text-xs font-black shadow-sm border border-[#69C48A]/60 dark:border-[#41A96A]/60 flex items-center gap-1">
-                                                        <span>{new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" })}</span>
+                                                        <span>{calendarHeaderTitle}</span>
                                                     </div>
                                                 </div>
 

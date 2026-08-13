@@ -497,8 +497,35 @@ export default function QuoteForm({
                                 ))}
                             </ConfigRow>
 
+                            {/* Material-specific options or Substrate Type for Flex */}
+                            {formData.baseMaterial === "Flex" && (
+                                <ConfigRow label="Substrate Type" tooltip="Thickness of dielectric layer.">
+                                    {[
+                                        { label: "25µm dielectric thickness", val: "25µm dielectric thickness" },
+                                        { label: "50µm dielectric thickness", val: "50µm dielectric thickness" },
+                                        { label: "Transparent", val: "Transparent" }
+                                    ].map(sub => (
+                                        <Pill
+                                            key={sub.val}
+                                            active={(formData.substrateType || "25µm dielectric thickness") === sub.val}
+                                            onClick={() => updateField("substrateType", sub.val)}
+                                        >
+                                            {sub.label}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
+
+                            {/* PCB Thickness - Dynamic options for Flex vs Others */}
                             <ConfigRow label="PCB Thickness">
-                                {["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(t => (
+                                {(formData.baseMaterial === "Flex"
+                                    ? ["0.11mm", "0.12mm", "0.2mm"]
+                                    : formData.baseMaterial === "Rogers"
+                                    ? ["0.51mm", "0.76mm", "1.52mm"]
+                                    : formData.baseMaterial === "PTFE Teflon"
+                                    ? ["0.76mm", "1.52mm"]
+                                    : ["0.4mm", "0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"]
+                                ).map(t => (
                                     <Pill
                                         key={t}
                                         active={formData.thickness === t}
@@ -509,17 +536,28 @@ export default function QuoteForm({
                                 ))}
                             </ConfigRow>
 
-                            <ConfigRow label="PCB Color">
-                                <div className="flex flex-wrap gap-2.5">
-                                    <ColorCirclePill color="#52c41a" name="Green" active={formData.pcbColor === "#52c41a"} onClick={() => updateField("pcbColor", "#52c41a")} />
-                                    <ColorCirclePill color="#722ed1" name="Purple" active={formData.pcbColor === "#722ed1"} onClick={() => updateField("pcbColor", "#722ed1")} />
-                                    <ColorCirclePill color="#f5222d" name="Red" active={formData.pcbColor === "#f5222d"} onClick={() => updateField("pcbColor", "#f5222d")} />
-                                    <ColorCirclePill color="#fadb14" name="Yellow" active={formData.pcbColor === "#fadb14"} onClick={() => updateField("pcbColor", "#fadb14")} />
-                                    <ColorCirclePill color="#1677ff" name="Blue" active={formData.pcbColor === "#1677ff"} onClick={() => updateField("pcbColor", "#1677ff")} />
-                                    <ColorCirclePill color="#ffffff" name="White" active={formData.pcbColor === "#ffffff"} onClick={() => updateField("pcbColor", "#ffffff")} />
-                                    <ColorCirclePill color="#000000" name="Black" active={formData.pcbColor === "#000000"} onClick={() => updateField("pcbColor", "#000000")} />
-                                </div>
-                            </ConfigRow>
+                            {/* Coverlay Color for Flex vs PCB Color for FR-4/Rogers/PTFE */}
+                            {formData.baseMaterial === "Flex" ? (
+                                <ConfigRow label="Coverlay Color">
+                                    <div className="flex flex-wrap gap-2.5">
+                                        <ColorCirclePill color="#fadb14" name="Yellow" active={(formData.coverlayColor || "Yellow") === "Yellow"} onClick={() => updateField("coverlayColor", "Yellow")} />
+                                        <ColorCirclePill color="#000000" name="Black" active={formData.coverlayColor === "Black"} onClick={() => updateField("coverlayColor", "Black")} />
+                                        <ColorCirclePill color="#ffffff" name="White" active={formData.coverlayColor === "White"} onClick={() => updateField("coverlayColor", "White")} />
+                                    </div>
+                                </ConfigRow>
+                            ) : (
+                                <ConfigRow label="PCB Color">
+                                    <div className="flex flex-wrap gap-2.5">
+                                        <ColorCirclePill color="#52c41a" name="Green" active={formData.pcbColor === "#52c41a"} onClick={() => updateField("pcbColor", "#52c41a")} />
+                                        <ColorCirclePill color="#722ed1" name="Purple" active={formData.pcbColor === "#722ed1"} onClick={() => updateField("pcbColor", "#722ed1")} />
+                                        <ColorCirclePill color="#f5222d" name="Red" active={formData.pcbColor === "#f5222d"} onClick={() => updateField("pcbColor", "#f5222d")} />
+                                        <ColorCirclePill color="#fadb14" name="Yellow" active={formData.pcbColor === "#fadb14"} onClick={() => updateField("pcbColor", "#fadb14")} />
+                                        <ColorCirclePill color="#1677ff" name="Blue" active={formData.pcbColor === "#1677ff"} onClick={() => updateField("pcbColor", "#1677ff")} />
+                                        <ColorCirclePill color="#ffffff" name="White" active={formData.pcbColor === "#ffffff"} onClick={() => updateField("pcbColor", "#ffffff")} />
+                                        <ColorCirclePill color="#000000" name="Black" active={formData.pcbColor === "#000000"} onClick={() => updateField("pcbColor", "#000000")} />
+                                    </div>
+                                </ConfigRow>
+                            )}
 
                             <ConfigRow label="Silkscreen">
                                 <Pill
@@ -530,20 +568,95 @@ export default function QuoteForm({
                                 </Pill>
                             </ConfigRow>
 
+                            {/* Copper Type for Flex */}
+                            {formData.baseMaterial === "Flex" && (
+                                <ConfigRow label="Copper Type">
+                                    {["Electro-deposited", "Rolled Annealed"].map(ct => (
+                                        <Pill
+                                            key={ct}
+                                            active={(formData.copperType || "Electro-deposited") === ct}
+                                            onClick={() => updateField("copperType", ct)}
+                                        >
+                                            {ct}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
+
+                            {/* Material Type dropdown/options depending on Base Material */}
                             <ConfigRow label="Material Type">
-                                {["FR4 TG135"].map(m => (
-                                    <Pill
-                                        key={m}
-                                        active={(formData.materialType || "FR4 TG135") === m}
-                                        onClick={() => updateField("materialType", m)}
-                                    >
-                                        {m}
-                                    </Pill>
-                                ))}
+                                {formData.baseMaterial === "FR-4" && (
+                                    ["FR4-TG135", "KB6164 - TG135", "Nan Ya NP-140F", "S1141 TG140", "S1000H TG155"].map(m => (
+                                        <Pill
+                                            key={m}
+                                            active={(formData.materialType || "FR4-TG135") === m}
+                                            onClick={() => updateField("materialType", m)}
+                                        >
+                                            {m}
+                                        </Pill>
+                                    ))
+                                )}
+
+                                {formData.baseMaterial === "Flex" && (
+                                    ["Polyimide (PI)"].map(m => (
+                                        <Pill
+                                            key={m}
+                                            active={(formData.materialType || "Polyimide (PI)") === m}
+                                            onClick={() => updateField("materialType", m)}
+                                        >
+                                            {m}
+                                        </Pill>
+                                    ))
+                                )}
+
+                                {formData.baseMaterial === "Rogers" && (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {["RO4350B(Dk=3.48,Df=0.0037)"].map(m => (
+                                            <Pill
+                                                key={m}
+                                                active={(formData.materialType || "RO4350B(Dk=3.48,Df=0.0037)") === m}
+                                                onClick={() => updateField("materialType", m)}
+                                            >
+                                                {m}
+                                            </Pill>
+                                        ))}
+                                        <a href="https://jlpcb.com/datasheet/RO4350B.pdf" target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline hover:text-secondary ml-1">
+                                            Datasheet
+                                        </a>
+                                    </div>
+                                )}
+
+                                {formData.baseMaterial === "PTFE Teflon" && (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {[
+                                            "ZYF300CA-P(Dk=3.0,Df=0.0016)",
+                                            "ZYF300CA-O(Dk=2.94,Df=0.0016)",
+                                            "ZYF265D(Dk=2.65,Df=0.0019)",
+                                            "ZYF255DA(Dk=2.55,Df=0.0018)"
+                                        ].map(m => (
+                                            <Pill
+                                                key={m}
+                                                active={(formData.materialType || "ZYF300CA-P(Dk=3.0,Df=0.0016)") === m}
+                                                onClick={() => updateField("materialType", m)}
+                                            >
+                                                {m}
+                                            </Pill>
+                                        ))}
+                                        <a href="https://jlpcb.com/datasheet/PTFE.pdf" target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline hover:text-secondary ml-1">
+                                            Datasheet
+                                        </a>
+                                    </div>
+                                )}
                             </ConfigRow>
 
+                            {/* Surface Finish */}
                             <ConfigRow label="Surface Finish">
-                                {["OSP", "HASL(with lead)", "LeadFree HASL", "ENIG"].map(s => (
+                                {(formData.baseMaterial === "Flex"
+                                    ? ["ENIG"]
+                                    : formData.baseMaterial === "Rogers" || formData.baseMaterial === "PTFE Teflon"
+                                    ? ["OSP", "ENIG", "HASL(with lead)", "LeadFree HASL"]
+                                    : ["OSP", "HASL(with lead)", "LeadFree HASL", "ENIG"]
+                                ).map(s => (
                                     <Pill
                                         key={s}
                                         active={formData.surfaceFinish === s}
@@ -554,7 +667,7 @@ export default function QuoteForm({
                                 ))}
                             </ConfigRow>
 
-                            {formData.surfaceFinish === "ENIG" && (
+                            {(formData.surfaceFinish === "ENIG" || formData.baseMaterial === "Flex") && (
                                 <ConfigRow label="Gold Thickness">
                                     {["1 U*", "2 U*"].map(gt => (
                                         <Pill
@@ -585,7 +698,10 @@ export default function QuoteForm({
                     {highSpecsOpen && (
                         <div className="py-2 space-y-1">
                             <ConfigRow label="Outer Copper Weight">
-                                {["1 oz", "2 oz"].map(w => (
+                                {(formData.baseMaterial === "Flex"
+                                    ? ["0.5 oz", "1 oz"]
+                                    : ["1 oz", "2 oz", "3.5 oz", "4.5 oz"]
+                                ).map(w => (
                                     <Pill
                                         key={w}
                                         disabled={w === "3.5 oz" || w === "4.5 oz"}
@@ -597,46 +713,179 @@ export default function QuoteForm({
                                 ))}
                             </ConfigRow>
 
-                            <ConfigRow label="Via Covering">
-                                {["Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map(v => (
-                                    <Pill
-                                        key={v}
-                                        disabled={v === "Copper paste Filled & Capped"}
-                                        active={formData.viaCovering === v}
-                                        onClick={() => updateField("viaCovering", v)}
-                                    >
-                                        {v}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
+                            {/* Coverlay Thickness for Flex */}
+                            {formData.baseMaterial === "Flex" && (
+                                <ConfigRow label="Coverlay Thickness">
+                                    {["PI:12.5um/AD:15um", "PI:25um/AD:25um"].map(ct => (
+                                        <Pill
+                                            key={ct}
+                                            active={(formData.coverlayThickness || "PI:12.5um/AD:15um") === ct}
+                                            onClick={() => updateField("coverlayThickness", ct)}
+                                        >
+                                            {ct}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
 
-                            <ConfigRow label="Via Plating Method">
-                                <div className="w-full flex flex-col gap-2">
-                                    <div className="flex flex-wrap gap-2.5">
-                                        {["Not Specified", "Conductive Adhesive", "Horizontal Electroless Copper Plating"].map(v => (
-                                            <Pill
-                                                key={v}
-                                                active={formData.viaPlating === v}
-                                                onClick={() => updateField("viaPlating", v)}
-                                            >
-                                                {v}
-                                            </Pill>
-                                        ))}
+                            {/* Standard Via Covering for FR-4 / Rogers / PTFE */}
+                            {formData.baseMaterial !== "Flex" && (
+                                <ConfigRow label="Via Covering">
+                                    {["Tented", "Untented", "Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map(v => (
+                                        <Pill
+                                            key={v}
+                                            disabled={v === "Copper paste Filled & Capped"}
+                                            active={formData.viaCovering === v}
+                                            onClick={() => updateField("viaCovering", v)}
+                                        >
+                                            {v}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
+
+                            {formData.baseMaterial !== "Flex" && (
+                                <ConfigRow label="Via Plating Method">
+                                    <div className="w-full flex flex-col gap-2">
+                                        <div className="flex flex-wrap gap-2.5">
+                                            {["Not Specified", "Conductive Adhesive", "Horizontal Electroless Copper Plating"].map(v => (
+                                                <Pill
+                                                    key={v}
+                                                    active={formData.viaPlating === v}
+                                                    onClick={() => updateField("viaPlating", v)}
+                                                >
+                                                    {v}
+                                                </Pill>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            </ConfigRow>
+                                </ConfigRow>
+                            )}
 
-                            <ConfigRow label="Min via hole size/diameter">
-                                {["0.3mm/(0.4/0.45mm)", "0.25mm/(0.35/0.4mm)", "0.2mm/(0.3/0.35mm)", "0.15mm/(0.25/0.3mm)"].map(h => (
+                            {formData.baseMaterial !== "Flex" && (
+                                <ConfigRow label="Min via hole size/diameter">
+                                    {["0.3mm/(0.4/0.45mm)", "0.25mm/(0.35/0.4mm)", "0.2mm/(0.3/0.35mm)", "0.15mm/(0.25/0.3mm)"].map(h => (
+                                        <Pill
+                                            key={h}
+                                            active={formData.minHole === h}
+                                            onClick={() => updateField("minHole", h)}
+                                        >
+                                            {h}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
+
+                            {/* EDA Software for Flex */}
+                            {formData.baseMaterial === "Flex" && (
+                                <ConfigRow label="EDA Software" tooltip="Specify EDA software used to design FPC layout.">
+                                    {["EasyEDA Pro", "Other"].map(sw => (
+                                        <Pill
+                                            key={sw}
+                                            active={(formData.edaSoftware || "EasyEDA Pro") === sw}
+                                            onClick={() => updateField("edaSoftware", sw)}
+                                        >
+                                            {sw}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
+
+                            {/* Stiffener for Flex */}
+                            {formData.baseMaterial === "Flex" && (
+                                <ConfigRow label="Stiffener">
+                                    {["Without", "Polyimide", "FR4", "Stainless Steel", "3M Tape"].map(st => (
+                                        <Pill
+                                            key={st}
+                                            active={(formData.stiffener || "Without") === st}
+                                            onClick={() => updateField("stiffener", st)}
+                                        >
+                                            {st}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
+
+                            {/* EMI Shielding Film for Flex */}
+                            {formData.baseMaterial === "Flex" && (
+                                <ConfigRow label="EMI Shielding Film">
+                                    {["Without", "Both sides ( Black, 18um )", "Single side ( Black, 18um )"].map(emi => (
+                                        <Pill
+                                            key={emi}
+                                            active={(formData.emiShielding || "Without") === emi}
+                                            onClick={() => updateField("emiShielding", emi)}
+                                        >
+                                            {emi}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
+
+                            {/* Cutting Method for Flex */}
+                            {formData.baseMaterial === "Flex" && (
+                                <ConfigRow label="Cutting Method">
+                                    {["Laser Cutting", "Punching"].map(cm => (
+                                        <Pill
+                                            key={cm}
+                                            active={(formData.cuttingMethod || "Laser Cutting") === cm}
+                                            onClick={() => updateField("cuttingMethod", cm)}
+                                        >
+                                            {cm}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
+
+                            <ConfigRow label="Confirm Production file">
+                                {["No", "Yes"].map(cpf => (
                                     <Pill
-                                        key={h}
-                                        active={formData.minHole === h}
-                                        onClick={() => updateField("minHole", h)}
+                                        key={cpf}
+                                        active={formData.confirmFile === cpf}
+                                        onClick={() => updateField("confirmFile", cpf)}
                                     >
-                                        {h}
+                                        {cpf}
                                     </Pill>
                                 ))}
                             </ConfigRow>
+
+                            <ConfigRow label="Mark on PCB">
+                                {["Remove Mark", "2D barcode (Serial Number)"].map(m => (
+                                    <Pill
+                                        key={m}
+                                        active={formData.markOnPcb === m}
+                                        onClick={() => updateField("markOnPcb", m)}
+                                    >
+                                        {m}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Electrical Test">
+                                {["Flying Probe Fully Test"].map(et => (
+                                    <Pill
+                                        key={et}
+                                        active={formData.elecTest === et}
+                                        onClick={() => updateField("elecTest", et)}
+                                    >
+                                        {et}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            {/* Silkscreen on Stiffener for Flex */}
+                            {formData.baseMaterial === "Flex" && (
+                                <ConfigRow label="Silkscreen on Stiffener">
+                                    {["No", "Yes"].map(sos => (
+                                        <Pill
+                                            key={sos}
+                                            active={(formData.silkscreenOnStiffener || "No") === sos}
+                                            onClick={() => updateField("silkscreenOnStiffener", sos)}
+                                        >
+                                            {sos}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
 
                             <ConfigRow label="Gold Fingers">
                                 {["No", "Yes"].map(g => (
@@ -650,42 +899,48 @@ export default function QuoteForm({
                                 ))}
                             </ConfigRow>
 
-                            <ConfigRow label="Castellated Holes">
-                                {["No", "Yes"].map(c => (
-                                    <Pill
-                                        key={c}
-                                        active={formData.castellated === c}
-                                        onClick={() => updateField("castellated", c)}
-                                    >
-                                        {c}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
+                            {formData.baseMaterial !== "Flex" && (
+                                <ConfigRow label="Castellated Holes">
+                                    {["No", "Yes"].map(c => (
+                                        <Pill
+                                            key={c}
+                                            active={formData.castellated === c}
+                                            onClick={() => updateField("castellated", c)}
+                                        >
+                                            {c}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
 
-                            <ConfigRow label="Edge Plating">
-                                {["No", "Yes"].map(e => (
-                                    <Pill
-                                        key={e}
-                                        disabled={e === "Yes"}
-                                        active={formData.edgePlating === e}
-                                        onClick={() => updateField("edgePlating", e)}
-                                    >
-                                        {e}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
+                            {formData.baseMaterial !== "Flex" && (
+                                <ConfigRow label="Edge Plating">
+                                    {["No", "Yes"].map(e => (
+                                        <Pill
+                                            key={e}
+                                            disabled={e === "Yes"}
+                                            active={formData.edgePlating === e}
+                                            onClick={() => updateField("edgePlating", e)}
+                                        >
+                                            {e}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
 
-                            <ConfigRow label="Blind Slots">
-                                {["No", "Yes"].map(b => (
-                                    <Pill
-                                        key={b}
-                                        active={formData.blindSlots === b}
-                                        onClick={() => updateField("blindSlots", b)}
-                                    >
-                                        {b}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
+                            {formData.baseMaterial !== "Flex" && (
+                                <ConfigRow label="Blind Slots">
+                                    {["No", "Yes"].map(b => (
+                                        <Pill
+                                            key={b}
+                                            active={formData.blindSlots === b}
+                                            onClick={() => updateField("blindSlots", b)}
+                                        >
+                                            {b}
+                                        </Pill>
+                                    ))}
+                                </ConfigRow>
+                            )}
 
                             <ConfigRow label="UL Marking">
                                 {["No", "Yes (Any Position)", "Yes (Specify Position)"].map(u => (
@@ -696,6 +951,18 @@ export default function QuoteForm({
                                         onClick={() => updateField("ulMarking", u)}
                                     >
                                         {u}
+                                    </Pill>
+                                ))}
+                            </ConfigRow>
+
+                            <ConfigRow label="Humidity Indicator Card">
+                                {["No", "Yes"].map(hic => (
+                                    <Pill
+                                        key={hic}
+                                        active={formData.humidity === hic}
+                                        onClick={() => updateField("humidity", hic)}
+                                    >
+                                        {hic}
                                     </Pill>
                                 ))}
                             </ConfigRow>

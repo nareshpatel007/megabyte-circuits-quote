@@ -250,7 +250,14 @@ export default function CartPage() {
                                                         </div>
                                                         <div className="space-y-1 min-w-0">
                                                             <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">{item.boardName}</h3>
-                                                            <p className="text-[11px] text-gray-500 font-medium leading-relaxed">{item.layers} Layer, {item.dimensions}, {item.thickness} Thickness</p>
+                                                            <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                                {item.layers} Layer, {item.dimensions}, {item.thickness} Thickness, {item.material || "FR-4"}
+                                                                {(item as any).materialType ? `, ${(item as any).materialType}` : ""}
+                                                                {(item as any).substrateType ? `, ${(item as any).substrateType}` : ""}
+                                                                {(item as any).copperType ? `, Copper: ${(item as any).copperType}` : ""}
+                                                                {(item as any).coverlayColor ? `, Coverlay: ${(item as any).coverlayColor}` : ""}
+                                                                {(item as any).stiffener && (item as any).stiffener !== "Without" ? `, Stiffener: ${(item as any).stiffener}` : ""}
+                                                            </p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center justify-between sm:justify-end gap-6 sm:gap-8 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100">

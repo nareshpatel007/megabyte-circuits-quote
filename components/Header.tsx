@@ -20,7 +20,7 @@ export default function Header() {
 
     useEffect(() => {
         const savedTheme = localStorage.getItem("megabyte_theme");
-        if (savedTheme === "dark" || (!savedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+        if (savedTheme === "dark") {
             setIsDarkMode(true);
             document.documentElement.classList.add("dark");
         } else {
@@ -131,7 +131,7 @@ export default function Header() {
     return (
         <>
             <header className="bg-white dark:bg-zinc-900 border-b border-gray-200/90 dark:border-zinc-800 sticky top-0 z-50 shadow-xs h-14 transition-colors">
-                <div className="w-full px-4 sm:px-6 h-full flex items-center justify-between gap-4">
+                <div className={`w-full h-full flex items-center justify-between gap-4 ${user ? "px-4 sm:px-6" : "max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12"}`}>
                     {/* Brand Logo (visible only when not logged in or in header layout) */}
                     {!user ? (
                         <div className="flex items-center gap-4 shrink-0">
