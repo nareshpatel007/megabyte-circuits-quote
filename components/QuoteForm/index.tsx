@@ -524,7 +524,7 @@ export default function QuoteForm({
                                     ? ["0.51mm", "0.76mm", "1.52mm"]
                                     : formData.baseMaterial === "PTFE Teflon"
                                     ? ["0.76mm", "1.52mm"]
-                                    : ["0.4mm", "0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"]
+                                    : ["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"]
                                 ).map(t => (
                                     <Pill
                                         key={t}
@@ -586,7 +586,7 @@ export default function QuoteForm({
                             {/* Material Type dropdown/options depending on Base Material */}
                             <ConfigRow label="Material Type">
                                 {formData.baseMaterial === "FR-4" && (
-                                    ["FR4-TG135", "KB6164 - TG135", "Nan Ya NP-140F", "S1141 TG140", "S1000H TG155"].map(m => (
+                                    ["FR4-TG135"].map(m => (
                                         <Pill
                                             key={m}
                                             active={(formData.materialType || "FR4-TG135") === m}
@@ -700,11 +700,10 @@ export default function QuoteForm({
                             <ConfigRow label="Outer Copper Weight">
                                 {(formData.baseMaterial === "Flex"
                                     ? ["0.5 oz", "1 oz"]
-                                    : ["1 oz", "2 oz", "3.5 oz", "4.5 oz"]
+                                    : ["1 oz", "2 oz"]
                                 ).map(w => (
                                     <Pill
                                         key={w}
-                                        disabled={w === "3.5 oz" || w === "4.5 oz"}
                                         active={formData.copperWeight === w || (w === "1 oz" && (!formData.copperWeight || formData.copperWeight === "1oz"))}
                                         onClick={() => updateField("copperWeight", w)}
                                     >

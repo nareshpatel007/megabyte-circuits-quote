@@ -1032,7 +1032,7 @@ export default function PCBQuote() {
                                         </ConfigRow>
 
                                         <ConfigRow label="PCB Thickness">
-                                            {["0.4mm", "0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(t => (
+                                            {["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(t => (
                                                 <Pill key={t} active={thickness === t} onClick={() => setThickness(t)}>{t}</Pill>
                                             ))}
                                         </ConfigRow>
@@ -1054,7 +1054,7 @@ export default function PCBQuote() {
                                         </ConfigRow>
 
                                         <ConfigRow label="Material Type">
-                                            {["FR4-TG135", "KB6164-TG135", "Nan Ya NP-140F", "S1141-TG140", "S1000H-TG155"].map(m => (
+                                            {["FR4-TG135"].map(m => (
                                                 <Pill key={m} active={materialType === m} onClick={() => setMaterialType(m)}>{m}</Pill>
                                             ))}
                                         </ConfigRow>
