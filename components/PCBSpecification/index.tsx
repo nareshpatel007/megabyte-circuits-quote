@@ -1143,7 +1143,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-lg sticky top-24 overflow-hidden">
                             <div className="p-4 space-y-4 bg-white">                                 {/* Sticky Notes Board Delivery Calendar */}
                                 {(() => {
-                                    const { options, showContact } = getLeadTimePricing();
+                                    const { options, showContact, totalAreaInSqM = 0 } = getLeadTimePricing();
 
                                     if (showContact) {
                                         return (
@@ -1305,11 +1305,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                             <div
                                                                 key={item.day}
                                                                 onClick={() => setSelectedDay(item.day)}
-                                                                className={`relative flex flex-col items-center justify-between p-1.5 rounded-sm transition-all duration-200 cursor-pointer select-none aspect-square shadow-sm ${rotation} ${
-                                                                    isSelected
+                                                                className={`relative flex flex-col items-center justify-between p-1.5 rounded-sm transition-all duration-200 cursor-pointer select-none aspect-square shadow-sm ${rotation} ${isSelected
                                                                         ? `${color.activeBg} ring-2 ring-[#238E4E] border-2 border-[#0F7438] scale-[1.08] z-20 shadow-md rotate-0`
                                                                         : `${color.bg} border ${color.border} hover:scale-[1.04] hover:rotate-0 hover:z-10 hover:shadow-md`
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 {/* Push Pin */}
                                                                 <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
@@ -1327,24 +1326,31 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                 </div>
                                             </div>
 
-                                            {selectedDayData ? (
-                                                <div className="bg-[#8DD3A5]/10 border border-[#41A96A]/30 rounded-xl p-3.5 shadow-2xs space-y-2 animate-in fade-in duration-200">
-                                                    <div className="flex justify-between items-center text-xs font-bold text-[#0F7438] dark:text-[#8DD3A5]">
-                                                        <span>Selected Delivery:</span>
-                                                        <span className="bg-[#238E4E] text-white px-2 py-0.5 rounded text-xs font-black">{selectedDayData.formattedDate}</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-baseline">
-                                                        <span className="text-slate-600 dark:text-slate-300 text-xs font-semibold">Total Price:</span>
-                                                        <span className="text-lg font-black text-[#0F7438] dark:text-[#69C48A]">
-                                                            {formatPrice(selectedDayData.orderValue)}
-                                                        </span>
-                                                    </div>
+                                            <div className="bg-[#8DD3A5]/10 border border-[#41A96A]/30 rounded-xl p-3.5 shadow-2xs space-y-2">
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">Total Area:</span>
+                                                    <span className="font-extrabold text-[#0F7438] dark:text-[#8DD3A5]">
+                                                        {totalAreaInSqM.toFixed(2)} m²
+                                                    </span>
                                                 </div>
-                                            ) : (
-                                                <div className="text-center p-3 bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-500 italic">
-                                                    Tap on any sticky note above to pick a delivery date.
-                                                </div>
-                                            )}
+
+                                                {selectedDayData ? (
+                                                    <div className="pt-2 border-t border-[#41A96A]/20 space-y-2 animate-in fade-in duration-200">
+                                                        <div className="flex justify-between items-center text-xs font-bold text-[#0F7438] dark:text-[#8DD3A5]">
+                                                            <span>Selected Delivery:</span>
+                                                            <span className="bg-[#238E4E] text-white px-2 py-0.5 rounded text-xs font-black">{selectedDayData.formattedDate}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-baseline">
+                                                            <span className="text-slate-600 dark:text-slate-300 text-xs font-semibold">Total Price:</span>
+                                                            <span className="text-lg font-black text-[#0F7438] dark:text-[#69C48A]">
+                                                                {formatPrice(selectedDayData.orderValue)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center pt-1 text-xs font-semibold text-slate-500 italic border-t border-[#41A96A]/10"></div>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })()}
