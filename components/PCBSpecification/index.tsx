@@ -520,6 +520,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [isChargeDetailsOpen, setIsChargeDetailsOpen] = useState(true);
     const [selectedBuildTime, setSelectedBuildTime] = useState<"3days" | "24hours" | "24hours_pcba">("3days");
     const [selectedDay, setSelectedDay] = useState<number | null>(null);
+    const [shippingOptionKey, setShippingOptionKey] = useState<string>("gujarat_road");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [checkoutData, setCheckoutData] = useState<{ day: number; unitPrice: string; orderValue: string; dateStr: string } | null>(null);
 
@@ -590,7 +591,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
         const solderMask = formData.pcbColor === "#52c41a" ? "Green" : "Other";
         const copperWeight = formData.copperWeight.replace(" ", "");
-        const thickness = parseFloat(formData.thickness) || 1.6;
+        const rawThicknessStr = (formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "");
+        const thickness = parseFloat(rawThicknessStr) || 1.6;
 
         if (length <= 0 || width <= 0 || quantity <= 0) {
             return { options: [], showContact: false, totalAreaInSqM: 0 };
@@ -1326,31 +1328,87 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                 </div>
                                             </div>
 
-                                            <div className="bg-[#8DD3A5]/10 border border-[#41A96A]/30 rounded-xl p-3.5 shadow-2xs space-y-2">
-                                                <div className="flex justify-between items-center text-xs">
-                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">Total Area:</span>
-                                                    <span className="font-extrabold text-[#0F7438] dark:text-[#8DD3A5]">
-                                                        {totalAreaInSqM.toFixed(2)} m²
-                                                    </span>
-                                                </div>
+                                            {/* Shipping Options & Total Calculation */}
+                                            {(() => {
+                                                // Estimate PCB weight in KG (standard 1.6mm FR4 PCB ~ 3.8kg per sq meter)
+                                                const thicknessMm = parseFloat((formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "")) || 1.6;
+                                                const weightPerSqM = 3.8 * (thicknessMm / 1.6);
+                                                const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
 
-                                                {selectedDayData ? (
-                                                    <div className="pt-2 border-t border-[#41A96A]/20 space-y-2 animate-in fade-in duration-200">
-                                                        <div className="flex justify-between items-center text-xs font-bold text-[#0F7438] dark:text-[#8DD3A5]">
-                                                            <span>Selected Delivery:</span>
-                                                            <span className="bg-[#238E4E] text-white px-2 py-0.5 rounded text-xs font-black">{selectedDayData.formattedDate}</span>
-                                                        </div>
-                                                        <div className="flex justify-between items-baseline">
-                                                            <span className="text-slate-600 dark:text-slate-300 text-xs font-semibold">Total Price:</span>
-                                                            <span className="text-lg font-black text-[#0F7438] dark:text-[#69C48A]">
-                                                                {formatPrice(selectedDayData.orderValue)}
+                                                const shippingOptions = [
+                                                    { key: "gujarat_road", location: "In Gujarat", method: "By Road", rate: 40 },
+                                                    { key: "out_road", location: "Out of Gujarat", method: "By Road", rate: 80 },
+                                                    { key: "out_air", location: "Out of Gujarat", method: "By Air", rate: 150 },
+                                                    { key: "out_fastrack", location: "Out of Gujarat", method: "Fastrack", rate: 450 },
+                                                ];
+
+                                                const activeShipping = shippingOptions.find(o => o.key === shippingOptionKey) || shippingOptions[0];
+                                                const shippingCharge = Math.round(activeShipping.rate * estimatedWeightKg);
+
+                                                const pcbPrice = selectedDayData ? parseFloat(selectedDayData.orderValue) : 0;
+                                                const mainTotal = pcbPrice > 0 ? pcbPrice + shippingCharge : 0;
+
+                                                return (
+                                                    <div className="bg-[#8DD3A5]/10 border border-[#41A96A]/30 rounded-xl p-3.5 shadow-2xs space-y-3">
+                                                        <div className="flex justify-between items-center text-xs">
+                                                            <span className="text-slate-600 dark:text-slate-300 font-semibold">Total Area:</span>
+                                                            <span className="font-extrabold text-[#0F7438] dark:text-[#8DD3A5]">
+                                                                {totalAreaInSqM.toFixed(2)} m² <span className="text-[10px] font-normal text-slate-500">({estimatedWeightKg} kg est.)</span>
                                                             </span>
                                                         </div>
+
+                                                        {/* Shipping Option Selection */}
+                                                        <div className="pt-2 border-t border-[#41A96A]/20 space-y-1.5">
+                                                            <div className="flex justify-between items-center text-xs font-bold text-[#0F7438] dark:text-[#8DD3A5]">
+                                                                <span>Shipping Option:</span>
+                                                                <span className="text-[10px] font-medium text-slate-500">Select delivery method</span>
+                                                            </div>
+                                                            <select
+                                                                value={shippingOptionKey}
+                                                                onChange={(e) => setShippingOptionKey(e.target.value)}
+                                                                className="w-full bg-white dark:bg-slate-800 border border-[#41A96A]/40 rounded-lg p-2 text-xs font-medium text-slate-800 dark:text-slate-100 shadow-2xs focus:ring-2 focus:ring-[#238E4E] focus:outline-none"
+                                                            >
+                                                                {shippingOptions.map(opt => {
+                                                                    const charge = Math.round(opt.rate * estimatedWeightKg);
+                                                                    return (
+                                                                        <option key={opt.key} value={opt.key}>
+                                                                            {opt.location} - {opt.method} (₹{opt.rate}/kg) → +₹{charge}
+                                                                        </option>
+                                                                    );
+                                                                })}
+                                                            </select>
+                                                            <div className="flex justify-between items-center text-xs pt-1">
+                                                                <span className="text-slate-600 dark:text-slate-300 font-medium">Shipping Charge:</span>
+                                                                <span className="font-bold text-slate-800 dark:text-slate-200">₹{shippingCharge.toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Total Calculation */}
+                                                        {selectedDayData ? (
+                                                            <div className="pt-2 border-t border-[#41A96A]/20 space-y-2 animate-in fade-in duration-200">
+                                                                <div className="flex justify-between items-center text-xs font-bold text-[#0F7438] dark:text-[#8DD3A5]">
+                                                                    <span>Selected Delivery:</span>
+                                                                    <span className="bg-[#238E4E] text-white px-2 py-0.5 rounded text-xs font-black">{selectedDayData.formattedDate}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center text-xs">
+                                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">PCB Price:</span>
+                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">{formatPrice(selectedDayData.orderValue)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-baseline pt-1 border-t border-dashed border-[#41A96A]/30">
+                                                                    <span className="text-slate-800 dark:text-slate-200 text-xs font-black">Main Total:</span>
+                                                                    <span className="text-xl font-black text-[#0F7438] dark:text-[#69C48A]">
+                                                                        {formatPrice(mainTotal)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-center pt-2 text-xs font-semibold text-slate-500 italic border-t border-[#41A96A]/10">
+                                                                Tap on any sticky note above to pick a delivery date.
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                ) : (
-                                                    <div className="text-center pt-1 text-xs font-semibold text-slate-500 italic border-t border-[#41A96A]/10"></div>
-                                                )}
-                                            </div>
+                                                );
+                                            })()}
                                         </div>
                                     );
                                 })()}

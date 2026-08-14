@@ -10,8 +10,11 @@ function LoginSuccessContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     
-    const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+    const [status, setStatus] = useState<"loading" | "success" | "gst_prompt" | "error">("loading");
     const [message, setMessage] = useState("Processing Google authentication...");
+    const [gstNumber, setGstNumber] = useState("");
+    const [isSavingGst, setIsSavingGst] = useState(false);
+    const [userId, setUserId] = useState<string | number | null>(null);
 
     useEffect(() => {
         const token = searchParams.get("token");
@@ -25,7 +28,6 @@ function LoginSuccessContent() {
 
         if (token) {
             try {
-                // Decode token payload if JWT to extract basic user details
                 let userObj: { id?: string | number; name?: string; email?: string; avatar?: string } = {};
 
                 const parts = token.split(".");
@@ -57,23 +59,18 @@ function LoginSuccessContent() {
                     };
                 }
 
-                // Store in auth state & localStorage
                 setAuthSession(token, userObj);
                 localStorage.setItem("megabyte_user_token", token);
                 localStorage.setItem("megabyte_user", JSON.stringify(userObj));
-                
-                // Dispatch event for header & app state update
                 window.dispatchEvent(new Event("megabyte_auth_updated"));
 
-                setStatus("success");
+                if (userObj.id) {
+                    setUserId(userObj.id);
+                }
+
+                // Show GST prompt modal
+                setStatus("gst_prompt");
                 setMessage("Successfully signed in with Google!");
-
-                // Redirect after brief delay for smooth UX
-                const timer = setTimeout(() => {
-                    router.push("/dashboard");
-                }, 1000);
-
-                return () => clearTimeout(timer);
             } catch (err) {
                 console.error("Auth token processing error:", err);
                 setStatus("error");
@@ -83,7 +80,29 @@ function LoginSuccessContent() {
             setStatus("error");
             setMessage("No authentication token received from Google callback.");
         }
-    }, [searchParams, router]);
+    }, [searchParams]);
+
+    const handleSaveGst = async (skip: boolean = false) => {
+        setIsSavingGst(true);
+        try {
+            if (!skip && gstNumber.trim() && userId) {
+                const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+                await fetch(`${backendUrl}/api/dashboard/update-gst`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: userId, gst_number: gstNumber.trim() }),
+                });
+            }
+        } catch (e) {
+            console.error("Failed to save GST number:", e);
+        } finally {
+            setIsSavingGst(false);
+            setStatus("success");
+            setTimeout(() => {
+                router.push("/dashboard");
+            }, 600);
+        }
+    };
 
     return (
         <div className="min-h-screen w-full bg-slate-50 flex items-center justify-center p-4 sm:p-6 font-sans">
@@ -105,6 +124,49 @@ function LoginSuccessContent() {
                         </div>
                         <h2 className="text-lg font-bold text-gray-800">{message}</h2>
                         <p className="text-xs text-gray-500">Please wait while we finalize your account access.</p>
+                    </div>
+                )}
+
+                {status === "gst_prompt" && (
+                    <div className="py-4 space-y-4 text-left">
+                        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-600">
+                            <CheckCircle2 className="w-8 h-8" />
+                        </div>
+                        <div className="text-center space-y-1">
+                            <h2 className="text-xl font-bold text-gray-900">Welcome! Google Login Successful</h2>
+                            <p className="text-xs text-gray-500">Please provide your GST number to complete your business profile.</p>
+                        </div>
+
+                        <div className="space-y-3 pt-2">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">GST Number</label>
+                                <input
+                                    type="text"
+                                    value={gstNumber}
+                                    onChange={(e) => setGstNumber(e.target.value)}
+                                    placeholder="e.g. 24AAAAA0000A1Z5"
+                                    className="w-full h-11 px-3.5 text-xs sm:text-sm border border-gray-300 rounded-xl focus:border-primary outline-none uppercase transition-all"
+                                />
+                            </div>
+
+                            <button
+                                type="button"
+                                disabled={isSavingGst}
+                                onClick={() => handleSaveGst(false)}
+                                className="w-full py-3 rounded-xl bg-primary hover:bg-secondary text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                            >
+                                {isSavingGst ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <span>Save & Continue</span>}
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={isSavingGst}
+                                onClick={() => handleSaveGst(true)}
+                                className="w-full py-2.5 text-center text-xs text-gray-500 hover:text-gray-700 font-semibold cursor-pointer"
+                            >
+                                Skip for now
+                            </button>
+                        </div>
                     </div>
                 )}
 

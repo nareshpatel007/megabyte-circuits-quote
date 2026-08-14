@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck, Loader2, AlertCircle } from "lucide-react";
 import { setAuthSession, getAuthToken } from "@/lib/auth";
+import { signInSchema, signUpSchema } from "@/lib/validations/auth";
 
 function LoginContent() {
     const router = useRouter();
@@ -19,6 +20,7 @@ function LoginContent() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [country, setCountry] = useState("India");
+    const [gstNumber, setGstNumber] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
     const [agreeTerms, setAgreeTerms] = useState(true);
@@ -28,6 +30,17 @@ function LoginContent() {
     const [isSocialLoading, setIsSocialLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+    const clearFieldError = (fieldName: string) => {
+        if (fieldErrors[fieldName]) {
+            setFieldErrors((prev) => {
+                const updated = { ...prev };
+                delete updated[fieldName];
+                return updated;
+            });
+        }
+    };
 
     useEffect(() => {
         // 1. Check if error in URL from OAuth redirect
@@ -47,6 +60,44 @@ function LoginContent() {
         e.preventDefault();
         setErrorMessage("");
         setSuccessMessage("");
+        setFieldErrors({});
+
+        if (viewMode === "signin") {
+            const validation = signInSchema.safeParse({ usernameOrEmail, password });
+            if (!validation.success) {
+                const errors: Record<string, string> = {};
+                validation.error.issues.forEach((issue) => {
+                    const key = issue.path[0]?.toString();
+                    if (key && !errors[key]) {
+                        errors[key] = issue.message;
+                    }
+                });
+                setFieldErrors(errors);
+                return;
+            }
+        } else {
+            const validation = signUpSchema.safeParse({
+                username,
+                email,
+                password,
+                accountType,
+                country,
+                gstNumber,
+                agreeTerms,
+            });
+            if (!validation.success) {
+                const errors: Record<string, string> = {};
+                validation.error.issues.forEach((issue) => {
+                    const key = issue.path[0]?.toString();
+                    if (key && !errors[key]) {
+                        errors[key] = issue.message;
+                    }
+                });
+                setFieldErrors(errors);
+                return;
+            }
+        }
+
         setIsLoading(true);
 
         try {
@@ -58,7 +109,8 @@ function LoginContent() {
                     email: email,
                     password: password,
                     company_name: accountType === "company" ? username : "",
-                    country: country
+                    country: country,
+                    gst_number: gstNumber
                 };
 
             const res = await fetch(endpoint, {
@@ -107,7 +159,7 @@ function LoginContent() {
     return (
         <div className="min-h-screen w-full bg-white flex flex-col md:flex-row font-sans">
             {/* Left Column: Slimmer Full-Height PCB Image */}
-            <div className="w-full md:w-[320px] lg:w-[360px] xl:w-[380px] min-h-[300px] md:min-h-screen relative overflow-hidden shrink-0 p-0 m-0 bg-emerald-950">
+            <div className="w-full md:w-[320px] lg:w-[360px] xl:w-[380px] h-[300px] md:h-screen md:sticky md:top-0 md:self-start relative overflow-hidden shrink-0 p-0 m-0 bg-emerald-950">
                 <img
                     src="/images/login-wide-pcb.png"
                     alt="PCB Circuit Board"
@@ -148,30 +200,18 @@ function LoginContent() {
                     )}
 
                     {/* Form */}
-                    <form onSubmit={handleFormSubmit} className="space-y-4">
+                    <form onSubmit={handleFormSubmit} noValidate className="space-y-4">
                         {viewMode === "signup" && (
                             <>
-                                {/* Company / Personal Radios */}
+                                {/* Personal / Company Radios */}
                                 <div className="grid grid-cols-2 gap-3">
                                     <label
-                                        onClick={() => setAccountType("company")}
-                                        className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${accountType === "company"
-                                            ? "border-primary bg-primary/5 text-primary"
-                                            : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                                            }`}
-                                    >
-                                        <input
-                                            type="radio"
-                                            name="accountType"
-                                            checked={accountType === "company"}
-                                            onChange={() => setAccountType("company")}
-                                            className="accent-primary"
-                                        />
-                                        <span>Company</span>
-                                    </label>
-
-                                    <label
-                                        onClick={() => setAccountType("personal")}
+                                        onClick={() => {
+                                            setAccountType("personal");
+                                            setGstNumber("");
+                                            clearFieldError("accountType");
+                                            clearFieldError("gstNumber");
+                                        }}
                                         className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${accountType === "personal"
                                             ? "border-primary bg-primary/5 text-primary"
                                             : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
@@ -181,10 +221,38 @@ function LoginContent() {
                                             type="radio"
                                             name="accountType"
                                             checked={accountType === "personal"}
-                                            onChange={() => setAccountType("personal")}
+                                            onChange={() => {
+                                                setAccountType("personal");
+                                                setGstNumber("");
+                                                clearFieldError("accountType");
+                                                clearFieldError("gstNumber");
+                                            }}
                                             className="accent-primary"
                                         />
                                         <span>Personal</span>
+                                    </label>
+
+                                    <label
+                                        onClick={() => {
+                                            setAccountType("company");
+                                            clearFieldError("accountType");
+                                        }}
+                                        className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${accountType === "company"
+                                            ? "border-primary bg-primary/5 text-primary"
+                                            : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                                            }`}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="accountType"
+                                            checked={accountType === "company"}
+                                            onChange={() => {
+                                                setAccountType("company");
+                                                clearFieldError("accountType");
+                                            }}
+                                            className="accent-primary"
+                                        />
+                                        <span>Company</span>
                                     </label>
                                 </div>
 
@@ -192,24 +260,42 @@ function LoginContent() {
                                 <div>
                                     <input
                                         type="text"
-                                        required
                                         value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
+                                        onChange={(e) => {
+                                            setUsername(e.target.value);
+                                            clearFieldError("username");
+                                        }}
                                         placeholder="Username"
-                                        className="w-full h-11 px-3.5 text-xs sm:text-sm border border-gray-300 rounded-xl focus:border-primary outline-none transition-all placeholder:text-gray-400"
+                                        className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${
+                                            fieldErrors.username
+                                                ? "border-red-500 focus:border-red-500"
+                                                : "border-gray-300 focus:border-primary"
+                                        }`}
                                     />
+                                    {fieldErrors.username && (
+                                        <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.username}</p>
+                                    )}
                                 </div>
 
                                 {/* Email */}
                                 <div>
                                     <input
                                         type="email"
-                                        required
                                         value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
+                                        onChange={(e) => {
+                                            setEmail(e.target.value);
+                                            clearFieldError("email");
+                                        }}
                                         placeholder="Email"
-                                        className="w-full h-11 px-3.5 text-xs sm:text-sm border border-gray-300 rounded-xl focus:border-primary outline-none transition-all placeholder:text-gray-400"
+                                        className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${
+                                            fieldErrors.email
+                                                ? "border-red-500 focus:border-red-500"
+                                                : "border-gray-300 focus:border-primary"
+                                        }`}
                                     />
+                                    {fieldErrors.email && (
+                                        <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.email}</p>
+                                    )}
                                 </div>
                             </>
                         )}
@@ -218,50 +304,103 @@ function LoginContent() {
                             <div>
                                 <input
                                     type="text"
-                                    required
                                     value={usernameOrEmail}
-                                    onChange={(e) => setUsernameOrEmail(e.target.value)}
+                                    onChange={(e) => {
+                                        setUsernameOrEmail(e.target.value);
+                                        clearFieldError("usernameOrEmail");
+                                    }}
                                     placeholder="Username or Email"
-                                    className="w-full h-11 px-3.5 text-xs sm:text-sm border border-gray-300 rounded-xl focus:border-primary outline-none transition-all placeholder:text-gray-400"
+                                    className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${
+                                        fieldErrors.usernameOrEmail
+                                            ? "border-red-500 focus:border-red-500"
+                                            : "border-gray-300 focus:border-primary"
+                                    }`}
                                 />
+                                {fieldErrors.usernameOrEmail && (
+                                    <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.usernameOrEmail}</p>
+                                )}
                             </div>
                         )}
 
                         {/* Password with Eye Toggle */}
-                        <div className="relative">
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Password"
-                                className="w-full h-11 pl-3.5 pr-10 text-xs sm:text-sm border border-gray-300 rounded-xl focus:border-primary outline-none transition-all placeholder:text-gray-400"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 cursor-pointer"
-                            >
-                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
+                        <div>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={password}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value);
+                                        clearFieldError("password");
+                                    }}
+                                    placeholder="Password"
+                                    className={`w-full h-11 pl-3.5 pr-10 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${
+                                        fieldErrors.password
+                                            ? "border-red-500 focus:border-red-500"
+                                            : "border-gray-300 focus:border-primary"
+                                    }`}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 cursor-pointer"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                            {fieldErrors.password && (
+                                <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.password}</p>
+                            )}
                         </div>
 
-                        {/* Country Dropdown for Register */}
+                        {/* Country Dropdown & GST Field for Register */}
                         {viewMode === "signup" && (
-                            <div>
-                                <select
-                                    value={country}
-                                    onChange={(e) => setCountry(e.target.value)}
-                                    className="w-full h-11 px-3.5 text-xs sm:text-sm border border-gray-300 rounded-xl focus:border-primary outline-none bg-white transition-all text-gray-700"
-                                >
-                                    <option value="India">India</option>
-                                    <option value="United States">United States</option>
-                                    <option value="United Kingdom">United Kingdom</option>
-                                    <option value="Germany">Germany</option>
-                                    <option value="Canada">Canada</option>
-                                    <option value="Australia">Australia</option>
-                                    <option value="Japan">Japan</option>
-                                </select>
+                            <div className="space-y-4">
+                                <div>
+                                    <select
+                                        value={country}
+                                        onChange={(e) => {
+                                            setCountry(e.target.value);
+                                            clearFieldError("country");
+                                        }}
+                                        className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none bg-white transition-all text-gray-700 ${
+                                            fieldErrors.country
+                                                ? "border-red-500 focus:border-red-500"
+                                                : "border-gray-300 focus:border-primary"
+                                        }`}
+                                    >
+                                        <option value="India">India</option>
+                                        <option value="United States">United States</option>
+                                        <option value="United Kingdom">United Kingdom</option>
+                                        <option value="Germany">Germany</option>
+                                        <option value="Canada">Canada</option>
+                                        <option value="Australia">Australia</option>
+                                        <option value="Japan">Japan</option>
+                                    </select>
+                                    {fieldErrors.country && (
+                                        <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.country}</p>
+                                    )}
+                                </div>
+                                {accountType === "company" && (
+                                    <div>
+                                        <input
+                                            type="text"
+                                            value={gstNumber}
+                                            onChange={(e) => {
+                                                setGstNumber(e.target.value);
+                                                clearFieldError("gstNumber");
+                                            }}
+                                            placeholder="GST Number (Optional)"
+                                            className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 uppercase ${
+                                                fieldErrors.gstNumber
+                                                    ? "border-red-500 focus:border-red-500"
+                                                    : "border-gray-300 focus:border-primary"
+                                            }`}
+                                        />
+                                        {fieldErrors.gstNumber && (
+                                            <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.gstNumber}</p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -285,18 +424,24 @@ function LoginContent() {
 
                         {/* Checkboxes for Register */}
                         {viewMode === "signup" && (
-                            <div className="space-y-2 text-xs text-gray-600">
+                            <div className="space-y-1 text-xs text-gray-600">
                                 <label className="flex items-start gap-2 cursor-pointer select-none">
                                     <input
                                         type="checkbox"
                                         checked={agreeTerms}
-                                        onChange={(e) => setAgreeTerms(e.target.checked)}
+                                        onChange={(e) => {
+                                            setAgreeTerms(e.target.checked);
+                                            clearFieldError("agreeTerms");
+                                        }}
                                         className="mt-0.5 rounded accent-primary shrink-0"
                                     />
                                     <span>
                                         I agree to Megabyte&apos;s <a href="#" className="text-primary hover:underline font-semibold">Terms of Use</a> and <a href="#" className="text-primary hover:underline font-semibold">Privacy Policy</a>.
                                     </span>
                                 </label>
+                                {fieldErrors.agreeTerms && (
+                                    <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.agreeTerms}</p>
+                                )}
                             </div>
                         )}
 
@@ -320,6 +465,7 @@ function LoginContent() {
                                 setViewMode(viewMode === "signin" ? "signup" : "signin");
                                 setErrorMessage("");
                                 setSuccessMessage("");
+                                setFieldErrors({});
                             }}
                             className="w-full py-3 rounded-xl bg-gray-100/90 hover:bg-gray-200/80 text-gray-700 font-semibold text-xs sm:text-sm transition-all text-center cursor-pointer"
                         >

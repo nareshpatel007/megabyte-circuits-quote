@@ -393,39 +393,42 @@ function CheckoutContent() {
     }
 
     return (
-        <div className="min-h-screen bg-[#f4f6f9] flex flex-col font-sans">
+        <div className="min-h-screen bg-[#f4f6f9] dark:bg-[#030712] text-gray-900 dark:text-gray-100 flex flex-col lg:flex-row font-sans transition-colors">
             {/* Razorpay Script */}
             <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
-            {/* Theme Header */}
-            <Header />
+            {/* Left Sidebar when logged in */}
+            {isLoggedIn && <DashboardSidebar />}
 
-            {/* Main Content Area */}
-            <main className="flex-1 max-w-[1550px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                {/* Page Title & Back to Cart Button */}
-                <div className="mb-4 flex items-center justify-between gap-4">
-                    <h1 className="text-sm sm:text-base font-bold text-gray-700 tracking-wider uppercase">
-                        CHECKOUT
-                    </h1>
-                    <Link
-                        href="/cart"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-primary text-primary hover:bg-primary hover:text-white font-bold text-xs sm:text-sm transition-all shadow-2xs active:scale-95 cursor-pointer"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>Back to Cart</span>
-                    </Link>
-                </div>
+            <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+                {/* Theme Header */}
+                <Header />
 
-                {errorMessage && (
-                    <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 shrink-0" />
-                        <span>{errorMessage}</span>
+                {/* Main Content Area */}
+                <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+                    {/* Page Title & Back to Cart Button */}
+                    <div className="flex items-center justify-between gap-4">
+                        <h1 className="text-sm sm:text-base font-bold text-gray-700 dark:text-zinc-300 tracking-wider uppercase">
+                            CHECKOUT
+                        </h1>
+                        <Link
+                            href="/cart"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-primary text-primary hover:bg-primary hover:text-white font-bold text-xs sm:text-sm transition-all shadow-2xs active:scale-95 cursor-pointer"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            <span>Back to Cart</span>
+                        </Link>
                     </div>
-                )}
 
-                <div className="flex flex-col lg:flex-row gap-6">
-                    {isLoggedIn && <DashboardSidebar />}
-                    <div className="flex-1">
+                    {errorMessage && (
+                        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{errorMessage}</span>
+                        </div>
+                    )}
+
+                    <div className="flex flex-col lg:flex-row gap-6">
+                        <div className="flex-1 min-w-0">
                         <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-7 shadow-2xs">
                             {activeFormType !== "none" ? (
                                 <form onSubmit={handleSaveNewAddress} className="space-y-4">
@@ -893,6 +896,7 @@ function CheckoutContent() {
 
             {/* Theme Footer */}
             <Footer />
+            </div>
         </div>
     );
 }
