@@ -259,56 +259,57 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
     const isCompleted = (order?.status_name || "").toLowerCase() === "completed" || (order?.status_name || "").toLowerCase() === "ready to ship";
 
     return (
-        <div className="min-h-screen bg-[#f4f6f9] flex flex-col font-sans">
-            <Header />
+        <div className="min-h-screen bg-[#f4f6f9] dark:bg-[#030712] text-gray-900 dark:text-gray-100 flex flex-col lg:flex-row font-sans transition-colors">
+            {/* Left Sidebar */}
+            <DashboardSidebar />
 
-            <main className="flex-1 max-w-[1550px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                {/* Header Navigation Banner */}
-                <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-                    <div className="flex items-center gap-3">
-                        <Link
-                            href="/orders"
-                            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all cursor-pointer"
-                        >
-                            <ArrowLeft className="w-5 h-5" />
-                        </Link>
-                        <div>
-                            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 flex items-center gap-2">
-                                <span>Order</span>
-                                <span className="text-primary">{order?.order_number || `#${orderId}`}</span>
-                            </h1>
-                            <p className="text-xs text-gray-500 font-medium mt-0.5">
-                                Placed on {order ? new Date(order.created_at).toLocaleString() : "..."}
-                            </p>
+            <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+                <Header />
+
+                <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+                    {/* Header Navigation Banner */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#0b0f19] p-5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs">
+                        <div className="flex items-center gap-3">
+                            <Link
+                                href="/orders"
+                                className="p-2 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 transition-all cursor-pointer"
+                            >
+                                <ArrowLeft className="w-5 h-5" />
+                            </Link>
+                            <div>
+                                <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <span>Order</span>
+                                    <span className="text-primary dark:text-emerald-400">{order?.order_number || `#${orderId}`}</span>
+                                </h1>
+                                <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium mt-0.5">
+                                    Placed on {order ? new Date(order.created_at).toLocaleString() : "..."}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            {isCompleted && order && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleRepeatOrder(order)}
+                                    className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                >
+                                    <RotateCw className="w-4 h-4" />
+                                    <span>Repeat Order</span>
+                                </button>
+                            )}
+
+                            <Link
+                                href="/orders"
+                                className="px-4 py-2.5 rounded-full bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 font-bold text-xs transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                                <span>Back to Orders</span>
+                            </Link>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        {isCompleted && order && (
-                            <button
-                                type="button"
-                                onClick={() => handleRepeatOrder(order)}
-                                className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-                            >
-                                <RotateCw className="w-4 h-4" />
-                                <span>Repeat Order</span>
-                            </button>
-                        )}
-
-                        <Link
-                            href="/orders"
-                            className="px-4 py-2.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                            <span>Back to Orders</span>
-                        </Link>
-                    </div>
-                </div>
-
-                <div className="flex flex-col lg:flex-row gap-6">
-                    <DashboardSidebar />
-
-                    {/* Right Content Area */}
-                    <div className="flex-1 space-y-6">
+                    {/* Main Content Area */}
+                    <div className="space-y-6">
                         {loading ? (
                             <OrderDetailsSkeleton />
                         ) : errorMsg || !order ? (
@@ -577,10 +578,10 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                             </div>
                         )}
                     </div>
-                </div>
-            </main>
+                </main>
 
-            <Footer />
+                <Footer />
+            </div>
         </div>
     );
 }
@@ -589,17 +590,15 @@ export default function ViewOrderPage({ params }: { params: Promise<{ id: string
     const resolvedParams = use(params);
     return (
         <Suspense fallback={
-            <div className="min-h-screen bg-[#f4f6f9] flex flex-col font-sans">
-                <Header />
-                <main className="flex-1 max-w-[1550px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                    <div className="flex flex-col lg:flex-row gap-6">
-                        <DashboardSidebar />
-                        <div className="flex-1 space-y-6">
-                            <OrderDetailsSkeleton />
-                        </div>
-                    </div>
-                </main>
-                <Footer />
+            <div className="min-h-screen bg-[#f4f6f9] dark:bg-[#030712] text-gray-900 dark:text-gray-100 flex flex-col lg:flex-row font-sans transition-colors">
+                <DashboardSidebar />
+                <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+                    <Header />
+                    <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+                        <OrderDetailsSkeleton />
+                    </main>
+                    <Footer />
+                </div>
             </div>
         }>
             <OrderDetailsContent orderId={resolvedParams.id} />

@@ -61,31 +61,31 @@ export default function ThankYouPage() {
     const mainContent = (
         <div className="space-y-6 flex-1 min-w-0">
             {/* Success Card Header */}
-            <div className="bg-white rounded-2xl border border-gray-200/80 p-6 sm:p-8 shadow-2xs text-center relative overflow-hidden">
-                <div className="w-16 h-16 bg-emerald-100/80 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-200">
-                    <CheckCircle className="w-8 h-8 text-emerald-600" />
+            <div className="bg-white dark:bg-[#0b0f19] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 sm:p-8 shadow-2xs text-center relative overflow-hidden">
+                <div className="w-16 h-16 bg-emerald-100/80 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-200 dark:border-emerald-500/20">
+                    <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
                 </div>
 
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-bold text-emerald-700 mb-3">
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-full text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-3">
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Order Placed Successfully
                 </span>
 
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
                     Thank You For Your Order!
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-500 max-w-lg mx-auto font-medium leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 max-w-lg mx-auto font-medium leading-relaxed">
                     Thank you for your business! We will keep you updated on your order&apos;s progress and notify you as soon as manufacturing is complete.
                 </p>
 
                 {primaryOrderNum && (
-                    <div className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700">
+                    <div className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl text-xs font-bold text-gray-700 dark:text-zinc-300">
                         <span>Order Number:</span>
-                        <span className="font-mono text-primary font-extrabold text-sm">{primaryOrderNum}</span>
+                        <span className="font-mono text-primary dark:text-emerald-400 font-extrabold text-sm">{primaryOrderNum}</span>
                     </div>
                 )}
 
                 {/* Navigation Action Buttons Inside Thank You Card */}
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3 pt-4 border-t border-gray-100">
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
                     <Link
                         href="/orders"
                         className="px-6 py-2.5 rounded-full bg-primary hover:bg-secondary text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -97,9 +97,9 @@ export default function ThankYouPage() {
                     {primaryOrderId && (
                         <Link
                             href={`/orders/${primaryOrderId}`}
-                            className="px-6 py-2.5 rounded-full border border-gray-300 hover:border-gray-400 bg-white text-gray-800 font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                            className="px-6 py-2.5 rounded-full border border-gray-300 dark:border-zinc-700 hover:border-gray-400 dark:hover:border-zinc-600 bg-white dark:bg-zinc-900 text-gray-800 dark:text-gray-200 font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                         >
-                            <Eye className="w-4 h-4 text-primary" />
+                            <Eye className="w-4 h-4 text-primary dark:text-emerald-400" />
                             <span>View Order Details</span>
                         </Link>
                     )}
@@ -108,21 +108,21 @@ export default function ThankYouPage() {
 
             {/* List of Orders if split or single detail */}
             {ordersList.length > 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-4">
-                    <h2 className="text-sm font-extrabold text-gray-900 border-b border-gray-100 pb-3">
+                <div className="bg-white dark:bg-[#0b0f19] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 shadow-2xs space-y-4">
+                    <h2 className="text-sm font-extrabold text-gray-900 dark:text-white border-b border-gray-100 dark:border-zinc-800 pb-3">
                         Order Details ({ordersList.length} Item{ordersList.length > 1 ? "s" : ""})
                     </h2>
                     <div className="space-y-3">
                         {ordersList.map((ord: any, idx: number) => {
                             const ordId = ord.id || ord.order_id;
                             return (
-                                <div key={idx} className="p-4 rounded-xl border border-gray-200/70 bg-gray-50/60 flex items-center justify-between gap-3">
+                                <div key={idx} className="p-4 rounded-xl border border-gray-200/70 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-900/60 flex items-center justify-between gap-3">
                                     <div className="min-w-0">
-                                        <span className="text-[10px] font-bold text-gray-400 block uppercase">Order #{ord.order_number}</span>
-                                        <p className="text-xs font-extrabold text-gray-900 truncate">{ord.board_name || "Standard PCB"}</p>
+                                        <span className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 block uppercase">Order #{ord.order_number}</span>
+                                        <p className="text-xs font-extrabold text-gray-900 dark:text-white truncate">{ord.board_name || "Standard PCB"}</p>
                                     </div>
                                     <div className="flex items-center gap-3 shrink-0">
-                                        <span className="text-xs font-extrabold text-primary">
+                                        <span className="text-xs font-extrabold text-primary dark:text-emerald-400">
                                             {formatPrice(ord.price || ord.order_value || 0)}
                                         </span>
                                         {ordId && (
@@ -141,22 +141,22 @@ export default function ThankYouPage() {
                     </div>
                 </div>
             ) : orderData ? (
-                <div className="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-2xs space-y-4">
-                    <h2 className="text-sm font-extrabold text-gray-900 border-b border-gray-100 pb-3">
+                <div className="bg-white dark:bg-[#0b0f19] rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 shadow-2xs space-y-4">
+                    <h2 className="text-sm font-extrabold text-gray-900 dark:text-white border-b border-gray-100 dark:border-zinc-800 pb-3">
                         Order Information
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="p-4 rounded-xl bg-gray-50 border border-gray-200/70">
-                            <span className="text-[10px] text-gray-400 font-bold uppercase block">Project Name</span>
-                            <span className="text-xs font-extrabold text-gray-900">{orderData.board_name || "PCB Manufacturing"}</span>
+                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800">
+                            <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-bold uppercase block">Project Name</span>
+                            <span className="text-xs font-extrabold text-gray-900 dark:text-white">{orderData.board_name || "PCB Manufacturing"}</span>
                         </div>
-                        <div className="p-4 rounded-xl bg-gray-50 border border-gray-200/70">
-                            <span className="text-[10px] text-gray-400 font-bold uppercase block">Total Value</span>
-                            <span className="text-xs font-extrabold text-primary">{formatPrice(orderData.total_value || 0)}</span>
+                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800">
+                            <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-bold uppercase block">Total Value</span>
+                            <span className="text-xs font-extrabold text-primary dark:text-emerald-400">{formatPrice(orderData.total_value || 0)}</span>
                         </div>
-                        <div className="p-4 rounded-xl bg-gray-50 border border-gray-200/70">
-                            <span className="text-[10px] text-gray-400 font-bold uppercase block">Estimated Delivery</span>
-                            <span className="text-xs font-extrabold text-gray-900">{orderData.delivery_date || "3-5 Business Days"}</span>
+                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200/70 dark:border-zinc-800">
+                            <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-bold uppercase block">Estimated Delivery</span>
+                            <span className="text-xs font-extrabold text-gray-900 dark:text-white">{orderData.delivery_date || "3-5 Business Days"}</span>
                         </div>
                     </div>
                 </div>
@@ -165,37 +165,31 @@ export default function ThankYouPage() {
     );
 
     return (
-        <div className="min-h-screen bg-[#f0f2f5] font-sans flex flex-col">
-            <Header />
+        <div className="min-h-screen bg-[#f4f6f9] dark:bg-[#030712] text-gray-900 dark:text-gray-100 flex flex-col lg:flex-row font-sans transition-colors">
+            {/* Left Sidebar when logged in */}
+            {isLoggedIn && <DashboardSidebar />}
 
-            <main className="flex-1 max-w-[1550px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                {/* Header Banner */}
-                {isLoggedIn && (
-                    <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+            <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+                <Header />
+
+                <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+                    {/* Header Banner */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#0b0f19] p-5 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-2xs">
                         <div>
-                            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
+                            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">
                                 Order Confirmation
                             </h1>
-                            <p className="text-xs text-gray-500 font-medium mt-0.5">
-                                Thank you for choosing Megabyte Circuits for your PCB fabrication.
+                            <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium mt-0.5">
+                                Thank you for choosing Megabyte Circuit for your PCB fabrication.
                             </p>
                         </div>
                     </div>
-                )}
 
-                {isLoggedIn ? (
-                    <div className="flex flex-col lg:flex-row gap-6">
-                        <DashboardSidebar />
-                        {mainContent}
-                    </div>
-                ) : (
-                    <div className="max-w-3xl mx-auto">
-                        {mainContent}
-                    </div>
-                )}
-            </main>
+                    {mainContent}
+                </main>
 
-            <Footer />
+                <Footer />
+            </div>
         </div>
     );
 }

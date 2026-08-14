@@ -116,7 +116,10 @@ function CheckoutContent() {
                 // Set default billing address
                 const billingAddrs = data.addresses.filter((a: SavedAddress) => a.address_type === "billing");
                 if (billingAddrs.length > 0) {
-                    setSelectedBillingAddressId(billingAddrs[0].id);
+                    const defaultBill = billingAddrs.find((a: SavedAddress) => a.is_default) || billingAddrs[0];
+                    setSelectedBillingAddressId(defaultBill.id);
+                } else {
+                    setSelectedBillingAddressId(null);
                 }
             }
         } catch (e) {
@@ -180,12 +183,12 @@ function CheckoutContent() {
     const handleSelectChooseBilling = () => {
         setBillingOption("choose");
         const billingAddrs = savedAddresses.filter((a) => a.address_type === "billing");
-        if (billingAddrs.length === 0) {
-            // Requirement 5: If no billing address stored, directly open Add New Billing Address section
+        if (billingAddrs.length > 0) {
+            if (!selectedBillingAddressId || !billingAddrs.some((a) => a.id === selectedBillingAddressId)) {
+                setSelectedBillingAddressId(billingAddrs[0].id);
+            }
+        } else {
             setSelectedBillingAddressId(null);
-            setActiveFormType("billing");
-        } else if (!selectedBillingAddressId) {
-            setSelectedBillingAddressId(billingAddrs[0].id);
         }
     };
 
@@ -294,13 +297,16 @@ function CheckoutContent() {
             }
 
             // 2. Configure Razorpay Checkout Modal
+            const companyName = orderData.company_name || "Megabyte Circuit";
+            const logoUrl = orderData.company_logo || (typeof window !== "undefined" ? `${window.location.origin}/images/logo.png` : "");
+
             const options = {
                 key: orderData.key || "rzp_test_SQxqJOMmeLZK9n",
                 amount: orderData.amount,
                 currency: orderData.currency || "INR",
-                name: "Megabyte Circuits",
+                name: companyName,
                 description: `Payment for ${cartItems.length} PCB / Stencil items`,
-                image: "/images/logo.png",
+                image: logoUrl,
                 order_id: orderData.order_id,
                 prefill: {
                     name: `${selectedShippingAddress.first_name} ${selectedShippingAddress.last_name}`,
@@ -761,37 +767,55 @@ function CheckoutContent() {
                                         </div>
 
                                         {/* Billing Address Radio Selection List when "Choose Billing Address" is active */}
-                                        {billingOption === "choose" && billingAddresses.length > 0 && (
-                                            <div className="pl-6 space-y-2 mt-2">
-                                                {billingAddresses.map((bAddr) => {
-                                                    const isBSelected = selectedBillingAddressId === bAddr.id;
-                                                    const fullBAddr = `${bAddr.first_name} ${bAddr.last_name} / ${bAddr.building_no ? bAddr.building_no + ', ' : ''}${bAddr.street_address}, ${bAddr.city}, ${bAddr.state}, ${bAddr.postal_code}, ${bAddr.country.toUpperCase()}, ${bAddr.mobile}`;
+                                        {billingOption === "choose" && (
+                                            billingAddresses.length > 0 ? (
+                                                <div className="space-y-3 pt-2">
+                                                    {billingAddresses.map((bAddr) => {
+                                                        const isBSelected = selectedBillingAddressId === bAddr.id;
+                                                        const fullBAddr = `${bAddr.first_name} ${bAddr.last_name} / ${bAddr.building_no ? bAddr.building_no + ', ' : ''}${bAddr.street_address}, ${bAddr.city}, ${bAddr.state}, ${bAddr.postal_code}, ${bAddr.country.toUpperCase()}, ${bAddr.mobile}`;
 
-                                                    return (
-                                                        <label
-                                                            key={bAddr.id}
-                                                            onClick={() => setSelectedBillingAddressId(bAddr.id)}
-                                                            className={`flex items-start justify-between gap-3 p-3 rounded-xl border text-xs cursor-pointer transition-all ${isBSelected
-                                                                ? "border-primary bg-primary/5"
-                                                                : "border-gray-200 bg-white hover:border-gray-300"
-                                                                }`}
-                                                        >
-                                                            <div className="flex items-start gap-2.5">
-                                                                <input
-                                                                    type="radio"
-                                                                    name="billingAddressRadio"
-                                                                    checked={isBSelected}
-                                                                    onChange={() => setSelectedBillingAddressId(bAddr.id)}
-                                                                    className="mt-0.5 accent-primary shrink-0 cursor-pointer"
-                                                                />
-                                                                <span className="font-semibold text-gray-800 leading-relaxed">
-                                                                    {fullBAddr}
-                                                                </span>
-                                                            </div>
-                                                        </label>
-                                                    );
-                                                })}
-                                            </div>
+                                                        return (
+                                                            <label
+                                                                key={bAddr.id}
+                                                                onClick={() => setSelectedBillingAddressId(bAddr.id)}
+                                                                className={`flex items-start justify-between gap-3 p-4 rounded-xl border text-xs cursor-pointer transition-all ${isBSelected
+                                                                    ? "border-primary bg-primary/5 shadow-2xs"
+                                                                    : "border-gray-200 bg-white hover:border-gray-300"
+                                                                    }`}
+                                                            >
+                                                                <div className="flex items-start gap-3">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name="billingAddressRadio"
+                                                                        checked={isBSelected}
+                                                                        onChange={() => setSelectedBillingAddressId(bAddr.id)}
+                                                                        className="mt-0.5 accent-primary shrink-0 cursor-pointer"
+                                                                    />
+                                                                    <span className="font-semibold text-gray-800 leading-relaxed">
+                                                                        {fullBAddr}
+                                                                    </span>
+                                                                </div>
+                                                                {Boolean(bAddr.is_default) && (
+                                                                    <span className="px-2.5 py-1 rounded bg-gray-100 text-gray-500 text-[10px] font-extrabold uppercase shrink-0">
+                                                                        DEFAULT
+                                                                    </span>
+                                                                )}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-500 flex justify-between items-center mt-2">
+                                                    <span>No billing address stored.</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setActiveFormType("billing")}
+                                                        className="text-primary font-bold hover:underline cursor-pointer"
+                                                    >
+                                                        + Add Billing Address
+                                                    </button>
+                                                </div>
+                                            )
                                         )}
                                     </div>
                                 </div>
