@@ -238,8 +238,7 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                 qty: qty,
                 buildTime: ord.meta?.build_time || "3-4 days",
                 price: currentPrice,
-                unitPrice: qty > 0 ? Math.round(currentPrice / qty) : currentPrice,
-                parent_order_number: ord.order_number
+                unitPrice: qty > 0 ? Math.round(currentPrice / qty) : currentPrice
             };
 
             const savedCart = localStorage.getItem("megabyte_cart");
