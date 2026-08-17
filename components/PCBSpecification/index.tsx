@@ -487,6 +487,26 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
     const [pricingConfig, setPricingConfig] = useState<{ fixedCosts: any; priceTiers: any } | null>(null);
 
+    // Read URL search params for prefilling parameters passed from main site
+    React.useEffect(() => {
+        if (typeof window === "undefined") return;
+        const params = new URLSearchParams(window.location.search);
+        const updates: Partial<QuoteFormData> = {};
+
+        if (params.get("layers")) updates.layers = params.get("layers")!;
+        if (params.get("width") || params.get("boardWidth")) updates.width = params.get("width") || params.get("boardWidth")!;
+        if (params.get("height") || params.get("boardHeight")) updates.height = params.get("height") || params.get("boardHeight")!;
+        if (params.get("qty") || params.get("quantity")) updates.qty = params.get("qty") || params.get("quantity")!;
+        if (params.get("thickness")) updates.thickness = params.get("thickness")!;
+        if (params.get("copperWeight")) updates.copperWeight = params.get("copperWeight")!;
+        if (params.get("surfaceFinish")) updates.surfaceFinish = params.get("surfaceFinish")!;
+        if (params.get("pcbType")) updates.productType = params.get("pcbType")!;
+
+        if (Object.keys(updates).length > 0) {
+            setFormData(prev => ({ ...prev, ...updates }));
+        }
+    }, []);
+
     // Load dynamic PCB calculation parameters from backend API
     React.useEffect(() => {
         let active = true;
