@@ -682,11 +682,11 @@ export default function PCBQuote() {
 
             {/* Main Content */}
             <main className="max-w-[1400px] mx-auto px-4 py-6">
-                <div className="flex flex-col lg:flex-row gap-6">
+                <div className="flex flex-col lg:flex-row gap-6 items-start">
 
                     {/* Left Column - Quote Config */}
                     <div className="flex-1 space-y-6">
-                        <div className="bg-white rounded-lg shadow-sm p-6">
+                        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-lg p-6">
 
                             {/* Card Header */}
                             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -1211,8 +1211,8 @@ export default function PCBQuote() {
                     </div>
 
                     {/* Right Column - Charge Details */}
-                    <div className="w-full lg:w-[360px] shrink-0">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-[88px] overflow-hidden">
+                    <div className="w-full lg:w-[360px] shrink-0 sticky top-24">
+                        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-lg overflow-hidden">
                             <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                                 <h2 className="text-[17px] font-bold text-gray-900">Charge Details</h2>
                                 <ChevronUp className="w-5 h-5 text-gray-500" />

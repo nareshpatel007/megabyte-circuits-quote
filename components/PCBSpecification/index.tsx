@@ -501,7 +501,36 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         if (params.get("thickness")) updates.thickness = params.get("thickness")!;
         if (params.get("copperWeight")) updates.copperWeight = params.get("copperWeight")!;
         if (params.get("surfaceFinish")) updates.surfaceFinish = params.get("surfaceFinish")!;
-        if (params.get("pcbType")) updates.productType = params.get("pcbType")!;
+
+        const pcbTypeParam = params.get("pcbType") || params.get("baseMaterial");
+        if (pcbTypeParam) {
+            const lower = pcbTypeParam.toLowerCase();
+            let matchedMaterial = "";
+            if (lower.includes("flex")) {
+                matchedMaterial = "Flex";
+            } else if (lower.includes("roger")) {
+                matchedMaterial = "Rogers";
+            } else if (lower.includes("ptfe") || lower.includes("taflon") || lower.includes("teflon")) {
+                matchedMaterial = "PTFE Teflon";
+            } else if (lower.includes("rigid") || lower.includes("fr4") || lower.includes("standard")) {
+                matchedMaterial = "FR-4";
+            }
+            if (matchedMaterial) {
+                updates.baseMaterial = matchedMaterial;
+                if (matchedMaterial === "Flex") {
+                    updates.materialType = "Polyimide (PI)";
+                    if (!params.get("thickness")) updates.thickness = "0.12mm";
+                    if (!params.get("surfaceFinish")) updates.surfaceFinish = "ENIG";
+                    if (!params.get("copperWeight")) updates.copperWeight = "0.5 oz";
+                } else if (matchedMaterial === "Rogers") {
+                    updates.materialType = "RO4350B(Dk=3.48,Df=0.0037)";
+                } else if (matchedMaterial === "PTFE Teflon") {
+                    updates.materialType = "ZYF300CA-P(Dk=3.0,Df=0.0016)";
+                } else if (matchedMaterial === "FR-4") {
+                    updates.materialType = "FR4-TG135";
+                }
+            }
+        }
 
         if (Object.keys(updates).length > 0) {
             setFormData(prev => ({ ...prev, ...updates }));
@@ -1137,11 +1166,11 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         <div className="bg-[#f0f2f5] dark:bg-transparent font-sans">
             {/* Main grid */}
             <main className={isLoggedIn ? "w-full py-2" : "max-w-[1550px] mx-auto px-4 py-6"}>
-                <div className="flex flex-col lg:flex-row gap-6">
+                <div className="flex flex-col lg:flex-row gap-6 items-start">
 
                     {/* Left Quote Section */}
                     <div className="flex-1 space-y-6">
-                        <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
+                        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-lg p-6 space-y-6">
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <h1 className="text-lg font-bold text-gray-900">
                                     {selectedProduct === "stencil" ? "Online SMT Stencil Quote" : "Online PCB Quote"}
@@ -1205,9 +1234,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                         </div>
                     </div>
                     {/* Right Quote Cost Summary */}
-                    <div className="w-full lg:w-[480px] shrink-0">
-                        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-lg sticky top-24 overflow-hidden">
-                            <div className="p-4 space-y-4 bg-white">                                 {/* Sticky Notes Board Delivery Calendar */}
+                    <div className="w-full lg:w-[480px] shrink-0 sticky top-24">
+                        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-lg overflow-hidden">
+                            <div className="p-5 space-y-4 bg-white">                                 {/* Sticky Notes Board Delivery Calendar */}
                                 {(() => {
                                     const { options, showContact, totalAreaInSqM = 0 } = getLeadTimePricing();
 
