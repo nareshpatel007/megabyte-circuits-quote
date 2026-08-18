@@ -46,6 +46,7 @@ export default function Header() {
     const currencyRef = useRef<HTMLDivElement>(null);
     const accountRef = useRef<HTMLDivElement>(null);
     const bellRef = useRef<HTMLDivElement>(null);
+    const cartRef = useRef<HTMLDivElement>(null);
 
     const sampleNotifications = [
         { id: 1, text: "Your PCB order #ORD-851528 build is in progress", time: "10m ago", unread: true },
@@ -109,6 +110,9 @@ export default function Header() {
             }
             if (bellRef.current && !bellRef.current.contains(event.target as Node)) {
                 setIsBellOpen(false);
+            }
+            if (cartRef.current && !cartRef.current.contains(event.target as Node)) {
+                setIsCartOpen(false);
             }
         };
 
@@ -223,7 +227,7 @@ export default function Header() {
                         )}
 
                         {/* Cart Option */}
-                        <div className="relative">
+                        <div ref={cartRef} className="relative">
                             <button
                                 type="button"
                                 onClick={() => setIsCartOpen(!isCartOpen)}

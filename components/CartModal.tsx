@@ -70,6 +70,32 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
         setCartItems(updated);
     };
 
+    const modalRef = useState<any>(null)[1]; // or useRef
+    const containerRef = useState<any>(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+            const target = e.target as HTMLElement;
+            // If click is outside the cart modal container
+            if (target && !target.closest('.cart-modal-container') && !target.closest('button[title="Shopping Cart"]')) {
+                onClose();
+            }
+        };
+
+        const timer = setTimeout(() => {
+            document.addEventListener("mousedown", handleOutsideClick);
+            document.addEventListener("touchstart", handleOutsideClick);
+        }, 0);
+
+        return () => {
+            clearTimeout(timer);
+            document.removeEventListener("mousedown", handleOutsideClick);
+            document.removeEventListener("touchstart", handleOutsideClick);
+        };
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     const merchandiseTotal = cartItems.reduce((acc, item) => acc + item.price, 0);
@@ -80,7 +106,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
             <div className="fixed inset-0 z-40" onClick={onClose} />
 
             {/* Cart Dropdown Modal under Cart Icon */}
-            <div className="absolute right-0 top-full mt-2 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200/90 overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="cart-modal-container absolute right-0 top-full mt-2 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200/90 overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in slide-in-from-top-2 duration-200">
                 {/* Arrow Pointing Up */}
                 <div className="absolute top-0 right-4 -mt-1.5 w-3 h-3 bg-white border-t border-l border-gray-200/90 rotate-45 z-10" />
 

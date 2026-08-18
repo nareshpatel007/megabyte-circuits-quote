@@ -37,7 +37,7 @@ interface CartItem {
 export default function CartPage() {
     const router = useRouter();
     const { symbol, formatPrice } = useCurrency();
-    const [activeTab, setActiveTab] = useState<"all" | "pcb" | "stencil">("all");
+    const [activeTab, setActiveTab] = useState<"all" | "pcb" | "part" | "stencil">("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
@@ -113,9 +113,41 @@ export default function CartPage() {
         const validQty = Math.max(1, isNaN(newQty) ? 1 : newQty);
         const updated = cartItems.map((item) => {
             if (String(item.id) === strId) {
-                const unitPrice = item.unitPrice || (item.qty > 0 ? item.price / item.qty : item.price);
-                const newPrice = Math.max(Math.round(unitPrice * validQty), 10);
-                return { ...item, qty: validQty, price: newPrice, unitPrice };
+                if (item.productType === "part") {
+                    // Determine base unit price (unit price at qty 1)
+                    let basePrice = (item as any).baseUnitPrice;
+                    if (!basePrice) {
+                        const currentUnit = item.unitPrice || (item.qty > 0 ? item.price / item.qty : item.price);
+                        let oldMult = 1;
+                        if (item.qty >= 500) oldMult = 0.62;
+                        else if (item.qty >= 100) oldMult = 0.70;
+                        else if (item.qty >= 50) oldMult = 0.78;
+                        else if (item.qty >= 25) oldMult = 0.85;
+                        else if (item.qty >= 10) oldMult = 0.92;
+                        basePrice = currentUnit / oldMult;
+                    }
+
+                    let multiplier = 1;
+                    if (validQty >= 500) multiplier = 0.62;
+                    else if (validQty >= 100) multiplier = 0.70;
+                    else if (validQty >= 50) multiplier = 0.78;
+                    else if (validQty >= 25) multiplier = 0.85;
+                    else if (validQty >= 10) multiplier = 0.92;
+
+                    const effectiveUnitPrice = Math.round(basePrice * multiplier * 100) / 100;
+                    const newPrice = Math.round(effectiveUnitPrice * validQty * 100) / 100;
+                    return {
+                        ...item,
+                        qty: validQty,
+                        price: newPrice,
+                        unitPrice: effectiveUnitPrice,
+                        baseUnitPrice: basePrice,
+                    };
+                } else {
+                    const unitPrice = item.unitPrice || (item.qty > 0 ? item.price / item.qty : item.price);
+                    const newPrice = Math.max(Math.round(unitPrice * validQty), 10);
+                    return { ...item, qty: validQty, price: newPrice, unitPrice };
+                }
             }
             return item;
         });
@@ -125,10 +157,18 @@ export default function CartPage() {
     // Filter items
     const filteredItems = cartItems.filter((item) => {
         const matchesTab =
-            activeTab === "all" ? true : activeTab === "pcb" ? item.productType === "pcb" : item.productType === "stencil";
+            activeTab === "all"
+                ? true
+                : activeTab === "pcb"
+                ? item.productType === "pcb"
+                : activeTab === "part"
+                ? item.productType === "part"
+                : item.productType === "stencil";
         const matchesSearch =
             (item.boardName && item.boardName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            ((item as any).partNumber && (item as any).partNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
             (item.gerberFileName && item.gerberFileName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            ((item as any).description && (item as any).description.toLowerCase().includes(searchQuery.toLowerCase())) ||
             (item.layers && String(item.layers).includes(searchQuery)) ||
             (item.material && item.material.toLowerCase().includes(searchQuery.toLowerCase()));
         return matchesTab && matchesSearch;
@@ -154,6 +194,7 @@ export default function CartPage() {
     };
 
     const pcbCount = cartItems.filter((i) => i.productType === "pcb").length;
+    const partCount = cartItems.filter((i) => i.productType === "part").length;
     const stencilCount = cartItems.filter((i) => i.productType === "stencil").length;
 
     const selectedTotal = cartItems
@@ -210,10 +251,14 @@ export default function CartPage() {
                         <div className="flex-1 space-y-4">
                             <div className="bg-white rounded-xl shadow-xs border border-gray-200/80 p-4 sm:p-5">
                                 <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gray-200/80">
-                                    <div className="flex items-center gap-6 overflow-x-auto text-xs sm:text-sm font-semibold text-gray-600 select-none">
-                                        <button type="button" onClick={() => setActiveTab("all")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "all" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>All ({cartItems.length})</button>
-                                        <button type="button" onClick={() => setActiveTab("pcb")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "pcb" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>Megabyte PCB ({cartItems.filter(i => i.productType === 'pcb').length})</button>
-                                    </div>
+                                     <div className="flex items-center gap-6 overflow-x-auto text-xs sm:text-sm font-semibold text-gray-600 select-none">
+                                         <button type="button" onClick={() => setActiveTab("all")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "all" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>All ({cartItems.length})</button>
+                                         <button type="button" onClick={() => setActiveTab("pcb")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "pcb" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>Megabyte PCB ({pcbCount})</button>
+                                         <button type="button" onClick={() => setActiveTab("part")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "part" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>Parts ({partCount})</button>
+                                         {stencilCount > 0 && (
+                                             <button type="button" onClick={() => setActiveTab("stencil")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "stencil" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>SMT Stencil ({stencilCount})</button>
+                                         )}
+                                     </div>
 
                                     <div className="relative w-full sm:w-60">
                                         <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search" className="w-full h-8 pl-3 pr-8 text-xs border border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors" />
@@ -222,18 +267,20 @@ export default function CartPage() {
                                 </div>
 
                                 {filteredItems.length > 0 && (
-                                    <div className="flex items-center justify-between py-3 px-2 border-b border-gray-100 text-xs font-bold text-gray-500 bg-gray-50/50 rounded-lg mt-3">
+                                    <div className="flex items-center justify-between py-3 px-3 border-b border-gray-100 text-xs font-bold text-gray-500 bg-gray-50/50 rounded-lg mt-3">
                                         <div className="flex items-center gap-3">
                                             <input type="checkbox" checked={isAllSelected} onChange={toggleSelectAll} className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer" />
                                             <span className="uppercase text-[11px]">Item</span>
                                         </div>
-                                        <div className="hidden sm:flex items-center gap-12 mr-6 text-[11px] uppercase">
-                                            <span className="w-20 text-center">Qty</span>
+                                        <div className="hidden sm:flex items-center gap-4 sm:gap-6 text-[11px] uppercase">
+                                            <span className="w-28 text-center">Qty</span>
                                             <span className="w-24 text-center">Build Time</span>
-                                            <span className="w-20 text-right">Price</span>
-                                            <button type="button" onClick={() => setSelectedItemIds([])} disabled={selectedItemIds.length === 0} className={`p-1 rounded transition-colors ${selectedItemIds.length > 0 ? "text-red-500 hover:bg-red-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`} title="Delete Selected">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                                            <span className="w-24 text-right">Price</span>
+                                            <div className="w-8 flex justify-center">
+                                                <button type="button" onClick={() => setSelectedItemIds([])} disabled={selectedItemIds.length === 0} className={`p-1 rounded transition-colors ${selectedItemIds.length > 0 ? "text-red-500 hover:bg-red-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`} title="Delete Selected">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -250,7 +297,7 @@ export default function CartPage() {
                                         {filteredItems.map((item) => {
                                             const isSelected = selectedItemIds.includes(String(item.id));
                                             return (
-                                                <div key={item.id} className={`py-4 px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${isSelected ? "bg-primary/5" : ""}`}>
+                                                <div key={item.id} className={`py-4 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${isSelected ? "bg-primary/5" : ""}`}>
                                                     <div className="flex items-start gap-3 min-w-0 flex-1">
                                                         <input type="checkbox" checked={isSelected} onChange={() => toggleSelectItem(item.id)} className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary mt-1 shrink-0 cursor-pointer" />
                                                         <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-xl border border-gray-200/90 flex items-center justify-center p-1.5 overflow-hidden shrink-0 relative shadow-xs">
@@ -270,7 +317,7 @@ export default function CartPage() {
                                                                 <GerberBoardPreview previewData={item.gerberPreview} boardName={item.boardName} pcbColor={item.pcbColor} layers={item.layers} dimensions={item.dimensions} />
                                                             )}
                                                         </div>
-                                                        <div className="space-y-1 min-w-0">
+                                                        <div className="space-y-1 min-w-0 flex-1">
                                                             <div className="flex items-center gap-1.5">
                                                                 {item.productType === "part" && (
                                                                     <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-700">
@@ -295,24 +342,30 @@ export default function CartPage() {
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center justify-between sm:justify-end gap-6 sm:gap-8 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100">
-                                                         <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-gray-50/50">
-                                                             <button type="button" onClick={() => handleQuantityChange(item.id, (item.qty || 1) - 1)} className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer">-</button>
-                                                             <input
-                                                                 type="number"
-                                                                 min="1"
-                                                                 value={item.qty ?? 1}
-                                                                 onChange={(e) => {
-                                                                     const val = parseInt(e.target.value, 10);
-                                                                     handleQuantityChange(item.id, val);
-                                                                 }}
-                                                                 className="w-12 text-center text-xs font-bold text-gray-800 bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                             />
-                                                             <button type="button" onClick={() => handleQuantityChange(item.id, (item.qty || 1) + 1)} className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer">+</button>
-                                                         </div>
-                                                        <div className="text-xs font-semibold text-gray-600 w-20 text-center">{item.buildTime}</div>
-                                                        <div className="text-sm font-extrabold text-primary w-24 text-right">{formatPrice(item.price)}</div>
-                                                        <button type="button" onClick={() => handleRemoveItem(item.id)} className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                                                    <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 shrink-0">
+                                                        <div className="w-28 flex justify-center">
+                                                            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-gray-50/50">
+                                                                <button type="button" onClick={() => handleQuantityChange(item.id, (item.qty || 1) - 1)} className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer">-</button>
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    value={item.qty ?? 1}
+                                                                    onChange={(e) => {
+                                                                        const val = parseInt(e.target.value, 10);
+                                                                        handleQuantityChange(item.id, val);
+                                                                    }}
+                                                                    className="w-12 text-center text-xs font-bold text-gray-800 bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                />
+                                                                <button type="button" onClick={() => handleQuantityChange(item.id, (item.qty || 1) + 1)} className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer">+</button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-xs font-semibold text-gray-600 w-24 text-center flex justify-center items-center">
+                                                            {item.productType === "part" ? "-" : (item.buildTime || "-")}
+                                                        </div>
+                                                        <div className="text-sm font-extrabold text-primary w-24 text-right flex justify-end items-center">{formatPrice(item.price)}</div>
+                                                        <div className="w-8 flex justify-center items-center">
+                                                            <button type="button" onClick={() => handleRemoveItem(item.id)} className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer" title="Remove item"><Trash2 className="w-4 h-4" /></button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
