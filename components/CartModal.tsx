@@ -8,16 +8,22 @@ import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend } fro
 
 interface CartItem {
     id: string;
-    productType: "pcb" | "stencil";
-    boardName: string;
-    layers: string;
-    dimensions: string;
-    qty: number;
-    buildTime: string;
+    productType?: "pcb" | "stencil" | "part";
+    boardName?: string;
+    partNumber?: string;
+    description?: string;
+    photoUrl?: string;
+    layers?: string;
+    dimensions?: string;
+    qty?: number;
+    buildTime?: string;
     price: number;
-    material: string;
-    thickness: string;
-    date: string;
+    material?: string;
+    thickness?: string;
+    date?: string;
+    gerberPreview?: string;
+    gerberFileName?: string;
+    pcbColor?: string;
 }
 
 interface CartModalProps {
@@ -130,7 +136,19 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                     className="p-2.5 bg-gray-50/70 hover:bg-gray-50 rounded-xl border border-gray-200/60 transition-all flex items-start gap-2.5 relative group"
                                 >
                                     <div className="w-12 h-12 rounded-lg bg-[#f2f4f7] border border-gray-200/80 flex items-center justify-center shrink-0 p-1 overflow-hidden">
-                                        {item.gerberPreview && item.gerberPreview.startsWith("<svg") ? (
+                                        {item.productType === "part" ? (
+                                            <img
+                                                src={item.photoUrl || "https://mm.digikey.com/Volume0/opasdata/d220001/medias/images/7182/MFG_RMCF_series.jpg"}
+                                                alt={item.partNumber || item.boardName || "Part"}
+                                                className="w-full h-full object-contain"
+                                                onError={(e) => {
+                                                    (e.target as HTMLElement).setAttribute(
+                                                        "src",
+                                                        "https://mm.digikey.com/Volume0/opasdata/d220001/medias/images/7182/MFG_RMCF_series.jpg"
+                                                    );
+                                                }}
+                                            />
+                                        ) : item.gerberPreview && item.gerberPreview.startsWith("<svg") ? (
                                             <div
                                                 className="w-full h-full flex items-center justify-center [&_svg]:w-full [&_svg]:h-full [&_svg]:object-contain"
                                                 dangerouslySetInnerHTML={{ __html: item.gerberPreview }}
@@ -138,7 +156,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                         ) : (
                                             <img
                                                 src={item.productType === "stencil" ? "/images/stencil-logo.png" : "/images/pcb-logo.png"}
-                                                alt={item.productType}
+                                                alt={item.productType || "PCB"}
                                                 className="w-full h-full object-contain p-1"
                                             />
                                         )}
@@ -147,7 +165,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                     <div className="flex-1 min-w-0 pr-5">
                                         <div className="flex items-center justify-between gap-1 mb-0.5">
                                             <h4 className="text-xs font-bold text-gray-900 truncate">
-                                                {item.gerberFileName || item.boardName || (item.productType === "stencil" ? "SMT Stencil" : "Standard PCB")}
+                                                {item.boardName || item.partNumber || item.gerberFileName || (item.productType === "stencil" ? "SMT Stencil" : "Standard PCB")}
                                             </h4>
                                             <span className="text-xs font-extrabold text-primary shrink-0">
                                                 {symbol}{item.price}
@@ -155,21 +173,46 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                         </div>
 
                                         <div className="flex flex-wrap gap-1 text-[10px] text-gray-500 font-medium mb-0.5">
-                                            <span className="bg-white border border-gray-200 px-1.5 py-0.2 rounded text-[10px] text-gray-600 font-semibold">
-                                                {item.layers}
-                                            </span>
-                                            <span className="bg-white border border-gray-200 px-1.5 py-0.2 rounded text-[10px] text-gray-600 font-semibold">
-                                                {item.dimensions}
-                                            </span>
-                                            <span className="bg-white border border-gray-200 px-1.5 py-0.2 rounded text-[10px] text-gray-600 font-semibold">
-                                                Qty: {item.qty}
-                                            </span>
+                                            {item.productType === "part" ? (
+                                                <>
+                                                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-1.5 py-0.2 rounded text-[9px] font-bold uppercase">
+                                                        Part
+                                                    </span>
+                                                    <span className="bg-white border border-gray-200 px-1.5 py-0.2 rounded text-[10px] text-gray-600 font-semibold">
+                                                        Qty: {item.qty || 1}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {item.layers && (
+                                                        <span className="bg-white border border-gray-200 px-1.5 py-0.2 rounded text-[10px] text-gray-600 font-semibold">
+                                                            {item.layers}
+                                                        </span>
+                                                    )}
+                                                    {item.dimensions && (
+                                                        <span className="bg-white border border-gray-200 px-1.5 py-0.2 rounded text-[10px] text-gray-600 font-semibold">
+                                                            {item.dimensions}
+                                                        </span>
+                                                    )}
+                                                    <span className="bg-white border border-gray-200 px-1.5 py-0.2 rounded text-[10px] text-gray-600 font-semibold">
+                                                        Qty: {item.qty || 1}
+                                                    </span>
+                                                </>
+                                            )}
                                         </div>
 
-                                        {item.pcbColor && (
-                                            <p className="text-[10px] text-gray-400 font-medium">
-                                                {item.pcbColor}, {item.thickness || '1.6mm'}
-                                            </p>
+                                        {item.productType === "part" ? (
+                                            item.description && (
+                                                <p className="text-[10px] text-gray-400 font-medium truncate max-w-[200px]">
+                                                    {item.description}
+                                                </p>
+                                            )
+                                        ) : (
+                                            item.pcbColor && (
+                                                <p className="text-[10px] text-gray-400 font-medium">
+                                                    {item.pcbColor}, {item.thickness || '1.6mm'}
+                                                </p>
+                                            )
                                         )}
                                     </div>
 

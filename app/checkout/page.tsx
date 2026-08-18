@@ -15,7 +15,7 @@ import { getAuthToken, getAuthUser } from "@/lib/auth";
 
 interface CartItem {
     id: string;
-    productType: "pcb" | "stencil";
+    productType: "pcb" | "stencil" | "part";
     boardName: string;
     gerberFileName?: string;
     gerberPreview?: string;

@@ -9,12 +9,12 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
 import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
-import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend } from "@/lib/cartSession";
+import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend, setCartSessionId } from "@/lib/cartSession";
 import { getAuthToken, getAuthUser } from "@/lib/auth";
 
 interface CartItem {
     id: string;
-    productType: "pcb" | "stencil";
+    productType: "pcb" | "stencil" | "part";
     boardName: string;
     gerberFileName?: string;
     gerberPreview?: string;
@@ -57,6 +57,13 @@ export default function CartPage() {
     useEffect(() => {
         const initCart = async () => {
             try {
+                if (typeof window !== "undefined") {
+                    const searchParams = new URLSearchParams(window.location.search);
+                    const urlSessionId = searchParams.get("session_id");
+                    if (urlSessionId) {
+                        setCartSessionId(urlSessionId);
+                    }
+                }
                 const savedCart = localStorage.getItem("megabyte_cart");
                 let items: CartItem[] = savedCart ? JSON.parse(savedCart) : [];
                 const backendItems = await loadCartFromBackend();
@@ -246,19 +253,46 @@ export default function CartPage() {
                                                 <div key={item.id} className={`py-4 px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${isSelected ? "bg-primary/5" : ""}`}>
                                                     <div className="flex items-start gap-3 min-w-0 flex-1">
                                                         <input type="checkbox" checked={isSelected} onChange={() => toggleSelectItem(item.id)} className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary mt-1 shrink-0 cursor-pointer" />
-                                                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#0b3818] rounded-xl border border-gray-200/90 flex items-center justify-center p-1 overflow-hidden shrink-0 relative shadow-xs">
-                                                            <GerberBoardPreview previewData={item.gerberPreview} boardName={item.boardName} pcbColor={item.pcbColor} layers={item.layers} dimensions={item.dimensions} />
+                                                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-xl border border-gray-200/90 flex items-center justify-center p-1.5 overflow-hidden shrink-0 relative shadow-xs">
+                                                            {item.productType === "part" ? (
+                                                                <img
+                                                                    src={(item as any).photoUrl || "https://mm.digikey.com/Volume0/opasdata/d220001/medias/images/7182/MFG_RMCF_series.jpg"}
+                                                                    alt={item.boardName || (item as any).partNumber || "Part"}
+                                                                    className="w-full h-full object-contain"
+                                                                    onError={(e) => {
+                                                                        (e.target as HTMLElement).setAttribute(
+                                                                            "src",
+                                                                            "https://mm.digikey.com/Volume0/opasdata/d220001/medias/images/7182/MFG_RMCF_series.jpg"
+                                                                        );
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <GerberBoardPreview previewData={item.gerberPreview} boardName={item.boardName} pcbColor={item.pcbColor} layers={item.layers} dimensions={item.dimensions} />
+                                                            )}
                                                         </div>
                                                         <div className="space-y-1 min-w-0">
-                                                            <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">{item.boardName}</h3>
-                                                            <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
-                                                                {item.layers} Layer, {item.dimensions}, {item.thickness} Thickness, {item.material || "FR-4"}
-                                                                {(item as any).materialType ? `, ${(item as any).materialType}` : ""}
-                                                                {(item as any).substrateType ? `, ${(item as any).substrateType}` : ""}
-                                                                {(item as any).copperType ? `, Copper: ${(item as any).copperType}` : ""}
-                                                                {(item as any).coverlayColor ? `, Coverlay: ${(item as any).coverlayColor}` : ""}
-                                                                {(item as any).stiffener && (item as any).stiffener !== "Without" ? `, Stiffener: ${(item as any).stiffener}` : ""}
-                                                            </p>
+                                                            <div className="flex items-center gap-1.5">
+                                                                {item.productType === "part" && (
+                                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-700">
+                                                                        Part
+                                                                    </span>
+                                                                )}
+                                                                <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">{item.boardName || (item as any).partNumber}</h3>
+                                                            </div>
+                                                            {item.productType === "part" ? (
+                                                                <p className="text-[11px] text-gray-500 font-medium leading-relaxed line-clamp-2">
+                                                                    {(item as any).description || "Electronic Component"}
+                                                                </p>
+                                                            ) : (
+                                                                <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                                    {item.layers} Layer, {item.dimensions}, {item.thickness} Thickness, {item.material || "FR-4"}
+                                                                    {(item as any).materialType ? `, ${(item as any).materialType}` : ""}
+                                                                    {(item as any).substrateType ? `, ${(item as any).substrateType}` : ""}
+                                                                    {(item as any).copperType ? `, Copper: ${(item as any).copperType}` : ""}
+                                                                    {(item as any).coverlayColor ? `, Coverlay: ${(item as any).coverlayColor}` : ""}
+                                                                    {(item as any).stiffener && (item as any).stiffener !== "Without" ? `, Stiffener: ${(item as any).stiffener}` : ""}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center justify-between sm:justify-end gap-6 sm:gap-8 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100">

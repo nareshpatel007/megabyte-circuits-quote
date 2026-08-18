@@ -27,6 +27,14 @@ export function setCookie(name: string, value: string, days: number = COOKIE_MAX
 }
 
 /**
+ * Explicitly sets or updates the cart session ID in cookie
+ */
+export function setCartSessionId(sessionId: string) {
+    if (!sessionId) return;
+    setCookie(COOKIE_NAME, sessionId, COOKIE_MAX_AGE_DAYS);
+}
+
+/**
  * Gets existing cart session ID or generates a new unique 30-day session ID
  */
 export function getOrCreateCartSessionId(): string {
