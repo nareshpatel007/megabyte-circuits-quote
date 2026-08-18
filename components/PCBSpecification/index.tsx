@@ -481,6 +481,7 @@ function getPriceTiers(mask: string, weight: string, thickness: number, customTi
 export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn = false }: { selectedProduct?: "pcb" | "stencil"; isLoggedIn?: boolean }) {
     const { formatPrice } = useCurrency();
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [uploadedGerberFileId, setUploadedGerberFileId] = useState<number | null>(null);
     const [clientLayers, setClientLayers] = useState<InputLayer[]>([]);
     const [detectedInfo, setDetectedInfo] = useState<{ layers: string; width: string; height: string } | null>(null);
 
@@ -601,6 +602,21 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             active = false;
         };
     }, [clientLayers, renderOptions]);
+
+    // Sync generated preview SVG with backend gerber_files record
+    React.useEffect(() => {
+        const previewSvg = topSvg || bottomSvg;
+        if (uploadedGerberFileId && previewSvg) {
+            fetch("/api/upload/preview", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    gerber_file_id: uploadedGerberFileId,
+                    preview_data: previewSvg
+                })
+            }).catch(err => console.error("Failed to sync gerber preview data:", err));
+        }
+    }, [uploadedGerberFileId, topSvg, bottomSvg]);
 
     // Dynamic lead time-based pricing calculation
     const getLeadTimePricing = () => {
@@ -729,6 +745,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
     const handleUploadSuccess = async (res: UploadResponse, file: File) => {
         setUploadedFile(file);
+        if (res?.gerber_file_id) {
+            setUploadedGerberFileId(res.gerber_file_id);
+        }
         try {
             const layers = await loadLayers(file);
             setClientLayers(layers);
@@ -792,6 +811,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
     const handleReset = () => {
         setUploadedFile(null);
+        setUploadedGerberFileId(null);
         setClientLayers([]);
         setDetectedInfo(null);
         setFormData(INITIAL_FORM_DATA);
@@ -1054,6 +1074,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 productType: selectedProduct || "pcb",
                 boardName: formData.boardName || gerberName,
                 gerberFileName: gerberName,
+                gerber_file_id: uploadedGerberFileId || undefined,
                 gerberPreview: previewSvg,
                 boardId: generatedBoardId,
                 pcbColor: pcbColorName,

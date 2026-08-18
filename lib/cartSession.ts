@@ -87,7 +87,7 @@ export async function removeCartItemFromBackend(id: string): Promise<any[]> {
     try {
         const savedCart = localStorage.getItem("megabyte_cart");
         const items = savedCart ? JSON.parse(savedCart) : [];
-        const updatedItems = items.filter((item: any) => item.id !== id);
+        const updatedItems = items.filter((item: any) => String(item.id) !== String(id));
         
         await saveCartToBackend(updatedItems);
         return updatedItems;

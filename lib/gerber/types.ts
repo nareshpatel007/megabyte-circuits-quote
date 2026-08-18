@@ -117,6 +117,7 @@ export interface QuoteFormData {
 
 export interface UploadResponse {
     success: boolean;
+    gerber_file_id?: number;
     folder?: string;
     files?: { name: string; type: string }[];
     info?: any;

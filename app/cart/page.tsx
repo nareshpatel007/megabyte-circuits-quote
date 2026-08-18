@@ -108,6 +108,15 @@ export default function CartPage() {
         setSelectedItemIds((prev) => prev.filter((itemId) => String(itemId) !== strId));
     };
 
+    const handleRemoveSelectedItems = async () => {
+        if (selectedItemIds.length === 0) return;
+        const remainingItems = cartItems.filter(
+            (item) => !selectedItemIds.includes(String(item.id))
+        );
+        await saveCart(remainingItems);
+        setSelectedItemIds([]);
+    };
+
     const handleQuantityChange = async (id: any, newQty: number) => {
         const strId = String(id);
         const validQty = Math.max(1, isNaN(newQty) ? 1 : newQty);
@@ -160,10 +169,10 @@ export default function CartPage() {
             activeTab === "all"
                 ? true
                 : activeTab === "pcb"
-                ? item.productType === "pcb"
-                : activeTab === "part"
-                ? item.productType === "part"
-                : item.productType === "stencil";
+                    ? item.productType === "pcb"
+                    : activeTab === "part"
+                        ? item.productType === "part"
+                        : item.productType === "stencil";
         const matchesSearch =
             (item.boardName && item.boardName.toLowerCase().includes(searchQuery.toLowerCase())) ||
             ((item as any).partNumber && (item as any).partNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -251,14 +260,14 @@ export default function CartPage() {
                         <div className="flex-1 space-y-4">
                             <div className="bg-white rounded-xl shadow-xs border border-gray-200/80 p-4 sm:p-5">
                                 <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gray-200/80">
-                                     <div className="flex items-center gap-6 overflow-x-auto text-xs sm:text-sm font-semibold text-gray-600 select-none">
-                                         <button type="button" onClick={() => setActiveTab("all")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "all" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>All ({cartItems.length})</button>
-                                         <button type="button" onClick={() => setActiveTab("pcb")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "pcb" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>Megabyte PCB ({pcbCount})</button>
-                                         <button type="button" onClick={() => setActiveTab("part")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "part" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>Parts ({partCount})</button>
-                                         {stencilCount > 0 && (
-                                             <button type="button" onClick={() => setActiveTab("stencil")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "stencil" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>SMT Stencil ({stencilCount})</button>
-                                         )}
-                                     </div>
+                                    <div className="flex items-center gap-6 overflow-x-auto text-xs sm:text-sm font-semibold text-gray-600 select-none">
+                                        <button type="button" onClick={() => setActiveTab("all")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "all" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>All ({cartItems.length})</button>
+                                        <button type="button" onClick={() => setActiveTab("pcb")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "pcb" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>Megabyte PCB ({pcbCount})</button>
+                                        <button type="button" onClick={() => setActiveTab("part")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "part" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>Parts ({partCount})</button>
+                                        {stencilCount > 0 && (
+                                            <button type="button" onClick={() => setActiveTab("stencil")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "stencil" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>SMT Stencil ({stencilCount})</button>
+                                        )}
+                                    </div>
 
                                     <div className="relative w-full sm:w-60">
                                         <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search" className="w-full h-8 pl-3 pr-8 text-xs border border-gray-200 rounded-lg focus:border-primary focus:outline-none transition-colors" />
@@ -277,7 +286,7 @@ export default function CartPage() {
                                             <span className="w-24 text-center">Build Time</span>
                                             <span className="w-24 text-right">Price</span>
                                             <div className="w-8 flex justify-center">
-                                                <button type="button" onClick={() => setSelectedItemIds([])} disabled={selectedItemIds.length === 0} className={`p-1 rounded transition-colors ${selectedItemIds.length > 0 ? "text-red-500 hover:bg-red-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`} title="Delete Selected">
+                                                <button type="button" onClick={handleRemoveSelectedItems} disabled={selectedItemIds.length === 0} className={`p-1 rounded transition-colors ${selectedItemIds.length > 0 ? "text-red-500 hover:bg-red-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`} title="Delete Selected">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -319,11 +328,6 @@ export default function CartPage() {
                                                         </div>
                                                         <div className="space-y-1 min-w-0 flex-1">
                                                             <div className="flex items-center gap-1.5">
-                                                                {item.productType === "part" && (
-                                                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-700">
-                                                                        Part
-                                                                    </span>
-                                                                )}
                                                                 <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">{item.boardName || (item as any).partNumber}</h3>
                                                             </div>
                                                             {item.productType === "part" ? (
