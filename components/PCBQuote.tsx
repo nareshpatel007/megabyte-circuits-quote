@@ -112,7 +112,7 @@ const GERBER_PATTERNS = {
     outline: /\.(gml|gko|outline|dim|gbr)$/i
 };
 
-// Interactive 2D PCB Preview component
+// Interactive 2D PCB Preview component (HD Crisp Canvas)
 const PCBPreviewCanvas = ({
     pcbColor,
     activeLayers
@@ -135,14 +135,29 @@ const PCBPreviewCanvas = ({
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
+        // Support HiDPI / Retina displays for HD sharp rendering
+        const dpr = window.devicePixelRatio || 2;
+        const displayWidth = 600;
+        const displayHeight = 380;
+
+        canvas.width = displayWidth * dpr;
+        canvas.height = displayHeight * dpr;
+        canvas.style.width = `${displayWidth}px`;
+        canvas.style.height = `${displayHeight}px`;
+
+        ctx.save();
+        ctx.scale(dpr, dpr);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+
         // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, displayWidth, displayHeight);
 
         // Draw PCB Board base
         if (activeLayers.outline) {
             ctx.fillStyle = pcbColor;
             ctx.beginPath();
-            ctx.roundRect(15, 15, canvas.width - 30, canvas.height - 30, 16);
+            ctx.roundRect(15, 15, displayWidth - 30, displayHeight - 30, 16);
             ctx.fill();
 
             // Draw gold/solder mask border outline
@@ -152,16 +167,16 @@ const PCBPreviewCanvas = ({
         } else {
             // Draw background if outline is disabled
             ctx.fillStyle = "#1e293b";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, displayWidth, displayHeight);
         }
 
         // Draw Solder Mask grid texture if enabled
         if (activeLayers.solderMask && activeLayers.outline) {
-            ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
-            for (let x = 30; x < canvas.width - 30; x += 25) {
-                for (let y = 30; y < canvas.height - 30; y += 25) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+            for (let x = 30; x < displayWidth - 30; x += 20) {
+                for (let y = 30; y < displayHeight - 30; y += 20) {
                     ctx.beginPath();
-                    ctx.arc(x, y, 1, 0, Math.PI * 2);
+                    ctx.arc(x, y, 1.2, 0, Math.PI * 2);
                     ctx.fill();
                 }
             }
@@ -169,19 +184,19 @@ const PCBPreviewCanvas = ({
 
         // Draw Bottom Copper Layer (cyan/blue traces underneath)
         if (activeLayers.bottomCopper) {
-            ctx.strokeStyle = "rgba(0, 191, 255, 0.35)";
+            ctx.strokeStyle = "rgba(0, 191, 255, 0.4)";
             ctx.lineWidth = 2.5;
             ctx.beginPath();
 
             // Bottom Trace 1
             ctx.moveTo(50, 100);
             ctx.lineTo(140, 140);
-            ctx.lineTo(canvas.width / 2, canvas.height / 2 - 20);
+            ctx.lineTo(displayWidth / 2, displayHeight / 2 - 20);
 
             // Bottom Trace 2
-            ctx.moveTo(canvas.width - 50, canvas.height - 100);
-            ctx.lineTo(canvas.width - 120, canvas.height - 140);
-            ctx.lineTo(canvas.width / 2 + 20, canvas.height / 2 + 20);
+            ctx.moveTo(displayWidth - 50, displayHeight - 100);
+            ctx.lineTo(displayWidth - 120, displayHeight - 140);
+            ctx.lineTo(displayWidth / 2 + 20, displayHeight / 2 + 20);
 
             ctx.stroke();
         }
@@ -192,8 +207,8 @@ const PCBPreviewCanvas = ({
             ctx.strokeStyle = "#e5c158";
 
             // IC 1 (Microcontroller pads in center)
-            const icX = canvas.width / 2;
-            const icY = canvas.height / 2;
+            const icX = displayWidth / 2;
+            const icY = displayHeight / 2;
             ctx.fillRect(icX - 35, icY - 35, 70, 70);
 
             // Draw pins
@@ -220,13 +235,13 @@ const PCBPreviewCanvas = ({
             ctx.lineTo(icX - 45, icY);
 
             // Trace 3
-            ctx.moveTo(canvas.width - 50, 60);
-            ctx.lineTo(canvas.width - 130, 60);
+            ctx.moveTo(displayWidth - 50, 60);
+            ctx.lineTo(displayWidth - 130, 60);
             ctx.lineTo(icX + 25, icY - 45);
 
             // Trace 4 (Bottom routing)
-            ctx.moveTo(70, canvas.height - 70);
-            ctx.lineTo(160, canvas.height - 70);
+            ctx.moveTo(70, displayHeight - 70);
+            ctx.lineTo(160, displayHeight - 70);
             ctx.lineTo(icX - 15, icY + 35);
 
             ctx.stroke();
@@ -235,8 +250,8 @@ const PCBPreviewCanvas = ({
             ctx.beginPath();
             ctx.arc(50, 60, 4, 0, Math.PI * 2);
             ctx.arc(50, 90, 4, 0, Math.PI * 2);
-            ctx.arc(canvas.width - 50, 60, 4, 0, Math.PI * 2);
-            ctx.arc(70, canvas.height - 70, 4, 0, Math.PI * 2);
+            ctx.arc(displayWidth - 50, 60, 4, 0, Math.PI * 2);
+            ctx.arc(70, displayHeight - 70, 4, 0, Math.PI * 2);
             ctx.fill();
         }
 
@@ -244,20 +259,20 @@ const PCBPreviewCanvas = ({
         if (activeLayers.drills) {
             ctx.fillStyle = "#0f172a"; // dark drill hole color
             const drillsList = [
-                [35, 35], [canvas.width - 35, 35],
-                [35, canvas.height - 35], [canvas.width - 35, canvas.height - 35],
-                [50, 60], [50, 90], [canvas.width - 50, 60], [70, canvas.height - 70]
+                [35, 35], [displayWidth - 35, 35],
+                [35, displayHeight - 35], [displayWidth - 35, displayHeight - 35],
+                [50, 60], [50, 90], [displayWidth - 50, 60], [70, displayHeight - 70]
             ];
             drillsList.forEach(([x, y]) => {
                 ctx.beginPath();
-                ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
                 ctx.fill();
 
                 // Add silver annular ring around drill
                 ctx.strokeStyle = "#94a3b8";
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 1.2;
                 ctx.beginPath();
-                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.arc(x, y, 4.5, 0, Math.PI * 2);
                 ctx.stroke();
             });
         }
@@ -267,53 +282,54 @@ const PCBPreviewCanvas = ({
             const isDarkText = pcbColor === "#ffffff" || pcbColor === "#fadb14";
             ctx.fillStyle = isDarkText ? "#0f172a" : "#ffffff";
             ctx.strokeStyle = isDarkText ? "#0f172a" : "#ffffff";
-            ctx.lineWidth = 1.2;
+            ctx.lineWidth = 1.4;
 
             // Draw IC silkscreen outlines
-            const icX = canvas.width / 2;
-            const icY = canvas.height / 2;
+            const icX = displayWidth / 2;
+            const icY = displayHeight / 2;
             ctx.strokeRect(icX - 42, icY - 42, 84, 84);
 
             // Draw pin 1 indicator dot
             ctx.beginPath();
-            ctx.arc(icX - 35, icY - 35, 2, 0, Math.PI * 2);
+            ctx.arc(icX - 35, icY - 35, 2.5, 0, Math.PI * 2);
             ctx.fill();
 
             // Text labels
-            ctx.font = "bold 9px sans-serif";
+            ctx.font = "bold 10px Inter, system-ui, sans-serif";
             ctx.fillText("U1 (MCU)", icX - 22, icY - 2);
             ctx.fillText("R1", 55, 52);
             ctx.fillText("R2", 55, 82);
-            ctx.fillText("C1", canvas.width - 65, 52);
-            ctx.fillText("J1", 55, canvas.height - 58);
+            ctx.fillText("C1", displayWidth - 65, 52);
+            ctx.fillText("J1", 55, displayHeight - 58);
 
             // Draw component outline boxes
             ctx.strokeRect(42, 52, 16, 16);
             ctx.strokeRect(42, 82, 16, 16);
-            ctx.strokeRect(canvas.width - 58, 52, 16, 16);
+            ctx.strokeRect(displayWidth - 58, 52, 16, 16);
 
             // Large logo/label
-            ctx.font = "bold 11px sans-serif";
-            ctx.fillText("MEGABYTE CIRCUITS", icX - 60, icY - 95);
+            ctx.font = "bold 12px Inter, system-ui, sans-serif";
+            ctx.fillText("MEGABYTE CIRCUITS", icX - 65, icY - 95);
 
             ctx.beginPath();
-            ctx.moveTo(icX - 60, icY - 90);
-            ctx.lineTo(icX + 60, icY - 90);
+            ctx.moveTo(icX - 65, icY - 90);
+            ctx.lineTo(icX + 65, icY - 90);
             ctx.stroke();
         }
+
+        ctx.restore();
 
     }, [pcbColor, activeLayers]);
 
     return (
-        <div className="relative border border-gray-200 rounded-lg overflow-hidden bg-[#1e293b] flex items-center justify-center p-4 min-h-[300px]">
+        <div className="relative border border-gray-200 rounded-lg overflow-hidden bg-[#1e293b] flex items-center justify-center p-4 min-h-[340px]">
             <canvas
                 ref={canvasRef}
-                width={500}
-                height={320}
-                className="max-w-full h-auto object-contain rounded shadow-lg"
+                className="max-w-full h-auto object-contain rounded shadow-xl"
             />
-            <div className="absolute bottom-2 right-2 bg-gray-900/80 backdrop-blur text-[10px] text-gray-300 px-2 py-1 rounded">
-                Interactive Canvas 2D
+            <div className="absolute bottom-2 right-2 bg-gray-900/90 backdrop-blur text-[10px] font-semibold text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-500/20 shadow-xs flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                HD Crisp 2D Canvas
             </div>
         </div>
     );
