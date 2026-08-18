@@ -755,6 +755,23 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const copperLayers = layers.filter(l => l.type === 'copper');
             const detectedLayersCount = copperLayers.length;
 
+            if (detectedLayersCount === 0) {
+                if (res?.gerber_file_id) {
+                    fetch("/api/upload/delete", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ gerber_file_id: res.gerber_file_id })
+                    }).catch(err => console.error("Failed to delete 0-layer Gerber file:", err));
+                    setUploadedGerberFileId(null);
+                }
+                setDetectedInfo({
+                    layers: "0",
+                    width: "0.00",
+                    height: "0.00"
+                });
+                return;
+            }
+
             const stack = await renderStack(layers, renderOptions);
 
             const topSide = stack.top || stack.bottom;
@@ -777,9 +794,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             }
 
             let detectedLayersStr = "0";
-            if (detectedLayersCount === 0) {
-                detectedLayersStr = "0";
-            } else if (detectedLayersCount === 1) {
+            if (detectedLayersCount === 1) {
                 detectedLayersStr = "1";
             } else if (detectedLayersCount > 1) {
                 const evenCount = detectedLayersCount % 2 !== 0 ? detectedLayersCount + 1 : detectedLayersCount;
@@ -801,6 +816,14 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             }));
         } catch (err) {
             console.error("Failed to extract layers:", err);
+            if (res?.gerber_file_id) {
+                fetch("/api/upload/delete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ gerber_file_id: res.gerber_file_id })
+                }).catch(err => console.error("Failed to delete invalid Gerber file:", err));
+                setUploadedGerberFileId(null);
+            }
             setDetectedInfo({
                 layers: "0",
                 width: "0.00",
