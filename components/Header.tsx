@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ShoppingCart, User, ChevronDown, Loader2, ClipboardList, FolderArchive, Cpu, Mail, Ticket, LogOut, Bell, Sun, Moon } from "lucide-react";
 import { useCurrency } from "../context/CurrencyContext";
 import CartModal from "./CartModal";
@@ -129,6 +130,12 @@ export default function Header() {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
+
+    const pathname = usePathname();
+
+    useEffect(() => {
+        loadCartFromBackend().then(() => updateCartCount());
+    }, [pathname]);
 
     const unreadCount = sampleNotifications.filter((n) => n.unread).length;
 

@@ -102,7 +102,7 @@ export async function removeCartItemFromBackend(id: string): Promise<any[]> {
  */
 export async function loadCartFromBackend(): Promise<any[]> {
     try {
-        const sessionId = getCookie(COOKIE_NAME);
+        const sessionId = getOrCreateCartSessionId();
         if (!sessionId) {
             const savedCart = localStorage.getItem("megabyte_cart");
             return savedCart ? JSON.parse(savedCart) : [];
