@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
                 { status: 400 }
             );
         }
-        return handleApiProxy(req, "/api/upload/preview", "POST", body);
+        return handleApiProxy(req, "/api/upload/preview", "POST", JSON.stringify(body));
     } catch (err: any) {
         console.error("Upload Preview API Error:", err);
         return NextResponse.json(
