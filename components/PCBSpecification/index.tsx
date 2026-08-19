@@ -778,7 +778,17 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             setUploadedGerberFileId(res.gerber_file_id);
         }
         try {
-            const layers = await loadLayers(file);
+            let fileToExtract = file;
+            if (file.name.toLowerCase().endsWith('.rar') && res?.zip_url) {
+                try {
+                    const zipBlob = await fetch(res.zip_url).then(r => r.blob());
+                    fileToExtract = new File([zipBlob], file.name.replace(/\.rar$/i, '.zip'), { type: 'application/zip' });
+                } catch (e) {
+                    console.warn("Could not fetch converted ZIP file from backend:", e);
+                }
+            }
+
+            const layers = await loadLayers(fileToExtract);
             setClientLayers(layers);
 
             const copperLayers = layers.filter(l => l.type === 'copper');

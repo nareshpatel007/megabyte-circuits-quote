@@ -125,5 +125,6 @@ export interface UploadResponse {
     tracespaceFiles?: any[];
     previewFront?: string;
     previewBack?: string;
+    zip_url?: string;
     error?: string;
 }
