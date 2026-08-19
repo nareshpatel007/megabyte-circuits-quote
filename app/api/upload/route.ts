@@ -24,9 +24,9 @@ export async function POST(req: NextRequest) {
 
         // Validate Extension
         const extension = file.name.split(".").pop()?.toLowerCase();
-        if (extension !== "zip") {
+        if (extension !== "zip" && extension !== "rar") {
             return NextResponse.json(
-                { success: false, error: "Only ZIP archives are supported." },
+                { success: false, error: "Only ZIP and RAR archives are supported." },
                 { status: 400 }
             );
         }

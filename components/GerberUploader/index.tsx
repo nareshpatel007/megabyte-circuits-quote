@@ -41,8 +41,8 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
 
         // Extension validation
         const ext = selectedFile.name.split(".").pop()?.toLowerCase();
-        if (ext !== "zip") {
-            setErrorMessage("Only .zip Gerber archives are supported.");
+        if (ext !== "zip" && ext !== "rar") {
+            setErrorMessage("Only .zip and .rar Gerber archives are supported.");
             setLoadingState("error");
             return;
         }
@@ -125,7 +125,7 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
             <input
                 ref={fileInputRef}
                 type="file"
-                accept=".zip"
+                accept=".zip,.rar"
                 onChange={handleFileChange}
                 className="hidden"
             />
