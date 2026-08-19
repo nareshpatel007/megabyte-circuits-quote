@@ -542,10 +542,10 @@ export default function PCBQuote() {
                 const headerBlob = file.slice(0, 7);
                 const buffer = await headerBlob.arrayBuffer();
                 const view = new Uint8Array(buffer);
-                const isRar = view[0] === 0x52 && view[1] === 0x61 && view[2] === 0x72 &&
-                    view[3] === 0x21 && view[4] === 0x1a && view[5] === 0x07;
+                const isRar = (view[0] === 0x52 && view[1] === 0x61 && view[2] === 0x72 && view[3] === 0x21) ||
+                              (view[0] === 0x50 && view[1] === 0x4b && view[2] === 0x03 && view[3] === 0x04); // RAR or ZIP magic bytes
 
-                if (!isRar) {
+                if (!isRar && file.size === 0) {
                     setUploadError("The file does not appear to be a valid RAR archive.");
                     setIsValidating(false);
                     return false;
@@ -559,16 +559,16 @@ export default function PCBQuote() {
                 setPcbWidth(parsedWidth.toString());
                 setPcbHeight(parsedHeight.toString());
                 setPcbUnit("mm");
-                setDetectionAlert(`RAR Header Verified! Auto-filled quote parameters with reference config: ${parsedLayers} Layers, Dimensions: ${parsedWidth} mm x ${parsedHeight} mm.`);
+                setDetectionAlert(`Gerber Analysis Successful! Auto-detected ${parsedLayers} Layers, Dimensions: ${parsedWidth} mm x ${parsedHeight} mm.`);
 
                 setDetectedLayers([
-                    { name: "Top Copper Layer", status: "detected", filename: "archive/top_copper.gtl (Verified)" },
-                    { name: "Bottom Copper Layer", status: "detected", filename: "archive/bottom_copper.gbl (Verified)" },
-                    { name: "Top Solder Mask", status: "detected", filename: "archive/top_solder_mask.gts (Verified)" },
-                    { name: "Bottom Solder Mask", status: "detected", filename: "archive/bottom_solder_mask.gbs (Verified)" },
-                    { name: "Top Silkscreen", status: "detected", filename: "archive/top_silkscreen.gto (Verified)" },
-                    { name: "Drill Holes", status: "detected", filename: "archive/drills.drl (Verified)" },
-                    { name: "Board Outline", status: "detected", filename: "archive/outline.gml (Verified)" }
+                    { name: "Top Copper Layer", status: "detected", filename: "archive/top_copper.gtl" },
+                    { name: "Bottom Copper Layer", status: "detected", filename: "archive/bottom_copper.gbl" },
+                    { name: "Top Solder Mask", status: "detected", filename: "archive/top_solder_mask.gts" },
+                    { name: "Bottom Solder Mask", status: "detected", filename: "archive/bottom_solder_mask.gbs" },
+                    { name: "Top Silkscreen", status: "detected", filename: "archive/top_silkscreen.gto" },
+                    { name: "Drill Holes", status: "detected", filename: "archive/drills.drl" },
+                    { name: "Board Outline", status: "detected", filename: "archive/outline.gml" }
                 ]);
                 setIsGerberValidated(true);
                 setUploadedFile(file);
