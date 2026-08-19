@@ -4,12 +4,36 @@ import { unzip as _unzip } from 'fflate';
 import stackup, { type InputLayer, type Stackup } from 'pcb-stackup';
 import { Buffer } from 'buffer';
 
+import JSZip from 'jszip';
+
 const unzip = promisify(_unzip);
 
 export async function loadLayers(file: File): Promise<InputLayer[]> {
     try {
         const buffer = await file.arrayBuffer();
-        const entries = await unzip(new Uint8Array(buffer));
+        const ext = file.name.split('.').pop()?.toLowerCase();
+
+        let archiveBytes = new Uint8Array(buffer);
+
+        if (ext === 'rar') {
+            try {
+                // If the user uploaded a RAR file (or ZIP saved as .rar), attempt in-memory ZIP conversion
+                const zip = new JSZip();
+                await zip.loadAsync(buffer);
+                const generated = await zip.generateAsync({ type: 'uint8array' });
+                archiveBytes = new Uint8Array(generated);
+            } catch (rarErr) {
+                // If fflate can unpack it directly
+                try {
+                    const entries = await unzip(archiveBytes);
+                    return await readLayers(entries);
+                } catch (e) {
+                    console.warn("Direct fflate unpack failed:", e);
+                }
+            }
+        }
+
+        const entries = await unzip(archiveBytes);
         return await readLayers(entries);
     } catch (err) {
         console.warn("Failed to extract Gerber archive file:", err);
