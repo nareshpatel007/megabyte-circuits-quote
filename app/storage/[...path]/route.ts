@@ -8,7 +8,7 @@ export async function GET(
         const { path } = await params;
         const filePath = path.join("/");
 
-        let backendUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "https://api.megabytecircuit.com";
+        let backendUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits-api/public";
         if (backendUrl.endsWith("/")) {
             backendUrl = backendUrl.slice(0, -1);
         }
