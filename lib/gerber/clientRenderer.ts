@@ -17,19 +17,13 @@ export async function loadLayers(file: File): Promise<InputLayer[]> {
 
         if (ext === 'rar') {
             try {
-                // If the user uploaded a RAR file (or ZIP saved as .rar), attempt in-memory ZIP conversion
+                // If the file is a ZIP archive saved with a .rar extension
                 const zip = new JSZip();
                 await zip.loadAsync(buffer);
                 const generated = await zip.generateAsync({ type: 'uint8array' });
                 archiveBytes = new Uint8Array(generated);
             } catch (rarErr) {
-                // If fflate can unpack it directly
-                try {
-                    const entries = await unzip(archiveBytes);
-                    return await readLayers(entries);
-                } catch (e) {
-                    console.warn("Direct fflate unpack failed:", e);
-                }
+                // Standard fflate attempt
             }
         }
 
