@@ -786,8 +786,13 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                         const pathPart = zipFetchUrl.split('/storage/')[1];
                         zipFetchUrl = `/storage/${pathPart}`;
                     }
-                    const zipBlob = await fetch(zipFetchUrl).then(r => r.blob());
-                    fileToExtract = new File([zipBlob], file.name.replace(/\.rar$/i, '.zip'), { type: 'application/zip' });
+                    const zipRes = await fetch(zipFetchUrl);
+                    if (zipRes.ok) {
+                        const zipBlob = await zipRes.blob();
+                        fileToExtract = new File([zipBlob], file.name.replace(/\.rar$/i, '.zip'), { type: 'application/zip' });
+                    } else {
+                        console.warn(`Converted ZIP fetch failed with status ${zipRes.status} at ${zipFetchUrl}`);
+                    }
                 } catch (e) {
                     console.warn("Could not fetch converted ZIP file from backend:", e);
                 }

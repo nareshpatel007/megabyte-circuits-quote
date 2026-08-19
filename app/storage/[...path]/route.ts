@@ -8,7 +8,7 @@ export async function GET(
         const { path } = await params;
         const filePath = path.join("/");
 
-        let backendUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits-api/public";
+        let backendUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "https://api.megabytecircuit.com";
         if (backendUrl.endsWith("/")) {
             backendUrl = backendUrl.slice(0, -1);
         }
@@ -17,7 +17,8 @@ export async function GET(
         const res = await fetch(targetUrl);
 
         if (!res.ok) {
-            return new NextResponse("File Not Found", { status: 404 });
+            console.error(`Storage proxy fetch failed for ${targetUrl} with status: ${res.status}`);
+            return new NextResponse(`File Not Found (${res.status})`, { status: res.status });
         }
 
         const arrayBuffer = await res.arrayBuffer();
