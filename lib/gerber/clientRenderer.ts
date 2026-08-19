@@ -9,35 +9,46 @@ import JSZip from 'jszip';
 const unzip = promisify(_unzip);
 
 export async function loadLayers(file: File): Promise<InputLayer[]> {
+    console.log(`[GerberExtraction] Starting layer extraction for file: "${file.name}" (Size: ${(file.size / 1024).toFixed(2)} KB)`);
     try {
         const buffer = await file.arrayBuffer();
         const ext = file.name.split('.').pop()?.toLowerCase();
+        console.log(`[GerberExtraction] Detected file extension: "${ext}"`);
 
         let archiveBytes = new Uint8Array(buffer);
 
         if (ext === 'rar') {
+            console.log(`[GerberExtraction] Attempting JSZip load for file with .rar extension...`);
             try {
-                // If the file is a ZIP archive saved with a .rar extension
                 const zip = new JSZip();
                 await zip.loadAsync(buffer);
                 const generated = await zip.generateAsync({ type: 'uint8array' });
                 archiveBytes = new Uint8Array(generated);
+                console.log(`[GerberExtraction] JSZip successfully unpacked file with .rar extension.`);
             } catch (rarErr) {
-                // Standard fflate attempt
+                console.log(`[GerberExtraction] File is not a ZIP formatted archive (JSZip load skipped). Proceeding to fflate...`, rarErr);
             }
         }
 
+        console.log(`[GerberExtraction] Unzipping archive via fflate...`);
         const entries = await unzip(archiveBytes);
-        return await readLayers(entries);
-    } catch (err) {
-        console.warn("Failed to extract Gerber archive file:", err);
+        console.log(`[GerberExtraction] fflate unzipped ${Object.keys(entries).length} file entries from archive.`);
+        
+        const layers = await readLayers(entries);
+        console.log(`[GerberExtraction] Successfully parsed ${layers.length} valid Gerber/Drill layers.`);
+        return layers;
+    } catch (err: any) {
+        console.error(`[GerberExtraction Error] Failed during extraction process:`, err);
         return [];
     }
 }
 
 export async function readLayers(entries: Record<string, Uint8Array>): Promise<InputLayer[]> {
     const layers = <InputLayer[]>[];
-    for (const name of Object.keys(entries)) {
+    const entryNames = Object.keys(entries);
+    console.log(`[GerberExtraction] Inspecting ${entryNames.length} file entries in archive:`, entryNames);
+
+    for (const name of entryNames) {
         // Skip hidden files, system files, or directory entries
         if (name.startsWith('__MACOSX') || name.startsWith('.') || name.includes('/.') || name.endsWith('/')) {
             continue;
@@ -53,6 +64,7 @@ export async function readLayers(entries: Record<string, Uint8Array>): Promise<I
         }
 
         const { type, side } = mapLayerType(name);
+        console.log(`[GerberExtraction] File entry "${name}" mapped -> type: ${type || 'NULL'}, side: ${side || 'NULL'}`);
         if (type !== null) {
             layers.push({ type, side, gerber: Buffer.from(entries[name]), filename: name });
         }
