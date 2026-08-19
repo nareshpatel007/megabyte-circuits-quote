@@ -781,7 +781,12 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             let fileToExtract = file;
             if (file.name.toLowerCase().endsWith('.rar') && res?.zip_url) {
                 try {
-                    const zipBlob = await fetch(res.zip_url).then(r => r.blob());
+                    let zipFetchUrl = res.zip_url;
+                    if (zipFetchUrl.includes('/storage/')) {
+                        const pathPart = zipFetchUrl.split('/storage/')[1];
+                        zipFetchUrl = `/storage/${pathPart}`;
+                    }
+                    const zipBlob = await fetch(zipFetchUrl).then(r => r.blob());
                     fileToExtract = new File([zipBlob], file.name.replace(/\.rar$/i, '.zip'), { type: 'application/zip' });
                 } catch (e) {
                     console.warn("Could not fetch converted ZIP file from backend:", e);
