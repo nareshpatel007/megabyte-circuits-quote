@@ -8,12 +8,16 @@ export async function GET(
         const { path } = await params;
         const filePath = path.join("/");
 
-        let backendUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits-api/public";
+        let backendUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
         if (backendUrl.endsWith("/")) {
             backendUrl = backendUrl.slice(0, -1);
         }
 
-        const targetUrl = `${backendUrl}/storage/${filePath}`;
+        let targetUrl = `${backendUrl}/storage/${filePath}`;
+        if (!backendUrl.includes('/storage/') && !targetUrl.includes('/storage/')) {
+            targetUrl = `${backendUrl}/storage/${filePath}`;
+        }
+        
         const res = await fetch(targetUrl);
 
         if (!res.ok) {
