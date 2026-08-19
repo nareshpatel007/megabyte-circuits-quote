@@ -4,8 +4,7 @@ import { unzip as _unzip } from 'fflate';
 import stackup, { type InputLayer, type Stackup } from 'pcb-stackup';
 import { Buffer } from 'buffer';
 
-// @ts-ignore
-import { readAsExtractor } from 'unrar-js';
+import { createExtractorFromData } from 'node-unrar-js';
 
 const unzip = promisify(_unzip);
 
@@ -15,7 +14,7 @@ export async function loadLayers(file: File): Promise<InputLayer[]> {
         const ext = file.name.split('.').pop()?.toLowerCase();
 
         if (ext === 'rar') {
-            const extractor = await readAsExtractor({ data: buffer });
+            const extractor = await createExtractorFromData({ data: buffer });
             const extracted = extractor.extract();
             const entries: Record<string, Uint8Array> = {};
 
