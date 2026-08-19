@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
                 { status: 400 }
             );
         }
-        return handleApiProxy(req, "/api/upload/delete", "POST", body);
+        return handleApiProxy(req, "/api/upload/delete", "POST", JSON.stringify(body));
     } catch (err: any) {
         console.error("Upload Delete API Error:", err);
         return NextResponse.json(
