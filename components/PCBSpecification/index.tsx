@@ -778,7 +778,29 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             setUploadedGerberFileId(res.gerber_file_id);
         }
         try {
-            const layers = await loadLayers(file);
+            let fileToExtract = file;
+            if (file.name.toLowerCase().endsWith('.rar') && res?.zip_url) {
+                console.log(`[GerberExtraction] Backend returned zip_url: ${res.zip_url}. Fetching converted ZIP archive...`);
+                try {
+                    let zipFetchUrl = res.zip_url;
+                    if (zipFetchUrl.includes('/storage/')) {
+                        const pathPart = zipFetchUrl.split('/storage/')[1];
+                        zipFetchUrl = `/storage/${pathPart}`;
+                    }
+                    const zipRes = await fetch(zipFetchUrl);
+                    if (zipRes.ok) {
+                        const zipBlob = await zipRes.blob();
+                        fileToExtract = new File([zipBlob], file.name.replace(/\.rar$/i, '.zip'), { type: 'application/zip' });
+                        console.log(`[GerberExtraction] Converted ZIP fetched successfully!`);
+                    } else {
+                        console.warn(`[GerberExtraction Warning] Converted ZIP fetch failed with HTTP ${zipRes.status} at ${zipFetchUrl}`);
+                    }
+                } catch (e) {
+                    console.warn("[GerberExtraction Warning] Exception fetching converted ZIP from backend:", e);
+                }
+            }
+
+            const layers = await loadLayers(fileToExtract);
             setClientLayers(layers);
 
             const copperLayers = layers.filter(l => l.type === 'copper');
