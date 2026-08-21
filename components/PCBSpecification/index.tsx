@@ -590,7 +590,141 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [isSavingCart, setIsSavingCart] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
+    // Live JLCPCB API quote state for > 2 layers
+    const [jlcpcbQuote, setJlcpcbQuote] = useState<any>(null);
+    const [isJlcpcbLoading, setIsJlcpcbLoading] = useState<boolean>(false);
+    const [jlcpcbError, setJlcpcbError] = useState<string | null>(null);
+
+    // Fetch JLCPCB live quotation whenever layers > 2
+    React.useEffect(() => {
+        let active = true;
+        const layersCount = parseInt(formData.layers, 10) || 1;
+
+        if (layersCount <= 2) {
+            setJlcpcbQuote(null);
+            setIsJlcpcbLoading(false);
+            setJlcpcbError(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            if (!active) return;
+            setIsJlcpcbLoading(true);
+            setJlcpcbError(null);
+
+            const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
+            const width = Math.max(1, Math.round((parseFloat(formData.width) || 100) * unitMultiplier));
+            const height = Math.max(1, Math.round((parseFloat(formData.height) || 100) * unitMultiplier));
+            const qty = Math.max(1, parseInt(formData.qty, 10) || 5);
+
+            const colorMap: Record<string, number> = {
+                "#52c41a": 0, // Green
+                "#f5222d": 1, // Red
+                "#fadb14": 2, // Yellow
+                "#1677ff": 3, // Blue
+                "#ffffff": 4, // White
+                "#000000": 5, // Black
+                "#722ed1": 6  // Purple
+            };
+
+            const finishMap: Record<string, number> = {
+                "HASL(with lead)": 0,
+                "LeadFree HASL": 1,
+                "LeadFree HASL (RoHS)": 1,
+                "ENIG": 2,
+                "OSP": 0
+            };
+
+            const rawThickness = parseFloat((formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "")) || 1.6;
+
+            const payload = {
+                orderType: 1,
+                achieveDate: 48,
+                country: "IN",
+                fileKey: uploadedGerberFileId ? String(uploadedGerberFileId) : "",
+                pcbParam: {
+                    layer: layersCount,
+                    width: width,
+                    length: height,
+                    qty: qty,
+                    thickness: rawThickness,
+                    pcbColor: colorMap[formData.pcbColor] ?? 0,
+                    surfaceFinish: finishMap[formData.surfaceFinish] ?? 0,
+                    copperWeight: formData.copperWeight?.includes("2") ? 2 : 1,
+                    insideCuprumThickness: "0.5",
+                    goldFinger: formData.goldFingers === "Yes" ? 1 : 0,
+                    materialDetails: 0,
+                    panelFlag: 0,
+                    differentDesign: parseInt(formData.differentDesign || "1", 10) || 1,
+                    flyingProbeTest: formData.elecTest === "Flying Probe Fully Test" ? 2 : 1,
+                    castellatedHoles: formData.castellated === "Yes" ? 1 : 0,
+                    orderDetailsRemark: "Web Quotation",
+                    cascadeStructure: 0,
+                    impedanceFlag: "no",
+                    isAddCustomerCode: "nocode",
+                    plateType: 1,
+                    autoConfirmProductionFile: true,
+                    markOnPcb: 1,
+                    viaCovering: formData.viaCovering === "Untented" ? 2 : 1,
+                    needTechnics: 0,
+                    edgeRounding: formData.edgePlating === "Yes",
+                    serviceConfigVos: []
+                }
+            };
+
+
+            try {
+                const res = await fetch("/api/jlcpcb/calculate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const json = await res.json();
+                if (active) {
+                    if (json.success && json.data) {
+                        setJlcpcbQuote(json.data);
+                    } else {
+                        console.warn("JLCPCB Quote API response:", json);
+                        setJlcpcbQuote(json.data || null);
+                        setJlcpcbError(json.message || "Failed to fetch JLCPCB quotation");
+                    }
+                }
+            } catch (err) {
+                console.error("Error calling JLCPCB quotation API:", err);
+                if (active) {
+                    setJlcpcbError("Error connecting to JLCPCB quotation API");
+                }
+            } finally {
+                if (active) {
+                    setIsJlcpcbLoading(false);
+                }
+            }
+        }, 400);
+
+        return () => {
+            active = false;
+            clearTimeout(timer);
+        };
+    }, [
+        formData.layers,
+        formData.width,
+        formData.height,
+        formData.qty,
+        formData.thickness,
+        formData.pcbColor,
+        formData.surfaceFinish,
+        formData.copperWeight,
+        formData.unit,
+        formData.goldFingers,
+        formData.differentDesign,
+        formData.elecTest,
+        formData.castellated,
+        formData.viaCovering,
+        formData.edgePlating
+    ]);
+
     // Sync Gerber preview soldermask color and surface finish with form selections
+
     React.useEffect(() => {
         const hexToMask: Record<string, RenderOptions["sm"]> = {
             "#52c41a": "green",
@@ -667,7 +801,47 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         const totalAreaInSqM = areaPerBoard * quantity;
         const areaInSqCm = totalAreaInSqM * 10000;
 
+        // If layers > 2, use live JLCPCB API quote when available
+        if (layers > 2) {
+            if (jlcpcbQuote) {
+                const usdTotalFee = parseFloat(jlcpcbQuote?.pcbCostInfo?.totalFee || jlcpcbQuote?.priceWithoutFreight || 0);
+                if (usdTotalFee > 0) {
+                    const inrTotalFee = Math.max(Math.round(usdTotalFee * 88.5), 100);
+                    const daysList = [1, 3, 5, 7, 10, 20];
+                    const options = daysList.map((day) => {
+                        const unitPrice = inrTotalFee / quantity;
+                        return {
+                            day,
+                            unitPrice: unitPrice.toFixed(2),
+                            orderValue: inrTotalFee.toFixed(2),
+                            visible: true
+                        };
+                    });
+                    return { options, showContact: false, totalAreaInSqM };
+                }
+            }
+
+            // Fallback calculation for > 2 layers when live quote is pending
+            const layerFactor = 1 + (layers - 2) * 0.4;
+            const baseCost = Math.round(5500 * layerFactor + (areaInSqCm * 1.2 * layerFactor));
+            const daysList = [1, 3, 5, 7, 10, 20];
+            const options = daysList.map((day) => {
+                const dayFactor = day === 1 ? 1.5 : day === 3 ? 1.3 : day === 5 ? 1.1 : 1.0;
+                const totalCost = Math.round(baseCost * dayFactor);
+                const unitPrice = totalCost / quantity;
+                return {
+                    day,
+                    unitPrice: unitPrice.toFixed(2),
+                    orderValue: totalCost.toFixed(2),
+                    visible: true
+                };
+            });
+            return { options, showContact: false, totalAreaInSqM };
+        }
+
+
         const fixedCosts: Record<string, Record<number, number>> = pricingConfig?.fixedCosts || {
+
             '1': { 1: 3100, 3: 2100, 5: 1600, 7: 1500, 10: 1400, 20: 1000 },
             '2': { 1: 8100, 3: 4100, 5: 2600, 7: 2200, 10: 1900, 20: 1400 },
             '4': { 20: 6000 },
@@ -1258,8 +1432,19 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     {/* Right Quote Cost Summary */}
                     <div className="w-full lg:w-[480px] shrink-0 sticky top-24">
                         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-lg overflow-hidden">
-                            <div className="p-5 space-y-4 bg-white">                                 {/* Sticky Notes Board Delivery Calendar */}
+                            <div className="p-5 space-y-4 bg-white">
+                                {parseInt(formData.layers, 10) > 2 && (
+                                    <div className="flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-semibold">
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                            {isJlcpcbLoading ? "Fetching Live JLCPCB Quote..." : `${formData.layers} Layer PCB (JLCPCB Live API Pricing)`}
+                                        </span>
+                                    </div>
+                                )}
+                                {/* Sticky Notes Board Delivery Calendar */}
                                 {(() => {
+                                    const layers = parseInt(formData.layers, 10) || 1;
+
                                     const { options, showContact, totalAreaInSqM = 0 } = getLeadTimePricing();
 
                                     if (showContact) {
@@ -1279,7 +1464,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                     const length = (parseFloat(formData.width) || 0) * unitMultiplier;
                                     const width = (parseFloat(formData.height) || 0) * unitMultiplier;
                                     const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
-                                    const layers = parseInt(formData.layers, 10) || 1;
 
                                     const defaultOrderValue = Math.max(Math.round(length * width * 0.05 * quantity), 100);
                                     const defaultUnitPrice = (defaultOrderValue / quantity).toFixed(2);
@@ -1296,7 +1480,14 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                         let matchedUnitPrice = parseFloat(defaultUnitPrice);
                                         let visible = false;
 
-                                        if (layers >= 4 && layers <= 10) {
+                                        if (layers > 2) {
+                                            const optAny = options.find(o => o.visible);
+                                            if (optAny) {
+                                                matchedOrderValue = parseFloat(optAny.orderValue);
+                                                matchedUnitPrice = parseFloat(optAny.unitPrice);
+                                                visible = true;
+                                            }
+                                        } else if (layers >= 4 && layers <= 10) {
                                             const opt20 = getOption(20);
                                             if (opt20) {
                                                 matchedOrderValue = parseFloat(opt20.orderValue);
@@ -1324,6 +1515,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                 }
                                                 return null;
                                             };
+
 
                                             if (daysAhead === 1) {
                                                 const o = getOption(1);
