@@ -153,7 +153,7 @@ function LoginContent() {
         setIsSocialLoading(true);
 
         const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        window.location.href = `${backendUrl}/api/auth/google`;
+        window.location.href = `${backendUrl}api/auth/google`;
     };
 
     return (
@@ -266,11 +266,10 @@ function LoginContent() {
                                             clearFieldError("username");
                                         }}
                                         placeholder="Username"
-                                        className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${
-                                            fieldErrors.username
-                                                ? "border-red-500 focus:border-red-500"
-                                                : "border-gray-300 focus:border-primary"
-                                        }`}
+                                        className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${fieldErrors.username
+                                            ? "border-red-500 focus:border-red-500"
+                                            : "border-gray-300 focus:border-primary"
+                                            }`}
                                     />
                                     {fieldErrors.username && (
                                         <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.username}</p>
@@ -287,11 +286,10 @@ function LoginContent() {
                                             clearFieldError("email");
                                         }}
                                         placeholder="Email"
-                                        className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${
-                                            fieldErrors.email
-                                                ? "border-red-500 focus:border-red-500"
-                                                : "border-gray-300 focus:border-primary"
-                                        }`}
+                                        className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${fieldErrors.email
+                                            ? "border-red-500 focus:border-red-500"
+                                            : "border-gray-300 focus:border-primary"
+                                            }`}
                                     />
                                     {fieldErrors.email && (
                                         <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.email}</p>
@@ -310,11 +308,10 @@ function LoginContent() {
                                         clearFieldError("usernameOrEmail");
                                     }}
                                     placeholder="Username or Email"
-                                    className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${
-                                        fieldErrors.usernameOrEmail
-                                            ? "border-red-500 focus:border-red-500"
-                                            : "border-gray-300 focus:border-primary"
-                                    }`}
+                                    className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${fieldErrors.usernameOrEmail
+                                        ? "border-red-500 focus:border-red-500"
+                                        : "border-gray-300 focus:border-primary"
+                                        }`}
                                 />
                                 {fieldErrors.usernameOrEmail && (
                                     <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.usernameOrEmail}</p>
@@ -333,11 +330,10 @@ function LoginContent() {
                                         clearFieldError("password");
                                     }}
                                     placeholder="Password"
-                                    className={`w-full h-11 pl-3.5 pr-10 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${
-                                        fieldErrors.password
-                                            ? "border-red-500 focus:border-red-500"
-                                            : "border-gray-300 focus:border-primary"
-                                    }`}
+                                    className={`w-full h-11 pl-3.5 pr-10 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 ${fieldErrors.password
+                                        ? "border-red-500 focus:border-red-500"
+                                        : "border-gray-300 focus:border-primary"
+                                        }`}
                                 />
                                 <button
                                     type="button"
@@ -362,11 +358,10 @@ function LoginContent() {
                                             setCountry(e.target.value);
                                             clearFieldError("country");
                                         }}
-                                        className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none bg-white transition-all text-gray-700 ${
-                                            fieldErrors.country
-                                                ? "border-red-500 focus:border-red-500"
-                                                : "border-gray-300 focus:border-primary"
-                                        }`}
+                                        className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none bg-white transition-all text-gray-700 ${fieldErrors.country
+                                            ? "border-red-500 focus:border-red-500"
+                                            : "border-gray-300 focus:border-primary"
+                                            }`}
                                     >
                                         <option value="India">India</option>
                                         <option value="United States">United States</option>
@@ -390,11 +385,10 @@ function LoginContent() {
                                                 clearFieldError("gstNumber");
                                             }}
                                             placeholder="GST Number (Optional)"
-                                            className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 uppercase ${
-                                                fieldErrors.gstNumber
-                                                    ? "border-red-500 focus:border-red-500"
-                                                    : "border-gray-300 focus:border-primary"
-                                            }`}
+                                            className={`w-full h-11 px-3.5 text-xs sm:text-sm border rounded-xl outline-none transition-all placeholder:text-gray-400 uppercase ${fieldErrors.gstNumber
+                                                ? "border-red-500 focus:border-red-500"
+                                                : "border-gray-300 focus:border-primary"
+                                                }`}
                                         />
                                         {fieldErrors.gstNumber && (
                                             <p className="text-red-500 text-xs mt-1 font-medium">{fieldErrors.gstNumber}</p>
