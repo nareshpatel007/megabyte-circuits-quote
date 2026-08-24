@@ -38,6 +38,7 @@ interface OrderDetail {
     id: number;
     order_number: string;
     status_id: number;
+    status?: string;
     status_name?: string;
     status_label?: string;
     gerber_file_id?: number;
