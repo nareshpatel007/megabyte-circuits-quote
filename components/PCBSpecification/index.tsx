@@ -486,7 +486,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [detectedInfo, setDetectedInfo] = useState<{ layers: string; width: string; height: string } | null>(null);
 
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
-    const [pricingConfig, setPricingConfig] = useState<{ fixedCosts: any; priceTiers: any } | null>(null);
+    const [pricingConfig, setPricingConfig] = useState<{ fixedCosts: any; priceTiers: any; shippingOptions?: any[] } | null>(null);
 
     // Read URL search params for prefilling parameters passed from main site
     React.useEffect(() => {
@@ -1699,14 +1699,17 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                 const weightPerSqM = 3.8 * (thicknessMm / 1.6);
                                                 const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
 
-                                                const shippingOptions = [
+                                                const defaultShippingOptions = [
                                                     { key: "gujarat_road", location: "In Gujarat", method: "By Road", rate: 40 },
                                                     { key: "out_road", location: "Out of Gujarat", method: "By Road", rate: 80 },
                                                     { key: "out_air", location: "Out of Gujarat", method: "By Air", rate: 150 },
                                                     { key: "out_fastrack", location: "Out of Gujarat", method: "Fastrack", rate: 450 },
                                                 ];
+                                                const shippingOptions = pricingConfig?.shippingOptions && Array.isArray(pricingConfig.shippingOptions) && pricingConfig.shippingOptions.length > 0
+                                                    ? pricingConfig.shippingOptions
+                                                    : defaultShippingOptions;
 
-                                                const activeShipping = shippingOptions.find(o => o.key === shippingOptionKey) || shippingOptions[0];
+                                                const activeShipping = shippingOptions.find((o: any) => o.key === shippingOptionKey) || shippingOptions[0];
                                                 const shippingCharge = Math.round(activeShipping.rate * estimatedWeightKg);
 
                                                 const pcbPrice = selectedDayData ? parseFloat(selectedDayData.orderValue) : 0;
@@ -1727,20 +1730,39 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                 <span>Shipping Option:</span>
                                                                 <span className="text-[10px] font-medium text-slate-500">Select delivery method</span>
                                                             </div>
-                                                            <select
-                                                                value={shippingOptionKey}
-                                                                onChange={(e) => setShippingOptionKey(e.target.value)}
-                                                                className="w-full bg-white dark:bg-slate-800 border border-[#41A96A]/40 rounded-lg p-2 text-xs font-medium text-slate-800 dark:text-slate-100 shadow-2xs focus:ring-2 focus:ring-[#238E4E] focus:outline-none"
-                                                            >
+                                                            <div className="grid grid-cols-1 gap-2 pt-1">
                                                                 {shippingOptions.map(opt => {
                                                                     const charge = Math.round(opt.rate * estimatedWeightKg);
+                                                                    const isSelected = shippingOptionKey === opt.key;
                                                                     return (
-                                                                        <option key={opt.key} value={opt.key}>
-                                                                            {opt.location} - {opt.method} (₹{opt.rate}/kg) → +₹{charge}
-                                                                        </option>
+                                                                        <label
+                                                                            key={opt.key}
+                                                                            onClick={() => setShippingOptionKey(opt.key)}
+                                                                            className={`flex items-center justify-between gap-2.5 p-2.5 rounded-xl border transition-all cursor-pointer ${
+                                                                                isSelected
+                                                                                    ? "bg-[#8DD3A5]/20 border-[#238E4E] shadow-2xs"
+                                                                                    : "bg-white/60 dark:bg-slate-800/60 border-[#41A96A]/30 hover:border-[#238E4E]/60"
+                                                                            }`}
+                                                                        >
+                                                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                                                <input
+                                                                                    type="radio"
+                                                                                    name="shippingOption"
+                                                                                    checked={isSelected}
+                                                                                    onChange={() => setShippingOptionKey(opt.key)}
+                                                                                    className="w-4 h-4 text-[#238E4E] focus:ring-[#238E4E] cursor-pointer accent-[#238E4E]"
+                                                                                />
+                                                                                <span className={`text-xs font-semibold ${isSelected ? "text-[#0F7438] dark:text-[#8DD3A5]" : "text-slate-800 dark:text-slate-200"}`}>
+                                                                                    {opt.location} - {opt.method} <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400 ml-1">(₹{opt.rate}/kg)</span>
+                                                                                </span>
+                                                                            </div>
+                                                                            <span className={`text-xs font-bold ${isSelected ? "text-[#0F7438] dark:text-[#8DD3A5]" : "text-slate-700 dark:text-slate-300"}`}>
+                                                                                +₹{charge}
+                                                                            </span>
+                                                                        </label>
                                                                     );
                                                                 })}
-                                                            </select>
+                                                            </div>
                                                             <div className="flex justify-between items-center text-xs pt-1">
                                                                 <span className="text-slate-600 dark:text-slate-300 font-medium">Shipping Charge:</span>
                                                                 <span className="font-bold text-slate-800 dark:text-slate-200">₹{shippingCharge.toLocaleString('en-IN')}</span>
