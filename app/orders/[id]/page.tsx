@@ -255,7 +255,8 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
         }
     };
 
-    const isCompleted = (order?.status_name || "").toLowerCase() === "completed" || (order?.status_name || "").toLowerCase() === "ready to ship";
+    const activeStatusName = order?.status || order?.status_name || "";
+    const isCompleted = activeStatusName.toLowerCase() === "completed" || activeStatusName.toLowerCase() === "ready to ship";
 
     return (
         <div className="min-h-screen bg-[#f4f6f9] dark:bg-[#030712] text-gray-900 dark:text-gray-100 flex flex-col lg:flex-row font-sans transition-colors">
@@ -334,7 +335,7 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                                                     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                                     : "bg-amber-50 text-amber-700 border-amber-200"
                                             }`}>
-                                                {order.status_name || "Pending"}
+                                                {activeStatusName || "Pending"}
                                             </span>
                                         </div>
                                     </div>

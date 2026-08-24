@@ -15,6 +15,7 @@ interface OrderItem {
     id: number;
     order_number: string;
     status_id: number;
+    status?: string;
     status_name?: string;
     status_label?: string;
     gerber_file_id?: number;
@@ -90,45 +91,70 @@ function DashboardContent() {
 
     const handleRepeatOrder = (ord: OrderItem) => {
         try {
-            const boardName = ord.gerber_name || ord.meta?.board_name || "Standard PCB";
-            const layers = parseInt(ord.meta?.layers || "2", 10);
-            const qty = parseInt(ord.meta?.quantity || "1", 10);
+            const confirmAction = window.confirm(`Reorder Confirmation: Are you sure you want to reorder Order #${ord.order_number}? This will load all specifications and Gerber file into the Instant Quote calculator with updated pricing.`);
+            if (!confirmAction) return;
+
+            const boardName = ord.gerber_name || ord.meta?.board_name || "Standard PCB Order";
+            const layers = ord.meta?.layers || "2";
             const dimensions = ord.meta?.dimensions || "100x100mm";
-            const pcbColor = ord.meta?.pcb_color || "Green";
+
+            let width = ord.meta?.width || "100";
+            let height = ord.meta?.height || "100";
+            if (dimensions && (!ord.meta?.width || !ord.meta?.height)) {
+                const clean = dimensions.replace(/mm|inch|in/gi, "").trim();
+                const parts = clean.split(/x|\*/i);
+                if (parts.length >= 2) {
+                    width = parts[0].trim();
+                    height = parts[1].trim();
+                }
+            }
+
+            const qty = ord.meta?.quantity || ord.meta?.qty || "5";
             const thickness = ord.meta?.thickness || "1.6mm";
+            const pcbColor = ord.meta?.pcb_color || "Green";
+            const surfaceFinish = ord.meta?.surface_finish || "HASL(Leaded)";
+            const copperWeight = ord.meta?.copper_weight || "1 oz";
+            const baseMaterial = ord.meta?.base_material || "FR-4";
+            const gerberFileName = ord.gerber_name || ord.meta?.gerber_file_name || boardName;
+            const gerberFileId = ord.gerber_file_id || null;
+            const gerberUrl = ord.gerber_url || ord.meta?.gerber_file_url || null;
+            const previewData = ord.gerber_preview_data || ord.meta?.preview_data || null;
 
-            const currentPrice = calculateCurrentPcbPrice(layers, dimensions, qty, thickness, pcbColor, ord.order_value);
-
-            const repeatItem = {
-                id: Date.now(),
-                productType: ord.meta?.product_type || "pcb",
-                boardName: boardName,
-                gerberFileName: ord.gerber_name || ord.meta?.gerber_file_name || boardName,
-                gerber_file_id: ord.gerber_file_id || null,
-                gerberPreview: ord.gerber_preview_data || null,
-                layers: layers,
-                dimensions: dimensions,
-                pcbColor: pcbColor,
-                thickness: thickness,
-                surfaceFinish: ord.meta?.surface_finish || "HASL(Leaded)",
-                qty: qty,
-                buildTime: ord.meta?.build_time || "3-4 days",
-                price: currentPrice,
-                unitPrice: qty > 0 ? Math.round(currentPrice / qty) : currentPrice
+            const reorderSpec = {
+                layers,
+                width,
+                height,
+                qty,
+                thickness,
+                pcbColor,
+                surfaceFinish,
+                copperWeight,
+                baseMaterial,
+                boardName,
+                gerber_file_id: gerberFileId,
+                gerber_name: gerberFileName,
+                gerber_url: gerberUrl,
+                gerber_preview_data: previewData,
+                parent_order_number: ord.order_number
             };
 
-            // Add to main cart
-            const savedCart = localStorage.getItem("megabyte_cart");
-            let cartItems = savedCart ? JSON.parse(savedCart) : [];
-            cartItems.push(repeatItem);
-            localStorage.setItem("megabyte_cart", JSON.stringify(cartItems));
+            sessionStorage.setItem("megabyte_reorder_spec", JSON.stringify(reorderSpec));
+            localStorage.setItem("megabyte_reorder_spec", JSON.stringify(reorderSpec));
 
-            // Select only this item
-            localStorage.setItem("selectedCartItemIds", JSON.stringify([repeatItem.id]));
-            window.dispatchEvent(new Event("megabyte_cart_updated"));
+            const queryParams = new URLSearchParams({
+                reorder: ord.order_number,
+                layers,
+                width,
+                height,
+                qty,
+                thickness,
+                pcbColor: encodeURIComponent(pcbColor),
+                surfaceFinish: encodeURIComponent(surfaceFinish),
+                copperWeight: encodeURIComponent(copperWeight),
+                baseMaterial: encodeURIComponent(baseMaterial)
+            });
 
-            // Redirect directly to Cart page
-            router.push("/cart");
+            router.push(`/quote?${queryParams.toString()}`);
         } catch (e) {
             console.error("Repeat order error:", e);
         }
@@ -307,9 +333,9 @@ function DashboardContent() {
                                                 </td>
                                                 <td className="py-3 text-gray-500 dark:text-zinc-400">{new Date(ord.created_at).toLocaleDateString()}</td>
                                                 <td className="py-3 font-extrabold text-gray-900 dark:text-white">{formatPrice(ord.order_value)}</td>
-                                                <td className="py-3">{getStatusBadge(ord.status_name)}</td>
+                                                <td className="py-3">{getStatusBadge(ord.status || ord.status_name)}</td>
                                                 <td className="py-3 text-right space-x-2">
-                                                    {(ord.status_name?.toLowerCase() === "completed" || ord.status_name?.toLowerCase() === "ready to ship") && (
+                                                    {(((ord.status || ord.status_name)?.toLowerCase() === "completed") || ((ord.status || ord.status_name)?.toLowerCase() === "ready to ship")) && (
                                                         <button
                                                             type="button"
                                                             onClick={() => handleRepeatOrder(ord)}

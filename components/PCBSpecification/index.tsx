@@ -537,6 +537,63 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         }
     }, []);
 
+    // Load reorder specifications & Gerber file if arriving from Reorder flow
+    React.useEffect(() => {
+        if (typeof window === "undefined") return;
+        try {
+            const rawSpec = sessionStorage.getItem("megabyte_reorder_spec") || localStorage.getItem("megabyte_reorder_spec");
+            if (rawSpec) {
+                const spec = JSON.parse(rawSpec);
+                const updates: Partial<QuoteFormData> = {};
+
+                if (spec.layers) updates.layers = String(spec.layers);
+                if (spec.width) updates.width = String(spec.width);
+                if (spec.height) updates.height = String(spec.height);
+                if (spec.qty) updates.qty = String(spec.qty);
+                if (spec.thickness) updates.thickness = String(spec.thickness);
+                if (spec.pcbColor) updates.pcbColor = String(spec.pcbColor);
+                if (spec.surfaceFinish) updates.surfaceFinish = String(spec.surfaceFinish);
+                if (spec.copperWeight) updates.copperWeight = String(spec.copperWeight);
+                if (spec.baseMaterial) updates.baseMaterial = String(spec.baseMaterial);
+                if (spec.boardName) updates.boardName = String(spec.boardName);
+
+                if (Object.keys(updates).length > 0) {
+                    setFormData(prev => ({ ...prev, ...updates }));
+                }
+
+                if (spec.gerber_file_id) {
+                    setUploadedGerberFileId(spec.gerber_file_id);
+                }
+
+                const fileName = spec.gerber_name || spec.boardName || "gerber.zip";
+                const fakeFile = new File([""], fileName, { type: "application/zip" });
+                setUploadedFile(fakeFile);
+
+                setDetectedInfo({
+                    layers: String(spec.layers || "2"),
+                    width: String(spec.width || "100"),
+                    height: String(spec.height || "100")
+                });
+
+                if (spec.gerber_preview_data) {
+                    let prevData = spec.gerber_preview_data;
+                    if (typeof prevData === "string" && prevData.startsWith("{")) {
+                        try { prevData = JSON.parse(prevData); } catch (e) {}
+                    }
+                    if (typeof prevData === "object" && prevData !== null) {
+                        if (prevData.top || prevData.topSvg) setTopSvg(prevData.top || prevData.topSvg);
+                        if (prevData.bottom || prevData.bottomSvg) setBottomSvg(prevData.bottom || prevData.bottomSvg);
+                    }
+                }
+
+                sessionStorage.removeItem("megabyte_reorder_spec");
+                localStorage.removeItem("megabyte_reorder_spec");
+            }
+        } catch (e) {
+            console.error("Error restoring reorder specification:", e);
+        }
+    }, []);
+
     // Load dynamic PCB calculation parameters from backend API
     React.useEffect(() => {
         let active = true;

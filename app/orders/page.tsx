@@ -15,6 +15,7 @@ interface OrderItem {
     id: number;
     order_number: string;
     status_id: number;
+    status?: string;
     status_name?: string;
     status_label?: string;
     gerber_file_id?: number;
@@ -66,6 +67,7 @@ function OrdersContent() {
     const [orders, setOrders] = useState<OrderItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
+    const [reorderConfirmOrder, setReorderConfirmOrder] = useState<OrderItem | null>(null);
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -96,50 +98,78 @@ function OrdersContent() {
         fetchOrders();
     }, [router]);
 
-    const handleRepeatOrder = (ord: OrderItem) => {
+    const handleReorderClick = (ord: OrderItem) => {
+        setReorderConfirmOrder(ord);
+    };
+
+    const executeReorder = (ord: OrderItem) => {
         try {
-            const boardName = ord.gerber_name || ord.meta?.board_name || "Standard PCB";
-            const layers = parseInt(ord.meta?.layers || "2", 10);
-            const qty = parseInt(ord.meta?.quantity || "1", 10);
+            const boardName = ord.gerber_name || ord.meta?.board_name || "Standard PCB Order";
+            const layers = ord.meta?.layers || "2";
             const dimensions = ord.meta?.dimensions || "100x100mm";
-            const pcbColor = ord.meta?.pcb_color || "Green";
+
+            let width = ord.meta?.width || "100";
+            let height = ord.meta?.height || "100";
+            if (dimensions && (!ord.meta?.width || !ord.meta?.height)) {
+                const clean = dimensions.replace(/mm|inch|in/gi, "").trim();
+                const parts = clean.split(/x|\*/i);
+                if (parts.length >= 2) {
+                    width = parts[0].trim();
+                    height = parts[1].trim();
+                }
+            }
+
+            const qty = ord.meta?.quantity || ord.meta?.qty || "5";
             const thickness = ord.meta?.thickness || "1.6mm";
+            const pcbColor = ord.meta?.pcb_color || "Green";
+            const surfaceFinish = ord.meta?.surface_finish || "HASL(Leaded)";
+            const copperWeight = ord.meta?.copper_weight || "1 oz";
+            const baseMaterial = ord.meta?.base_material || "FR-4";
+            const gerberFileName = ord.gerber_name || ord.meta?.gerber_file_name || boardName;
+            const gerberFileId = ord.gerber_file_id || null;
+            const gerberUrl = ord.gerber_url || ord.meta?.gerber_file_url || null;
+            const previewData = ord.gerber_preview_data || ord.meta?.preview_data || null;
 
-            const currentPrice = calculateCurrentPcbPrice(layers, dimensions, qty, thickness, pcbColor, ord.order_value);
-
-            const repeatItem = {
-                id: Date.now(),
-                productType: ord.meta?.product_type || "pcb",
-                boardName: boardName,
-                gerberFileName: ord.gerber_name || ord.meta?.gerber_file_name || boardName,
-                gerber_file_id: ord.gerber_file_id || null,
-                gerberPreview: ord.gerber_preview_data || null,
-                layers: layers,
-                dimensions: dimensions,
-                pcbColor: pcbColor,
-                thickness: thickness,
-                surfaceFinish: ord.meta?.surface_finish || "HASL(Leaded)",
-                qty: qty,
-                buildTime: ord.meta?.build_time || "3-4 days",
-                price: currentPrice,
-                unitPrice: qty > 0 ? Math.round(currentPrice / qty) : currentPrice,
+            const reorderSpec = {
+                layers,
+                width,
+                height,
+                qty,
+                thickness,
+                pcbColor,
+                surfaceFinish,
+                copperWeight,
+                baseMaterial,
+                boardName,
+                gerber_file_id: gerberFileId,
+                gerber_name: gerberFileName,
+                gerber_url: gerberUrl,
+                gerber_preview_data: previewData,
                 parent_order_number: ord.order_number
             };
 
-            // Add to main cart
-            const savedCart = localStorage.getItem("megabyte_cart");
-            let cartItems = savedCart ? JSON.parse(savedCart) : [];
-            cartItems.push(repeatItem);
-            localStorage.setItem("megabyte_cart", JSON.stringify(cartItems));
+            // Store specification for Instant Quote page loading
+            sessionStorage.setItem("megabyte_reorder_spec", JSON.stringify(reorderSpec));
+            localStorage.setItem("megabyte_reorder_spec", JSON.stringify(reorderSpec));
 
-            // Select only this item
-            localStorage.setItem("selectedCartItemIds", JSON.stringify([repeatItem.id]));
-            window.dispatchEvent(new Event("megabyte_cart_updated"));
+            setReorderConfirmOrder(null);
 
-            // Redirect directly to Cart page
-            router.push("/cart");
+            const queryParams = new URLSearchParams({
+                reorder: ord.order_number,
+                layers,
+                width,
+                height,
+                qty,
+                thickness,
+                pcbColor: encodeURIComponent(pcbColor),
+                surfaceFinish: encodeURIComponent(surfaceFinish),
+                copperWeight: encodeURIComponent(copperWeight),
+                baseMaterial: encodeURIComponent(baseMaterial)
+            });
+
+            router.push(`/quote?${queryParams.toString()}`);
         } catch (e) {
-            console.error("Repeat order error:", e);
+            console.error("Reorder error:", e);
         }
     };
 
@@ -210,7 +240,7 @@ function OrdersContent() {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-3">
                                                 <span className="text-sm font-black text-gray-900 dark:text-white">{ord.order_number}</span>
-                                                {getStatusBadge(ord.status_name)}
+                                                {getStatusBadge(ord.status || ord.status_name)}
                                             </div>
                                             <p className="text-xs font-bold text-gray-700 dark:text-zinc-300">
                                                 {ord.gerber_name || ord.meta?.board_name || "Standard PCB Order"}
@@ -221,19 +251,14 @@ function OrdersContent() {
                                         </div>
 
                                         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                            <div className="text-right">
-                                                <span className="text-xs text-gray-400 dark:text-zinc-500 font-medium block">Total Value</span>
-                                                <span className="text-base font-extrabold text-primary dark:text-emerald-400">{formatPrice(ord.order_value)}</span>
-                                            </div>
-
-                                            {(ord.status_name?.toLowerCase() === "completed" || ord.status_name?.toLowerCase() === "ready to ship") && (
+                                            {(((ord.status || ord.status_name)?.toLowerCase() === "completed") || ((ord.status || ord.status_name)?.toLowerCase() === "ready to ship")) && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleRepeatOrder(ord)}
+                                                    onClick={() => handleReorderClick(ord)}
                                                     className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                                                 >
                                                     <RotateCw className="w-3.5 h-3.5" />
-                                                    <span>Repeat Order</span>
+                                                    <span>Reorder</span>
                                                 </button>
                                             )}
 
@@ -250,6 +275,68 @@ function OrdersContent() {
                         )}
                     </div>
                 </main>
+
+                {/* Reorder Confirmation Modal */}
+                {reorderConfirmOrder && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+                        <div className="bg-white dark:bg-[#0b0f19] border border-gray-200 dark:border-white/10 rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 animate-in fade-in zoom-in duration-200">
+                            <div className="flex items-center gap-3 border-b border-gray-100 dark:border-zinc-800 pb-3">
+                                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                    <RotateCw className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Confirm Reorder</h3>
+                                    <p className="text-xs text-gray-500 dark:text-zinc-400 font-semibold">
+                                        Order #{reorderConfirmOrder.order_number}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 dark:bg-zinc-900/60 rounded-xl p-3.5 space-y-2 text-xs">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500 font-medium">Board Name:</span>
+                                    <span className="font-bold text-gray-900 dark:text-white">
+                                        {reorderConfirmOrder.gerber_name || reorderConfirmOrder.meta?.board_name || "PCB Order"}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500 font-medium">Specifications:</span>
+                                    <span className="font-bold text-gray-900 dark:text-white">
+                                        {reorderConfirmOrder.meta?.layers || "2"} Layers | {reorderConfirmOrder.meta?.dimensions || "100x100mm"} | {reorderConfirmOrder.meta?.quantity || "5"} Pcs
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500 font-medium">Color & Finish:</span>
+                                    <span className="font-bold text-gray-900 dark:text-white">
+                                        {reorderConfirmOrder.meta?.pcb_color || "Green"} / {reorderConfirmOrder.meta?.surface_finish || "HASL"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <p className="text-xs text-gray-600 dark:text-zinc-400 leading-relaxed font-medium">
+                                Reordering will load these exact specifications and Gerber file into the Instant Quote calculator with current pricing.
+                            </p>
+
+                            <div className="flex items-center justify-end gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setReorderConfirmOrder(null)}
+                                    className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 font-bold text-xs transition-all cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => executeReorder(reorderConfirmOrder)}
+                                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                                >
+                                    <RotateCw className="w-3.5 h-3.5" />
+                                    <span>Confirm & Open Quote</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <Footer />
             </div>
