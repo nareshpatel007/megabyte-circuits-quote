@@ -43,6 +43,15 @@ function LoginContent() {
     };
 
     useEffect(() => {
+        if (errorMessage) {
+            const timer = setTimeout(() => {
+                setErrorMessage("");
+            }, 10000);
+            return () => clearTimeout(timer);
+        }
+    }, [errorMessage]);
+
+    useEffect(() => {
         // 1. Check if error in URL from OAuth redirect
         const urlError = searchParams.get("error");
         if (urlError) {
