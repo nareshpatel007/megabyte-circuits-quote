@@ -126,3 +126,17 @@ export async function loadCartFromBackend(): Promise<any[]> {
         return savedCart ? JSON.parse(savedCart) : [];
     }
 }
+
+
+/**
+ * Gets the minimum product quantity configured in .env (default 5000)
+ */
+export function getMinCartQuantity(): number {
+    const envVal = process.env.NEXT_PUBLIC_MIN_CART_QUANTITY;
+    if (envVal && !isNaN(Number(envVal))) {
+        const parsed = Number(envVal);
+        if (parsed > 0) return parsed;
+    }
+    return 5000;
+}
+

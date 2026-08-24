@@ -9,7 +9,8 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
 import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
-import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend, setCartSessionId } from "@/lib/cartSession";
+import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend, setCartSessionId, getMinCartQuantity } from "@/lib/cartSession";
+
 import { getAuthToken, getAuthUser } from "@/lib/auth";
 
 interface CartItem {
@@ -71,8 +72,9 @@ export default function CartPage() {
                     items = backendItems;
                 }
                 items = items.map((item) => {
-                    if (item.productType === "part" && (!item.qty || item.qty < 5000)) {
-                        const minQty = 5000;
+                    const minCartQty = getMinCartQuantity();
+                    if (item.productType === "part" && (!item.qty || item.qty < minCartQty)) {
+                        const minQty = minCartQty;
                         let basePrice = (item as any).baseUnitPrice;
                         if (!basePrice) {
                             const currentUnit = item.unitPrice || (item.qty > 0 ? item.price / item.qty : item.price);
@@ -148,7 +150,7 @@ export default function CartPage() {
         const strId = String(id);
         const updated = cartItems.map((item) => {
             if (String(item.id) === strId) {
-                const minQty = item.productType === "part" ? 5000 : 1;
+                const minQty = item.productType === "part" ? getMinCartQuantity() : 1;
                 const validQty = Math.max(minQty, isNaN(newQty) ? minQty : newQty);
                 if (item.productType === "part") {
                     // Determine base unit price (unit price at qty 1)
@@ -377,10 +379,10 @@ export default function CartPage() {
                                                     <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 shrink-0">
                                                         <div className="w-28 flex justify-center">
                                                             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-gray-50/50">
-                                                                <button
+                                                                 <button
                                                                     type="button"
                                                                     onClick={() => {
-                                                                        const min = item.productType === "part" ? 5000 : 1;
+                                                                        const min = item.productType === "part" ? getMinCartQuantity() : 1;
                                                                         const step = item.productType === "part" ? 10 : 1;
                                                                         handleQuantityChange(item.id, Math.max(min, (item.qty || min) - step));
                                                                     }}
@@ -390,9 +392,9 @@ export default function CartPage() {
                                                                 </button>
                                                                 <input
                                                                     type="number"
-                                                                    min={item.productType === "part" ? 5000 : 1}
+                                                                    min={item.productType === "part" ? getMinCartQuantity() : 1}
                                                                     step={item.productType === "part" ? 10 : 1}
-                                                                    value={item.qty ?? (item.productType === "part" ? 5000 : 1)}
+                                                                    value={item.qty ?? (item.productType === "part" ? getMinCartQuantity() : 1)}
                                                                     onChange={(e) => {
                                                                         const val = parseInt(e.target.value, 10);
                                                                         handleQuantityChange(item.id, val);
@@ -402,7 +404,7 @@ export default function CartPage() {
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => {
-                                                                        const min = item.productType === "part" ? 5000 : 1;
+                                                                        const min = item.productType === "part" ? getMinCartQuantity() : 1;
                                                                         const step = item.productType === "part" ? 10 : 1;
                                                                         handleQuantityChange(item.id, (item.qty || min) + step);
                                                                     }}
