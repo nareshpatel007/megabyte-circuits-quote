@@ -70,6 +70,33 @@ export default function CartPage() {
                 if (Array.isArray(backendItems)) {
                     items = backendItems;
                 }
+                items = items.map((item) => {
+                    if (item.productType === "part" && (!item.qty || item.qty < 5000)) {
+                        const minQty = 5000;
+                        let basePrice = (item as any).baseUnitPrice;
+                        if (!basePrice) {
+                            const currentUnit = item.unitPrice || (item.qty > 0 ? item.price / item.qty : item.price);
+                            let oldMult = 1;
+                            if (item.qty >= 500) oldMult = 0.62;
+                            else if (item.qty >= 100) oldMult = 0.70;
+                            else if (item.qty >= 50) oldMult = 0.78;
+                            else if (item.qty >= 25) oldMult = 0.85;
+                            else if (item.qty >= 10) oldMult = 0.92;
+                            basePrice = currentUnit / oldMult;
+                        }
+                        const multiplier = 0.62;
+                        const effectiveUnitPrice = Math.round(basePrice * multiplier * 100) / 100;
+                        const newPrice = Math.round(effectiveUnitPrice * minQty * 100) / 100;
+                        return {
+                            ...item,
+                            qty: minQty,
+                            price: newPrice,
+                            unitPrice: effectiveUnitPrice,
+                            baseUnitPrice: basePrice,
+                        };
+                    }
+                    return item;
+                });
                 setCartItems(items);
                 const allIds = items.map((item) => String(item.id));
                 const savedSelected = localStorage.getItem("selectedCartItemIds");
@@ -119,9 +146,10 @@ export default function CartPage() {
 
     const handleQuantityChange = async (id: any, newQty: number) => {
         const strId = String(id);
-        const validQty = Math.max(1, isNaN(newQty) ? 1 : newQty);
         const updated = cartItems.map((item) => {
             if (String(item.id) === strId) {
+                const minQty = item.productType === "part" ? 5000 : 1;
+                const validQty = Math.max(minQty, isNaN(newQty) ? minQty : newQty);
                 if (item.productType === "part") {
                     // Determine base unit price (unit price at qty 1)
                     let basePrice = (item as any).baseUnitPrice;
@@ -349,18 +377,39 @@ export default function CartPage() {
                                                     <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 shrink-0">
                                                         <div className="w-28 flex justify-center">
                                                             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-gray-50/50">
-                                                                <button type="button" onClick={() => handleQuantityChange(item.id, (item.qty || 1) - 1)} className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer">-</button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const min = item.productType === "part" ? 5000 : 1;
+                                                                        const step = item.productType === "part" ? 10 : 1;
+                                                                        handleQuantityChange(item.id, Math.max(min, (item.qty || min) - step));
+                                                                    }}
+                                                                    className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
+                                                                >
+                                                                    -
+                                                                </button>
                                                                 <input
                                                                     type="number"
-                                                                    min="1"
-                                                                    value={item.qty ?? 1}
+                                                                    min={item.productType === "part" ? 5000 : 1}
+                                                                    step={item.productType === "part" ? 10 : 1}
+                                                                    value={item.qty ?? (item.productType === "part" ? 5000 : 1)}
                                                                     onChange={(e) => {
                                                                         const val = parseInt(e.target.value, 10);
                                                                         handleQuantityChange(item.id, val);
                                                                     }}
                                                                     className="w-12 text-center text-xs font-bold text-gray-800 bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                 />
-                                                                <button type="button" onClick={() => handleQuantityChange(item.id, (item.qty || 1) + 1)} className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer">+</button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const min = item.productType === "part" ? 5000 : 1;
+                                                                        const step = item.productType === "part" ? 10 : 1;
+                                                                        handleQuantityChange(item.id, (item.qty || min) + step);
+                                                                    }}
+                                                                    className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
+                                                                >
+                                                                    +
+                                                                </button>
                                                             </div>
                                                         </div>
                                                         <div className="text-xs font-semibold text-gray-600 w-24 text-center flex justify-center items-center">
