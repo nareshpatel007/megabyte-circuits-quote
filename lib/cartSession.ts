@@ -97,34 +97,46 @@ export async function removeCartItemFromBackend(id: string): Promise<any[]> {
     }
 }
 
+let pendingLoadCartPromise: Promise<any[]> | null = null;
+
 /**
  * Fetches cart items from backend API using cookie session ID
  */
 export async function loadCartFromBackend(): Promise<any[]> {
-    try {
-        const sessionId = getOrCreateCartSessionId();
-        if (!sessionId) {
+    if (pendingLoadCartPromise) {
+        return pendingLoadCartPromise;
+    }
+
+    pendingLoadCartPromise = (async () => {
+        try {
+            const sessionId = getOrCreateCartSessionId();
+            if (!sessionId) {
+                const savedCart = localStorage.getItem("megabyte_cart");
+                return savedCart ? JSON.parse(savedCart) : [];
+            }
+
+            const res = await fetch(`/api/cart/get?session_id=${encodeURIComponent(sessionId)}`);
+            const data = await res.json();
+
+            if (data.success && Array.isArray(data.items)) {
+                // Always sync backend items to localStorage (even if empty array)
+                localStorage.setItem("megabyte_cart", JSON.stringify(data.items));
+                window.dispatchEvent(new Event("megabyte_cart_updated"));
+                return data.items;
+            }
+            
             const savedCart = localStorage.getItem("megabyte_cart");
             return savedCart ? JSON.parse(savedCart) : [];
+        } catch (err) {
+            console.error("Failed to load cart from backend:", err);
+            const savedCart = localStorage.getItem("megabyte_cart");
+            return savedCart ? JSON.parse(savedCart) : [];
+        } finally {
+            pendingLoadCartPromise = null;
         }
+    })();
 
-        const res = await fetch(`/api/cart/get?session_id=${encodeURIComponent(sessionId)}`);
-        const data = await res.json();
-
-        if (data.success && Array.isArray(data.items)) {
-            // Always sync backend items to localStorage (even if empty array)
-            localStorage.setItem("megabyte_cart", JSON.stringify(data.items));
-            window.dispatchEvent(new Event("megabyte_cart_updated"));
-            return data.items;
-        }
-        
-        const savedCart = localStorage.getItem("megabyte_cart");
-        return savedCart ? JSON.parse(savedCart) : [];
-    } catch (err) {
-        console.error("Failed to load cart from backend:", err);
-        const savedCart = localStorage.getItem("megabyte_cart");
-        return savedCart ? JSON.parse(savedCart) : [];
-    }
+    return pendingLoadCartPromise;
 }
 
 

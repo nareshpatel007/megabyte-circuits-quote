@@ -105,6 +105,7 @@ function LoginContent() {
             const payload = viewMode === "signin"
                 ? { email: usernameOrEmail, password }
                 : {
+                    username: username,
                     name: username,
                     email: email,
                     password: password,
