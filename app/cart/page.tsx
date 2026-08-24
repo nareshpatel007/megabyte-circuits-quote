@@ -31,6 +31,9 @@ interface CartItem {
     thickness: string;
     surfaceFinish?: string;
     copperWeight?: string;
+    shippingOption?: string;
+    shippingOptionKey?: string;
+    shippingCharge?: number;
     date: string;
     customerNote?: string;
 }
@@ -360,7 +363,7 @@ export default function CartPage() {
                                                             <div className="flex items-center gap-1.5">
                                                                 <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">{item.boardName || (item as any).partNumber}</h3>
                                                             </div>
-                                                            {item.productType === "part" ? (
+                                                             {item.productType === "part" ? (
                                                                 <p className="text-[11px] text-gray-500 font-medium leading-relaxed line-clamp-2">
                                                                     {(item as any).description || "Electronic Component"}
                                                                 </p>
@@ -372,6 +375,7 @@ export default function CartPage() {
                                                                     {(item as any).copperType ? `, Copper: ${(item as any).copperType}` : ""}
                                                                     {(item as any).coverlayColor ? `, Coverlay: ${(item as any).coverlayColor}` : ""}
                                                                     {(item as any).stiffener && (item as any).stiffener !== "Without" ? `, Stiffener: ${(item as any).stiffener}` : ""}
+                                                                    {item.shippingOption ? `, Shipping: ${item.shippingOption}${item.shippingCharge ? ` (₹${item.shippingCharge})` : ""}` : ""}
                                                                 </p>
                                                             )}
                                                         </div>

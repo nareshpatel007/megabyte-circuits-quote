@@ -1374,6 +1374,25 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const previewSvg = topSvg || bottomSvg || "";
             const generatedBoardId = "Y2-" + Math.floor(10000000 + Math.random() * 90000000);
 
+            const defaultShippingOptions = [
+                { key: "gujarat_road", location: "In Gujarat", method: "By Road", rate: 40 },
+                { key: "out_road", location: "Out of Gujarat", method: "By Road", rate: 80 },
+                { key: "out_air", location: "Out of Gujarat", method: "By Air", rate: 150 },
+                { key: "out_fastrack", location: "Out of Gujarat", method: "Fastrack", rate: 450 },
+            ];
+            const currentShippingOpts = pricingConfig?.shippingOptions && Array.isArray(pricingConfig.shippingOptions) && pricingConfig.shippingOptions.length > 0
+                ? pricingConfig.shippingOptions
+                : defaultShippingOptions;
+            const activeShippingObj = currentShippingOpts.find((o: any) => o.key === shippingOptionKey) || currentShippingOpts[0];
+
+            const totalAreaInSqM = ((Number(formData.width) || 100) / 1000) * ((Number(formData.height) || 100) / 1000) * (Number(formData.qty) || 5);
+            const weightPerSqM = formData.baseMaterial === "Flex" ? 0.3 : 3.8;
+            const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
+            const calculatedShippingCharge = Math.round((activeShippingObj?.rate || 40) * estimatedWeightKg);
+
+            const pcbBasePrice = Number(calculatedPrice) || 100;
+            const itemTotalPrice = pcbBasePrice + calculatedShippingCharge;
+
             const newItem = {
                 id: 'cart_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
                 productType: selectedProduct || "pcb",
@@ -1387,7 +1406,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 dimensions: `${formData.width || 100}x${formData.height || 100}mm`,
                 qty: Number(formData.qty) || 5,
                 buildTime: `${selectedDay || 3} days`,
-                price: Number(calculatedPrice) || 100,
+                price: itemTotalPrice,
+                shippingOption: `${activeShippingObj.location} - ${activeShippingObj.method}`,
+                shippingOptionKey: activeShippingObj.key,
+                shippingCharge: calculatedShippingCharge,
                 material: formData.baseMaterial || "FR-4",
                 materialType: formData.materialType || (formData.baseMaterial === "Flex" ? "Polyimide (PI)" : formData.baseMaterial === "Rogers" ? "RO4350B(Dk=3.48,Df=0.0037)" : formData.baseMaterial === "PTFE Teflon" ? "ZYF300CA-P(Dk=3.0,Df=0.0016)" : "FR4-TG135"),
                 thickness: `${formData.thickness || (formData.baseMaterial === "Flex" ? '0.12mm' : '1.6mm')}`,

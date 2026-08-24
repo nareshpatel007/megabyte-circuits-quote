@@ -223,6 +223,11 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                                     <span className="bg-white border border-gray-200 px-1.5 py-0.2 rounded text-[10px] text-gray-600 font-semibold">
                                                         Qty: {item.qty || 1}
                                                     </span>
+                                                    {item.shippingOption && (
+                                                        <span className="bg-blue-50 border border-blue-200/60 px-1.5 py-0.2 rounded text-[9px] text-blue-700 font-medium">
+                                                            {item.shippingOption}
+                                                        </span>
+                                                    )}
                                                 </>
                                             )}
                                         </div>
