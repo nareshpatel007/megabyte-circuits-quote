@@ -58,36 +58,12 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
     }, []);
 
-    const fetchRates = async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch("https://open.er-api.com/v6/latest/INR");
-            if (res.ok) {
-                const data = await res.json();
-                if (data && data.rates) {
-                    setRates({ INR: 1, ...data.rates });
-                }
-            }
-        } catch (err) {
-            console.error("Failed to fetch exchange rates:", err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchRates();
-    }, []);
-
     const setCurrency = (code: string) => {
         setCurrencyState(code);
         try {
             localStorage.setItem("megabyte_currency", code);
         } catch (e) {
             console.error("Failed to save currency to localStorage", e);
-        }
-        if (Object.keys(rates).length <= Object.keys(DEFAULT_RATES).length) {
-            fetchRates();
         }
     };
 

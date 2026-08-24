@@ -389,7 +389,30 @@ export default function CartPage() {
                                     </div>
                                 )}
 
-                                {cartItems.length === 0 ? (
+                                {!isLoaded ? (
+                                    <div className="py-6 space-y-4 animate-pulse">
+                                        {[1, 2, 3].map((i) => (
+                                            <div key={i} className="py-4 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100">
+                                                <div className="flex items-start gap-3 min-w-0 flex-1">
+                                                    <div className="w-4 h-4 rounded bg-gray-200 mt-1 shrink-0"></div>
+                                                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 rounded-xl shrink-0"></div>
+                                                    <div className="space-y-2 min-w-0 flex-1 py-1">
+                                                        <div className="h-4 bg-gray-200 rounded w-48"></div>
+                                                        <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                                                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 pt-2 sm:pt-0 shrink-0">
+                                                    <div className="w-24 h-7 bg-gray-200 rounded-lg"></div>
+                                                    <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                                                    <div className="w-36 h-8 bg-gray-200 rounded-lg"></div>
+                                                    <div className="w-24 h-5 bg-gray-200 rounded"></div>
+                                                    <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : cartItems.length === 0 ? (
                                     <div className="py-16 text-center space-y-3">
                                         <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-400"><ShoppingBag className="w-8 h-8" /></div>
                                         <p className="text-sm font-bold text-gray-700">Your shopping cart is empty.</p>
