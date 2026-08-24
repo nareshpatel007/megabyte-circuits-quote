@@ -34,6 +34,8 @@ interface CartItem {
     shippingOption?: string;
     shippingOptionKey?: string;
     shippingCharge?: number;
+    width?: number | string;
+    height?: number | string;
     date: string;
     customerNote?: string;
 }
@@ -186,9 +188,51 @@ export default function CartPage() {
                         baseUnitPrice: basePrice,
                     };
                 } else {
-                    const unitPrice = item.unitPrice || (item.qty > 0 ? item.price / item.qty : item.price);
-                    const newPrice = Math.max(Math.round(unitPrice * validQty), 10);
-                    return { ...item, qty: validQty, price: newPrice, unitPrice };
+                    // Extract width & height (or parse from dimensions string '100x100mm')
+                    let w = Number(item.width);
+                    let h = Number(item.height);
+                    if ((!w || !h) && item.dimensions) {
+                        const match = item.dimensions.match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i);
+                        if (match) {
+                            w = parseFloat(match[1]);
+                            h = parseFloat(match[2]);
+                        }
+                    }
+                    if (!w) w = 100;
+                    if (!h) h = 100;
+
+                    // Compute unit PCB manufacturing price (excluding previous shipping fee)
+                    const prevShippingCharge = item.shippingCharge || 0;
+                    const prevPcbPrice = Math.max(item.price - prevShippingCharge, 0);
+                    const pcbUnitPrice = item.unitPrice || (item.qty > 0 ? prevPcbPrice / item.qty : prevPcbPrice);
+
+                    const newPcbPrice = Math.max(Math.round(pcbUnitPrice * validQty), 10);
+
+                    // Recalculate shipping fee based on updated weight
+                    let newShippingCharge = prevShippingCharge;
+                    if (item.shippingOption) {
+                        const defaultShippingOptions = [
+                            { key: "gujarat_road", location: "In Gujarat", method: "By Road", rate: 40 },
+                            { key: "out_road", location: "Out of Gujarat", method: "By Road", rate: 80 },
+                            { key: "out_air", location: "Out of Gujarat", method: "By Air", rate: 150 },
+                            { key: "out_fastrack", location: "Out of Gujarat", method: "Fastrack", rate: 450 },
+                        ];
+                        const foundOpt = defaultShippingOptions.find(o => `${o.location} - ${o.method}` === item.shippingOption || o.key === item.shippingOptionKey) || defaultShippingOptions[0];
+                        const totalAreaInSqM = (w / 1000) * (h / 1000) * validQty;
+                        const weightPerSqM = item.material === "Flex" ? 0.3 : 3.8;
+                        const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
+                        newShippingCharge = Math.round(foundOpt.rate * estimatedWeightKg);
+                    }
+
+                    const totalPriceWithShipping = newPcbPrice + newShippingCharge;
+
+                    return {
+                        ...item,
+                        qty: validQty,
+                        price: totalPriceWithShipping,
+                        unitPrice: pcbUnitPrice,
+                        shippingCharge: newShippingCharge
+                    };
                 }
             }
             return item;
@@ -239,11 +283,28 @@ export default function CartPage() {
     const partCount = cartItems.filter((i) => i.productType === "part").length;
     const stencilCount = cartItems.filter((i) => i.productType === "stencil").length;
 
-    const selectedTotal = cartItems
-        .filter((item) => selectedItemIds.includes(String(item.id)))
-        .reduce((acc, item) => acc + item.price, 0);
+    const selectedCartItemsList = cartItems.filter((item) => selectedItemIds.includes(String(item.id)));
+    const selectedCount = selectedCartItemsList.length;
 
-    const selectedCount = cartItems.filter((item) => selectedItemIds.includes(String(item.id))).length;
+    const selectedShippingTotal = selectedCartItemsList.reduce(
+        (acc, item) => acc + (item.shippingCharge || 0),
+        0
+    );
+
+    const selectedSubtotal = selectedCartItemsList.reduce(
+        (acc, item) => acc + (item.price - (item.shippingCharge || 0)),
+        0
+    );
+
+    const selectedTotal = selectedCartItemsList.reduce((acc, item) => acc + item.price, 0);
+
+    const selectedShippingOptionsList = selectedCartItemsList
+        .filter((item) => item.shippingOption)
+        .map((item) => ({
+            name: item.boardName || item.gerberFileName || "PCB",
+            option: item.shippingOption!,
+            charge: item.shippingCharge || 0,
+        }));
 
     const handleCheckoutClick = () => {
         if (selectedCount === 0) return;
@@ -314,9 +375,10 @@ export default function CartPage() {
                                             <input type="checkbox" checked={isAllSelected} onChange={toggleSelectAll} className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer" />
                                             <span className="uppercase text-[11px]">Item</span>
                                         </div>
-                                        <div className="hidden sm:flex items-center gap-4 sm:gap-6 text-[11px] uppercase">
-                                            <span className="w-28 text-center">Qty</span>
-                                            <span className="w-24 text-center">Build Time</span>
+                                        <div className="hidden sm:flex items-center gap-3 sm:gap-5 text-[11px] uppercase">
+                                            <span className="w-24 text-center">Qty</span>
+                                            <span className="w-20 text-center">Build Time</span>
+                                            <span className="w-36 text-center">Delivery Option</span>
                                             <span className="w-24 text-right">Price</span>
                                             <div className="w-8 flex justify-center">
                                                 <button type="button" onClick={handleRemoveSelectedItems} disabled={selectedItemIds.length === 0} className={`p-1 rounded transition-colors ${selectedItemIds.length > 0 ? "text-red-500 hover:bg-red-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`} title="Delete Selected">
@@ -375,13 +437,12 @@ export default function CartPage() {
                                                                     {(item as any).copperType ? `, Copper: ${(item as any).copperType}` : ""}
                                                                     {(item as any).coverlayColor ? `, Coverlay: ${(item as any).coverlayColor}` : ""}
                                                                     {(item as any).stiffener && (item as any).stiffener !== "Without" ? `, Stiffener: ${(item as any).stiffener}` : ""}
-                                                                    {item.shippingOption ? `, Shipping: ${item.shippingOption}${item.shippingCharge ? ` (₹${item.shippingCharge})` : ""}` : ""}
                                                                 </p>
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 shrink-0">
-                                                        <div className="w-28 flex justify-center">
+                                                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 shrink-0">
+                                                        <div className="w-24 flex justify-center">
                                                             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-gray-50/50">
                                                                  <button
                                                                     type="button"
@@ -390,7 +451,7 @@ export default function CartPage() {
                                                                         const step = item.productType === "part" ? 10 : 1;
                                                                         handleQuantityChange(item.id, Math.max(min, (item.qty || min) - step));
                                                                     }}
-                                                                    className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
+                                                                    className="w-6 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
                                                                 >
                                                                     -
                                                                 </button>
@@ -403,7 +464,7 @@ export default function CartPage() {
                                                                         const val = parseInt(e.target.value, 10);
                                                                         handleQuantityChange(item.id, val);
                                                                     }}
-                                                                    className="w-12 text-center text-xs font-bold text-gray-800 bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                    className="w-11 text-center text-xs font-bold text-gray-800 bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                 />
                                                                 <button
                                                                     type="button"
@@ -412,14 +473,26 @@ export default function CartPage() {
                                                                         const step = item.productType === "part" ? 10 : 1;
                                                                         handleQuantityChange(item.id, (item.qty || min) + step);
                                                                     }}
-                                                                    className="w-7 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
+                                                                    className="w-6 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
                                                                 >
                                                                     +
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                        <div className="text-xs font-semibold text-gray-600 w-24 text-center flex justify-center items-center">
+                                                        <div className="text-xs font-semibold text-gray-600 w-20 text-center flex justify-center items-center">
                                                             {item.productType === "part" ? "-" : (item.buildTime || "-")}
+                                                        </div>
+                                                        <div className="w-36 text-center flex flex-col justify-center items-center">
+                                                            {item.shippingOption ? (
+                                                                <div className="bg-blue-50/80 border border-blue-100 rounded-lg px-2 py-1 text-[11px] font-bold text-blue-900 leading-tight">
+                                                                    <div>{item.shippingOption}</div>
+                                                                    <div className="text-[10px] text-primary font-semibold mt-0.5">
+                                                                        Fee: {formatPrice(item.shippingCharge || 0)}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs text-gray-400 font-medium">-</span>
+                                                            )}
                                                         </div>
                                                         <div className="text-sm font-extrabold text-primary w-24 text-right flex justify-end items-center">{formatPrice(item.price)}</div>
                                                         <div className="w-8 flex justify-center items-center">
@@ -437,8 +510,24 @@ export default function CartPage() {
                         <div className="w-full lg:w-80 shrink-0">
                             <div className="bg-white rounded-xl shadow-xs border border-gray-200/80 p-5 space-y-4 sticky top-20">
                                 <h2 className="text-xs font-bold text-gray-700 tracking-wider uppercase border-b border-gray-100 pb-3">SUMMARY</h2>
+                                
+                                {selectedCartItemsList.length > 0 && (
+                                    <div className="space-y-2 py-2 border-b border-gray-100 text-xs">
+                                        <div className="flex items-center justify-between text-gray-600 font-medium">
+                                            <span>Subtotal ({selectedCount} {selectedCount === 1 ? "item" : "items"})</span>
+                                            <span className="font-semibold text-gray-800">{formatPrice(selectedSubtotal)}</span>
+                                        </div>
+                                        {selectedShippingTotal > 0 && (
+                                            <div className="flex items-center justify-between text-gray-600 font-medium">
+                                                <span>Estimated Shipping</span>
+                                                <span className="font-semibold text-gray-800">{formatPrice(selectedShippingTotal)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 <div className="flex items-center justify-between text-sm font-extrabold text-gray-900 pt-1">
-                                    <span>Total ({selectedItemIds.length} items)</span>
+                                    <span>Total Amount</span>
                                     <span className="text-lg text-primary">{formatPrice(selectedTotal)}</span>
                                 </div>
                                 <button type="button" onClick={handleCheckoutClick} disabled={selectedItemIds.length === 0} className={`w-full py-3 rounded-full text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs ${selectedItemIds.length > 0 ? "bg-primary hover:bg-secondary cursor-pointer active:scale-95" : "bg-gray-300 cursor-not-allowed"}`}>

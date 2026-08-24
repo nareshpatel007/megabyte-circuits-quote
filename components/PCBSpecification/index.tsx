@@ -1404,6 +1404,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 pcbColor: pcbColorName,
                 layers: `${formData.layers || '2'} Layer${(Number(formData.layers) || 2) > 1 ? 's' : ''}`,
                 dimensions: `${formData.width || 100}x${formData.height || 100}mm`,
+                width: Number(formData.width) || 100,
+                height: Number(formData.height) || 100,
                 qty: Number(formData.qty) || 5,
                 buildTime: `${selectedDay || 3} days`,
                 price: itemTotalPrice,
