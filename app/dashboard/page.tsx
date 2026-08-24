@@ -299,8 +299,8 @@ function DashboardContent() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
-                                        {recentOrders.map((ord) => (
-                                            <tr key={ord.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/50">
+                                        {recentOrders.map((ord, idx) => (
+                                            <tr key={ord.id ? `order-${ord.id}-${idx}` : idx} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/50">
                                                 <td className="py-3 font-extrabold text-gray-900 dark:text-white">{ord.order_number}</td>
                                                 <td className="py-3 font-semibold text-gray-700 dark:text-zinc-300 max-w-[200px] truncate">
                                                     {ord.gerber_name || "PCB Order"}
@@ -366,11 +366,11 @@ function DashboardContent() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
-                                        {recentPayments.map((p) => {
+                                        {recentPayments.map((p, idx) => {
                                             const status = (p.status || "").toLowerCase();
                                             const isSuccess = status === "success" || status === "paid";
                                             return (
-                                                <tr key={p.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/50">
+                                                <tr key={p.id ? `payment-${p.id}-${idx}` : idx} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/50">
                                                     <td className="py-3 font-extrabold text-gray-900 dark:text-white font-mono">
                                                         {p.transaction_number || p.razorpay_payment_id || `TXN-${p.id}`}
                                                     </td>
