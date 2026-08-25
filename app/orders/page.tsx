@@ -246,7 +246,7 @@ function OrdersContent() {
                                                 {ord.gerber_name || ord.meta?.board_name || "Standard PCB Order"}
                                             </p>
                                             <p className="text-[11px] text-gray-400 dark:text-zinc-500 font-medium">
-                                                Ordered on: {new Date(ord.created_at).toLocaleString()} | Delivery target: {ord.delivery_date}
+                                                Ordered on: {new Date(ord.created_at).toLocaleString()}
                                             </p>
                                         </div>
 
