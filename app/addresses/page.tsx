@@ -56,6 +56,22 @@ function AddressesContent() {
     const [postalCode, setPostalCode] = useState("");
     const [mobile, setMobile] = useState("");
     const [isSavingAddr, setIsSavingAddr] = useState(false);
+    const [statesList, setStatesList] = useState<{ id: number; code: string; name: string }[]>([]);
+
+    useEffect(() => {
+        const fetchStates = async () => {
+            try {
+                const res = await fetch("/api/checkout/states");
+                const data = await res.json();
+                if (data.status && Array.isArray(data.data)) {
+                    setStatesList(data.data);
+                }
+            } catch (e) {
+                console.error("Failed to fetch states:", e);
+            }
+        };
+        fetchStates();
+    }, []);
 
     useEffect(() => {
         const fetchAddresses = async () => {
@@ -110,7 +126,21 @@ function AddressesContent() {
         }
     };
 
+    const fetchStates = async () => {
+        if (statesList.length > 0) return;
+        try {
+            const res = await fetch("/api/checkout/states");
+            const data = await res.json();
+            if (data.status && Array.isArray(data.data)) {
+                setStatesList(data.data);
+            }
+        } catch (e) {
+            console.error("Failed to fetch states:", e);
+        }
+    };
+
     const handleOpenAddAddressModal = (type: "shipping" | "billing") => {
+        fetchStates();
         setEditingAddressId(null);
         setAddrType(type);
         setCustType("individual");
@@ -133,6 +163,7 @@ function AddressesContent() {
     };
 
     const handleOpenEditAddressModal = (addr: SavedAddress) => {
+        fetchStates();
         setEditingAddressId(addr.id);
         setAddrType(addr.address_type || "shipping");
         setCustType(addr.customer_type || "individual");
@@ -505,14 +536,19 @@ function AddressesContent() {
 
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 mb-1">State *</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         required
                                         value={stateName}
                                         onChange={(e) => setStateName(e.target.value)}
-                                        placeholder="State"
-                                        className="w-full h-9 px-3 text-xs border border-gray-300 rounded-xl focus:border-primary outline-none"
-                                    />
+                                        className="w-full h-9 px-3 text-xs border border-gray-300 rounded-xl focus:border-primary outline-none bg-white transition-all text-gray-700"
+                                    >
+                                        <option value="">Select State</option>
+                                        {statesList.map((st) => (
+                                            <option key={st.code} value={st.name}>
+                                                {st.name}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 <div>

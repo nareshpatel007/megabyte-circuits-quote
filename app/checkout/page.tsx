@@ -26,10 +26,19 @@ interface CartItem {
     qty: number;
     buildTime: string;
     price: number;
+    unitPrice?: number;
     material: string;
     thickness: string;
     surfaceFinish?: string;
     copperWeight?: string;
+    shippingOption?: string;
+    shippingOptionKey?: string;
+    shippingCharge?: number;
+    width?: number | string;
+    height?: number | string;
+    photoUrl?: string;
+    partNumber?: string;
+    description?: string;
     date: string;
 }
 
@@ -72,6 +81,7 @@ function CheckoutContent() {
 
     // Address Lists & Selections
     const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+    const [statesList, setStatesList] = useState<{ id: number; code: string; name: string }[]>([]);
     const [selectedShippingAddressId, setSelectedShippingAddressId] = useState<number | null>(null);
     const [selectedBillingAddressId, setSelectedBillingAddressId] = useState<number | null>(null);
 
@@ -96,6 +106,19 @@ function CheckoutContent() {
     const [isSavingAddress, setIsSavingAddress] = useState(false);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+
+    const fetchStates = async () => {
+        if (statesList.length > 0) return;
+        try {
+            const res = await fetch("/api/checkout/states");
+            const data = await res.json();
+            if (data.status && Array.isArray(data.data)) {
+                setStatesList(data.data);
+            }
+        } catch (e) {
+            console.error("Failed to fetch states list:", e);
+        }
+    };
 
     const fetchAddresses = async (userId: string | number) => {
         try {
@@ -253,11 +276,6 @@ function CheckoutContent() {
         }
     };
 
-    const grandTotal = cartItems.reduce((acc, item) => {
-        const val = typeof item.price === "number" ? item.price : parseFloat(String(item.price).replace(/^0+(?=\d)/, "")) || 0;
-        return acc + val;
-    }, 0);
-
     const shippingAddresses = savedAddresses.filter((a) => a.address_type !== "billing");
     const billingAddresses = savedAddresses.filter((a) => a.address_type === "billing");
 
@@ -265,6 +283,86 @@ function CheckoutContent() {
     const selectedBillingAddress = billingOption === "same"
         ? selectedShippingAddress
         : savedAddresses.find((a) => a.id === selectedBillingAddressId);
+
+    // Dynamic shipping charge calculation based on selected address state
+    const effectiveCartItems = cartItems.map((item) => {
+        if (!item.shippingOption || item.productType === "part") {
+            return item;
+        }
+
+        const isAddressSelected = Boolean(selectedShippingAddress);
+        const selectedState = (selectedShippingAddress?.state || "").trim().toLowerCase();
+        const isSelectedStateGujarat = isAddressSelected ? (selectedState === "gujarat" || selectedState === "gj") : true;
+
+        // If currently configured for Gujarat but address state is Out of Gujarat (or vice versa)
+        const isCurrentOptionGujarat = item.shippingOption.toLowerCase().includes("in gujarat") || item.shippingOptionKey === "gujarat_road";
+
+        let newOption = item.shippingOption;
+        let newOptionKey = item.shippingOptionKey;
+        let newRate = 40;
+
+        if (!isSelectedStateGujarat) {
+            // Address is Out of Gujarat -> force Out of Gujarat shipping rates
+            if (isCurrentOptionGujarat) {
+                newOption = "Out of Gujarat - By Road";
+                newOptionKey = "out_road";
+                newRate = 80;
+            } else {
+                if (item.shippingOptionKey === "out_air" || item.shippingOption.includes("By Air")) {
+                    newOption = "Out of Gujarat - By Air";
+                    newOptionKey = "out_air";
+                    newRate = 150;
+                } else if (item.shippingOptionKey === "out_fastrack" || item.shippingOption.includes("Fastrack")) {
+                    newOption = "Out of Gujarat - Fastrack";
+                    newOptionKey = "out_fastrack";
+                    newRate = 450;
+                } else {
+                    newOption = "Out of Gujarat - By Road";
+                    newOptionKey = "out_road";
+                    newRate = 80;
+                }
+            }
+        } else {
+            // Address is In Gujarat
+            newOption = "In Gujarat - By Road";
+            newOptionKey = "gujarat_road";
+            newRate = 40;
+        }
+
+        // Calculate weight
+        let w = Number(item.width);
+        let h = Number(item.height);
+        if ((!w || !h) && item.dimensions) {
+            const match = item.dimensions.match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i);
+            if (match) {
+                w = parseFloat(match[1]);
+                h = parseFloat(match[2]);
+            }
+        }
+        if (!w) w = 100;
+        if (!h) h = 100;
+
+        const totalAreaInSqM = (w / 1000) * (h / 1000) * (item.qty || 1);
+        const weightPerSqM = item.material === "Flex" ? 0.3 : 3.8;
+        const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
+        const newShippingCharge = Math.round(newRate * estimatedWeightKg);
+
+        const pcbBasePrice = item.price - (item.shippingCharge || 0);
+        const newTotalPrice = Math.max(pcbBasePrice, 0) + newShippingCharge;
+
+        return {
+            ...item,
+            shippingOption: newOption,
+            shippingOptionKey: newOptionKey,
+            shippingCharge: newShippingCharge,
+            price: newTotalPrice
+        };
+    });
+
+    const grandTotal = effectiveCartItems.reduce((acc, item) => {
+        const val = typeof item.price === "number" ? item.price : parseFloat(String(item.price).replace(/^0+(?=\d)/, "")) || 0;
+        return acc + val;
+    }, 0);
 
     // Requirement 4: Button is enabled ONLY when BOTH shipping & billing addresses are validly selected
     const isReadyToPay = Boolean(selectedShippingAddressId) && (billingOption === "same" || Boolean(selectedBillingAddressId));
@@ -327,7 +425,7 @@ function CheckoutContent() {
                                 razorpay_signature: response.razorpay_signature,
                                 shipping_address_id: selectedShippingAddress.id,
                                 billing_address_id: selectedBillingAddress?.id || selectedShippingAddress.id,
-                                items: cartItems,
+                                items: effectiveCartItems,
                                 total_amount: grandTotal,
                                 user_id: user?.id,
                                 email: user?.email
@@ -553,14 +651,19 @@ function CheckoutContent() {
                                             <label className="block text-xs font-bold text-gray-700 mb-1">
                                                 * State
                                             </label>
-                                            <input
-                                                type="text"
+                                            <select
                                                 required
                                                 value={state}
                                                 onChange={(e) => setState(e.target.value)}
-                                                placeholder="State"
-                                                className="w-full h-10 px-3.5 text-xs border border-gray-300 rounded-xl focus:border-primary outline-none transition-all"
-                                            />
+                                                className="w-full h-10 px-3 text-xs border border-gray-300 rounded-xl focus:border-primary outline-none bg-white transition-all text-gray-700"
+                                            >
+                                                <option value="">Select State</option>
+                                                {statesList.map((st) => (
+                                                    <option key={st.code} value={st.name}>
+                                                        {st.name}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
 
                                         <div>
@@ -667,7 +770,10 @@ function CheckoutContent() {
                                         </h3>
                                         <button
                                             type="button"
-                                            onClick={() => setActiveFormType("shipping")}
+                                            onClick={() => {
+                                                fetchStates();
+                                                setActiveFormType("shipping");
+                                            }}
                                             className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
                                         >
                                             <Plus className="w-3.5 h-3.5" />
@@ -718,7 +824,10 @@ function CheckoutContent() {
                                             <span>No shipping address stored.</span>
                                             <button
                                                 type="button"
-                                                onClick={() => setActiveFormType("shipping")}
+                                                onClick={() => {
+                                                    fetchStates();
+                                                    setActiveFormType("shipping");
+                                                }}
                                                 className="text-primary font-bold hover:underline cursor-pointer"
                                             >
                                                 + Add Shipping Address
@@ -734,7 +843,10 @@ function CheckoutContent() {
                                             </h3>
                                             <button
                                                 type="button"
-                                                onClick={() => setActiveFormType("billing")}
+                                                onClick={() => {
+                                                    fetchStates();
+                                                    setActiveFormType("billing");
+                                                }}
                                                 className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
                                             >
                                                 <Plus className="w-3.5 h-3.5" />
@@ -809,7 +921,10 @@ function CheckoutContent() {
                                                     <span>No billing address stored.</span>
                                                     <button
                                                         type="button"
-                                                        onClick={() => setActiveFormType("billing")}
+                                                        onClick={() => {
+                                                            fetchStates();
+                                                            setActiveFormType("billing");
+                                                        }}
                                                         className="text-primary font-bold hover:underline cursor-pointer"
                                                     >
                                                         + Add Billing Address
@@ -835,36 +950,60 @@ function CheckoutContent() {
                                 </span>
                             </div>
 
-                            {/* Requirement 7: Product Breakdown with Gerber Preview Image */}
+                            {/* Product Breakdown with Exact Part Image / Gerber Preview & Delivery Details */}
                             <div className="space-y-3 border-b border-gray-100 pb-4">
                                 <h3 className="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">
                                     PRODUCT BREAKDOWN
                                 </h3>
-                                <div className="space-y-3 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
-                                    {cartItems.map((item, idx) => (
-                                        <div key={item.id || idx} className="flex items-start gap-3 text-xs border-b border-gray-50 pb-2.5 last:border-0 last:pb-0">
-                                            {/* Gerber Preview Box matching Cart Page */}
-                                            <div className="w-12 h-12 bg-[#0b3818] rounded-lg border border-gray-200/90 flex items-center justify-center p-0.5 overflow-hidden shrink-0 relative">
-                                                <GerberBoardPreview
-                                                    previewData={item.gerberPreview}
-                                                    boardName={item.gerberFileName || item.boardName}
-                                                    pcbColor={item.pcbColor}
-                                                    layers={item.layers}
-                                                />
-                                            </div>
-
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-start justify-between gap-1">
-                                                    <p className="font-extrabold text-gray-800 leading-snug truncate max-w-[130px]">
-                                                        {item.gerberFileName || item.boardName || (item.productType === "stencil" ? "SMT Stencil" : "Standard PCB")}
-                                                    </p>
-                                                    <span className="font-extrabold text-gray-900 shrink-0">
-                                                        {formatPrice(item.price)}
-                                                    </span>
+                                <div className="space-y-3 max-h-64 overflow-y-auto pr-1 scrollbar-thin">
+                                    {effectiveCartItems.map((item, idx) => (
+                                        <div key={item.id || idx} className="space-y-1.5 border-b border-gray-50 pb-2.5 last:border-0 last:pb-0">
+                                            <div className="flex items-start gap-3 text-xs">
+                                                {/* Image Box matching Cart Page */}
+                                                <div className="w-12 h-12 bg-white rounded-lg border border-gray-200/90 flex items-center justify-center p-1 overflow-hidden shrink-0 relative">
+                                                    {item.productType === "part" ? (
+                                                        <img
+                                                            src={item.photoUrl || "https://mm.digikey.com/Volume0/opasdata/d220001/medias/images/7182/MFG_RMCF_series.jpg"}
+                                                            alt={item.boardName || item.partNumber || "Part"}
+                                                            className="w-full h-full object-contain"
+                                                            onError={(e) => {
+                                                                (e.target as HTMLElement).setAttribute(
+                                                                    "src",
+                                                                    "https://mm.digikey.com/Volume0/opasdata/d220001/medias/images/7182/MFG_RMCF_series.jpg"
+                                                                );
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <GerberBoardPreview
+                                                            previewData={item.gerberPreview}
+                                                            boardName={item.gerberFileName || item.boardName}
+                                                            pcbColor={item.pcbColor}
+                                                            layers={item.layers}
+                                                        />
+                                                    )}
                                                 </div>
-                                                <p className="text-[10px] text-gray-500 font-medium mt-0.5">
-                                                    Qty: {item.qty} | {item.layers} Layer | {item.pcbColor || "Green"}
-                                                </p>
+
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-start justify-between gap-1">
+                                                        <p className="font-extrabold text-gray-800 leading-snug truncate max-w-[130px]">
+                                                            {item.boardName || item.partNumber || item.gerberFileName || (item.productType === "stencil" ? "SMT Stencil" : "Standard PCB")}
+                                                        </p>
+                                                        <span className="font-extrabold text-gray-900 shrink-0">
+                                                            {formatPrice(item.price)}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[10px] text-gray-500 font-medium mt-0.5">
+                                                        Qty: {item.qty} {item.productType === "part" ? "| Part" : `| ${item.layers || '2'} Layer | ${item.pcbColor || "Green"}`}
+                                                    </p>
+                                                    {item.shippingOption && (
+                                                        <div className="mt-1 bg-blue-50/80 border border-blue-100/80 rounded p-1 text-[10px] text-blue-900 leading-tight">
+                                                            <div className="font-bold flex items-center justify-between">
+                                                                <span>🚚 {item.shippingOption}</span>
+                                                                <span className="font-extrabold text-primary">{formatPrice(item.shippingCharge || 0)}</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
