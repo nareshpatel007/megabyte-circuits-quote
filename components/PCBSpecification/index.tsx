@@ -9,7 +9,7 @@ import GerberUploader from "../GerberUploader";
 import GerberStackupPreview from "../GerberStackupPreview";
 import QuoteForm from "../QuoteForm";
 import { GerberFile, QuoteFormData, UploadResponse } from "../../lib/gerber/types";
-import { loadLayers, renderStack, type RenderOptions, COLORS, FINISHES } from "../../lib/gerber/clientRenderer";
+import { loadLayers, renderStack, renderWithGerbersRenderer, type RenderOptions, COLORS, FINISHES } from "../../lib/gerber/clientRenderer";
 import { type InputLayer } from "pcb-stackup";
 import { submitOrder, OrderFormData } from "../../lib/api/orderService";
 import Toast, { ToastType } from "../Toast";
@@ -1032,6 +1032,12 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 } catch (e) {
                     console.warn("[GerberExtraction Warning] Exception fetching converted ZIP from backend:", e);
                 }
+            }
+
+            const gerberRendererResult = await renderWithGerbersRenderer(fileToExtract);
+            if (gerberRendererResult?.top?.svg || gerberRendererResult?.bottom?.svg) {
+                if (gerberRendererResult.top?.svg) setTopSvg(gerberRendererResult.top.svg);
+                if (gerberRendererResult.bottom?.svg) setBottomSvg(gerberRendererResult.bottom.svg);
             }
 
             const layers = await loadLayers(fileToExtract);
