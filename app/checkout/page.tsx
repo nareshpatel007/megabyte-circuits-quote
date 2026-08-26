@@ -290,44 +290,23 @@ function CheckoutContent() {
             return item;
         }
 
-        const isAddressSelected = Boolean(selectedShippingAddress);
-        const selectedState = (selectedShippingAddress?.state || "").trim().toLowerCase();
-        const isSelectedStateGujarat = isAddressSelected ? (selectedState === "gujarat" || selectedState === "gj") : true;
+        const defaultShippingOptions = [
+            { key: "standard", location: "Standard", method: "Standard", rate: 0 },
+            { key: "plus", location: "Plus", method: "Plus", rate: 150 },
+            { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
+        ];
 
-        // If currently configured for Gujarat but address state is Out of Gujarat (or vice versa)
-        const isCurrentOptionGujarat = item.shippingOption.toLowerCase().includes("in gujarat") || item.shippingOptionKey === "gujarat_road";
+        const foundOpt = defaultShippingOptions.find(o => 
+            o.key === item.shippingOptionKey || 
+            item.shippingOption?.toLowerCase().includes(o.key) ||
+            (o.key === "standard" && (item.shippingOption?.toLowerCase().includes("standard") || item.shippingOptionKey === "gujarat_road")) ||
+            (o.key === "plus" && (item.shippingOption?.toLowerCase().includes("plus") || item.shippingOptionKey === "out_air" || item.shippingOptionKey === "out_road")) ||
+            (o.key === "fasttrack" && (item.shippingOption?.toLowerCase().includes("fasttrack") || item.shippingOptionKey === "out_fastrack"))
+        ) || defaultShippingOptions[0];
 
-        let newOption = item.shippingOption;
-        let newOptionKey = item.shippingOptionKey;
-        let newRate = 40;
-
-        if (!isSelectedStateGujarat) {
-            // Address is Out of Gujarat -> force Out of Gujarat shipping rates
-            if (isCurrentOptionGujarat) {
-                newOption = "Out of Gujarat - By Road";
-                newOptionKey = "out_road";
-                newRate = 80;
-            } else {
-                if (item.shippingOptionKey === "out_air" || item.shippingOption.includes("By Air")) {
-                    newOption = "Out of Gujarat - By Air";
-                    newOptionKey = "out_air";
-                    newRate = 150;
-                } else if (item.shippingOptionKey === "out_fastrack" || item.shippingOption.includes("Fastrack")) {
-                    newOption = "Out of Gujarat - Fastrack";
-                    newOptionKey = "out_fastrack";
-                    newRate = 450;
-                } else {
-                    newOption = "Out of Gujarat - By Road";
-                    newOptionKey = "out_road";
-                    newRate = 80;
-                }
-            }
-        } else {
-            // Address is In Gujarat
-            newOption = "In Gujarat - By Road";
-            newOptionKey = "gujarat_road";
-            newRate = 40;
-        }
+        const newOptionKey = foundOpt.key;
+        const newOption = (!foundOpt.method || foundOpt.location === foundOpt.method) ? foundOpt.location : `${foundOpt.location} - ${foundOpt.method}`;
+        const newRate = foundOpt.rate;
 
         // Calculate weight
         let w = Number(item.width);
@@ -345,7 +324,8 @@ function CheckoutContent() {
         const totalAreaInSqM = (w / 1000) * (h / 1000) * (item.qty || 1);
         const weightPerSqM = item.material === "Flex" ? 0.3 : 3.8;
         const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
-        const newShippingCharge = Math.round(newRate * estimatedWeightKg);
+        const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
+        const newShippingCharge = Math.round(newRate * chargedWeightKg);
 
         const pcbBasePrice = item.price - (item.shippingCharge || 0);
         const newTotalPrice = Math.max(pcbBasePrice, 0) + newShippingCharge;

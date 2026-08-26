@@ -212,16 +212,20 @@ export default function CartPage() {
                     let newShippingCharge = prevShippingCharge;
                     if (item.shippingOption) {
                         const defaultShippingOptions = [
-                            { key: "gujarat_road", location: "In Gujarat", method: "By Road", rate: 40 },
-                            { key: "out_road", location: "Out of Gujarat", method: "By Road", rate: 80 },
-                            { key: "out_air", location: "Out of Gujarat", method: "By Air", rate: 150 },
-                            { key: "out_fastrack", location: "Out of Gujarat", method: "Fastrack", rate: 450 },
+                            { key: "standard", location: "Standard", method: "Standard", rate: 0 },
+                            { key: "plus", location: "Plus", method: "Plus", rate: 150 },
+                            { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
                         ];
-                        const foundOpt = defaultShippingOptions.find(o => `${o.location} - ${o.method}` === item.shippingOption || o.key === item.shippingOptionKey) || defaultShippingOptions[0];
+                        const foundOpt = defaultShippingOptions.find(o => 
+                            `${o.location} - ${o.method}` === item.shippingOption || 
+                            o.location === item.shippingOption || 
+                            o.key === item.shippingOptionKey
+                        ) || defaultShippingOptions[0];
                         const totalAreaInSqM = (w / 1000) * (h / 1000) * validQty;
                         const weightPerSqM = item.material === "Flex" ? 0.3 : 3.8;
                         const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
-                        newShippingCharge = Math.round(foundOpt.rate * estimatedWeightKg);
+                        const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
+                        newShippingCharge = Math.round(foundOpt.rate * chargedWeightKg);
                     }
 
                     const totalPriceWithShipping = newPcbPrice + newShippingCharge;

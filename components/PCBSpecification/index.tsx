@@ -578,7 +578,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 if (spec.gerber_preview_data) {
                     let prevData = spec.gerber_preview_data;
                     if (typeof prevData === "string" && prevData.startsWith("{")) {
-                        try { prevData = JSON.parse(prevData); } catch (e) {}
+                        try { prevData = JSON.parse(prevData); } catch (e) { }
                     }
                     if (typeof prevData === "object" && prevData !== null) {
                         if (prevData.top || prevData.topSvg) setTopSvg(prevData.top || prevData.topSvg);
@@ -630,7 +630,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [isChargeDetailsOpen, setIsChargeDetailsOpen] = useState(true);
     const [selectedBuildTime, setSelectedBuildTime] = useState<"3days" | "24hours" | "24hours_pcba">("3days");
     const [selectedDay, setSelectedDay] = useState<number | null>(null);
-    const [shippingOptionKey, setShippingOptionKey] = useState<string>("gujarat_road");
+    const [shippingOptionKey, setShippingOptionKey] = useState<string>("standard");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [checkoutData, setCheckoutData] = useState<{ day: number; unitPrice: string; orderValue: string; dateStr: string } | null>(null);
 
@@ -1378,10 +1378,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const generatedBoardId = "Y2-" + Math.floor(10000000 + Math.random() * 90000000);
 
             const defaultShippingOptions = [
-                { key: "gujarat_road", location: "In Gujarat", method: "By Road", rate: 40 },
-                { key: "out_road", location: "Out of Gujarat", method: "By Road", rate: 80 },
-                { key: "out_air", location: "Out of Gujarat", method: "By Air", rate: 150 },
-                { key: "out_fastrack", location: "Out of Gujarat", method: "Fastrack", rate: 450 },
+                { key: "standard", location: "Standard", method: "Standard", rate: 0 },
+                { key: "plus", location: "Plus", method: "Plus", rate: 150 },
+                { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
             ];
             const currentShippingOpts = pricingConfig?.shippingOptions && Array.isArray(pricingConfig.shippingOptions) && pricingConfig.shippingOptions.length > 0
                 ? pricingConfig.shippingOptions
@@ -1391,7 +1390,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const totalAreaInSqM = ((Number(formData.width) || 100) / 1000) * ((Number(formData.height) || 100) / 1000) * (Number(formData.qty) || 5);
             const weightPerSqM = formData.baseMaterial === "Flex" ? 0.3 : 3.8;
             const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
-            const calculatedShippingCharge = Math.round((activeShippingObj?.rate || 40) * estimatedWeightKg);
+            const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
+            const calculatedShippingCharge = Math.round((activeShippingObj?.rate || 0) * chargedWeightKg);
 
             const pcbBasePrice = Number(calculatedPrice) || 100;
             const itemTotalPrice = pcbBasePrice + calculatedShippingCharge;
@@ -1412,7 +1412,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 qty: Number(formData.qty) || 5,
                 buildTime: `${selectedDay || 3} days`,
                 price: itemTotalPrice,
-                shippingOption: `${activeShippingObj.location} - ${activeShippingObj.method}`,
+                shippingOption: (!activeShippingObj.method || activeShippingObj.location === activeShippingObj.method) ? (activeShippingObj.location || activeShippingObj.method) : `${activeShippingObj.location} - ${activeShippingObj.method}`,
                 shippingOptionKey: activeShippingObj.key,
                 shippingCharge: calculatedShippingCharge,
                 material: formData.baseMaterial || "FR-4",
@@ -1699,8 +1699,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                 key={item.day}
                                                                 onClick={() => setSelectedDay(item.day)}
                                                                 className={`relative flex flex-col items-center justify-between p-1.5 rounded-sm transition-all duration-200 cursor-pointer select-none aspect-square shadow-sm ${rotation} ${isSelected
-                                                                        ? `${color.activeBg} ring-2 ring-[#238E4E] border-2 border-[#0F7438] scale-[1.08] z-20 shadow-md rotate-0`
-                                                                        : `${color.bg} border ${color.border} hover:scale-[1.04] hover:rotate-0 hover:z-10 hover:shadow-md`
+                                                                    ? `${color.activeBg} ring-2 ring-[#238E4E] border-2 border-[#0F7438] scale-[1.08] z-20 shadow-md rotate-0`
+                                                                    : `${color.bg} border ${color.border} hover:scale-[1.04] hover:rotate-0 hover:z-10 hover:shadow-md`
                                                                     }`}
                                                             >
                                                                 {/* Push Pin */}
@@ -1725,19 +1725,19 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                 const thicknessMm = parseFloat((formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "")) || 1.6;
                                                 const weightPerSqM = 3.8 * (thicknessMm / 1.6);
                                                 const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
+                                                const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
 
                                                 const defaultShippingOptions = [
-                                                    { key: "gujarat_road", location: "In Gujarat", method: "By Road", rate: 40 },
-                                                    { key: "out_road", location: "Out of Gujarat", method: "By Road", rate: 80 },
-                                                    { key: "out_air", location: "Out of Gujarat", method: "By Air", rate: 150 },
-                                                    { key: "out_fastrack", location: "Out of Gujarat", method: "Fastrack", rate: 450 },
+                                                    { key: "standard", location: "Standard", method: "Standard", rate: 0 },
+                                                    { key: "plus", location: "Plus", method: "Plus", rate: 150 },
+                                                    { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
                                                 ];
                                                 const shippingOptions = pricingConfig?.shippingOptions && Array.isArray(pricingConfig.shippingOptions) && pricingConfig.shippingOptions.length > 0
                                                     ? pricingConfig.shippingOptions
                                                     : defaultShippingOptions;
 
                                                 const activeShipping = shippingOptions.find((o: any) => o.key === shippingOptionKey) || shippingOptions[0];
-                                                const shippingCharge = Math.round(activeShipping.rate * estimatedWeightKg);
+                                                const shippingCharge = Math.round(activeShipping.rate * chargedWeightKg);
 
                                                 const pcbPrice = selectedDayData ? parseFloat(selectedDayData.orderValue) : 0;
                                                 const mainTotal = pcbPrice > 0 ? pcbPrice + shippingCharge : 0;
@@ -1747,53 +1747,52 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                         <div className="flex justify-between items-center text-xs">
                                                             <span className="text-slate-600 dark:text-slate-300 font-semibold">Total Area:</span>
                                                             <span className="font-extrabold text-[#0F7438] dark:text-[#8DD3A5]">
-                                                                {totalAreaInSqM.toFixed(2)} m² <span className="text-[10px] font-normal text-slate-500">({estimatedWeightKg} kg est.)</span>
+                                                                {totalAreaInSqM.toFixed(2)} m² <span className="text-[10px] font-normal text-slate-500">({estimatedWeightKg} kg est.{estimatedWeightKg < 1 ? ' → 1 kg min' : ''})</span>
                                                             </span>
                                                         </div>
 
                                                         {/* Shipping Option Selection */}
-                                                        <div className="pt-2 border-t border-[#41A96A]/20 space-y-1.5">
+                                                        <div className="pt-2 border-t border-[#41A96A]/20 space-y-2">
                                                             <div className="flex justify-between items-center text-xs font-bold text-[#0F7438] dark:text-[#8DD3A5]">
-                                                                <span>Shipping Option:</span>
+                                                                <span>Shipping Method</span>
                                                                 <span className="text-[10px] font-medium text-slate-500">Select delivery method</span>
                                                             </div>
-                                                            <div className="grid grid-cols-1 gap-2 pt-1">
+
+                                                            <div className="bg-[#8DD3A5]/15 dark:bg-slate-800/80 p-2.5 rounded-2xl border border-[#41A96A]/25 grid grid-cols-3 gap-2">
                                                                 {shippingOptions.map(opt => {
-                                                                    const charge = Math.round(opt.rate * estimatedWeightKg);
+                                                                    const charge = Math.round(opt.rate * chargedWeightKg);
                                                                     const isSelected = shippingOptionKey === opt.key;
+                                                                    const title = (!opt.method || opt.location === opt.method) ? (opt.location || opt.method) : `${opt.location} - ${opt.method}`;
+
                                                                     return (
                                                                         <label
                                                                             key={opt.key}
                                                                             onClick={() => setShippingOptionKey(opt.key)}
-                                                                            className={`flex items-center justify-between gap-2.5 p-2.5 rounded-xl border transition-all cursor-pointer ${
-                                                                                isSelected
-                                                                                    ? "bg-[#8DD3A5]/20 border-[#238E4E] shadow-2xs"
-                                                                                    : "bg-white/60 dark:bg-slate-800/60 border-[#41A96A]/30 hover:border-[#238E4E]/60"
-                                                                            }`}
+                                                                            className={`flex items-start gap-2 p-2 rounded-xl transition-all cursor-pointer select-none ${isSelected
+                                                                                ? "bg-white/90 dark:bg-slate-700/80 shadow-2xs border border-[#238E4E]"
+                                                                                : "bg-white/40 dark:bg-slate-800/40 border border-transparent hover:bg-white/60"
+                                                                                }`}
                                                                         >
-                                                                            <div className="flex items-center gap-2.5 min-w-0">
-                                                                                <input
-                                                                                    type="radio"
-                                                                                    name="shippingOption"
-                                                                                    checked={isSelected}
-                                                                                    onChange={() => setShippingOptionKey(opt.key)}
-                                                                                    className="w-4 h-4 text-[#238E4E] focus:ring-[#238E4E] cursor-pointer accent-[#238E4E]"
-                                                                                />
-                                                                                <span className={`text-xs font-semibold ${isSelected ? "text-[#0F7438] dark:text-[#8DD3A5]" : "text-slate-800 dark:text-slate-200"}`}>
-                                                                                    {opt.location} - {opt.method} <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400 ml-1">(₹{opt.rate}/kg)</span>
+                                                                            <input
+                                                                                type="radio"
+                                                                                name="shippingOption"
+                                                                                checked={isSelected}
+                                                                                onChange={() => setShippingOptionKey(opt.key)}
+                                                                                className="w-4 h-4 mt-0.5 text-[#238E4E] focus:ring-[#238E4E] accent-[#238E4E] cursor-pointer shrink-0"
+                                                                            />
+                                                                            <div className="flex flex-col min-w-0">
+                                                                                <span className={`text-xs font-bold leading-tight ${isSelected ? "text-[#0F7438] dark:text-[#8DD3A5]" : "text-slate-800 dark:text-slate-200"}`}>
+                                                                                    {title}
+                                                                                </span>
+                                                                                <span className={`text-[10px] font-semibold mt-0.5 ${isSelected ? "text-[#0F7438]" : "text-slate-600 dark:text-slate-300"}`}>
+                                                                                    +₹{charge} <span className="font-normal text-slate-400 text-[9px]">(₹{opt.rate}/kg)</span>
                                                                                 </span>
                                                                             </div>
-                                                                            <span className={`text-xs font-bold ${isSelected ? "text-[#0F7438] dark:text-[#8DD3A5]" : "text-slate-700 dark:text-slate-300"}`}>
-                                                                                +₹{charge}
-                                                                            </span>
                                                                         </label>
                                                                     );
                                                                 })}
                                                             </div>
-                                                            <div className="flex justify-between items-center text-xs pt-1">
-                                                                <span className="text-slate-600 dark:text-slate-300 font-medium">Shipping Charge:</span>
-                                                                <span className="font-bold text-slate-800 dark:text-slate-200">₹{shippingCharge.toLocaleString('en-IN')}</span>
-                                                            </div>
+
                                                         </div>
 
                                                         {/* Total Calculation */}
@@ -1807,6 +1806,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                     <span className="text-slate-600 dark:text-slate-300 font-semibold">PCB Price:</span>
                                                                     <span className="font-bold text-slate-700 dark:text-slate-300">{formatPrice(selectedDayData.orderValue)}</span>
                                                                 </div>
+                                                                <div className="flex justify-between items-center text-xs">
+                                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">Shipping Charge:</span>
+                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">₹{shippingCharge.toLocaleString('en-IN')}</span>
+                                                                </div>
                                                                 <div className="flex justify-between items-baseline pt-1 border-t border-dashed border-[#41A96A]/30">
                                                                     <span className="text-slate-800 dark:text-slate-200 text-xs font-black">Main Total:</span>
                                                                     <span className="text-xl font-black text-[#0F7438] dark:text-[#69C48A]">
@@ -1815,8 +1818,14 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            <div className="text-center pt-2 text-xs font-semibold text-slate-500 italic border-t border-[#41A96A]/10">
-                                                                Tap on any sticky note above to pick a delivery date.
+                                                            <div className="pt-2 border-t border-[#41A96A]/20 space-y-2">
+                                                                <div className="flex justify-between items-center text-xs">
+                                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">Shipping Charge:</span>
+                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">₹{shippingCharge.toLocaleString('en-IN')}</span>
+                                                                </div>
+                                                                <div className="text-center pt-1 text-xs font-semibold text-slate-500 italic border-t border-[#41A96A]/10">
+                                                                    Tap on any sticky note above to pick a delivery date.
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </div>
