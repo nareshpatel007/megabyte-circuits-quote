@@ -1,4 +1,11 @@
-import type { GerberProps, GerberSide, GerberType } from 'whats-that-gerber';
+export type GerberType = 'copper' | 'soldermask' | 'silkscreen' | 'solderpaste' | 'drill' | 'outline' | null;
+export type GerberSide = 'top' | 'bottom' | 'inner' | 'all' | null;
+
+export interface GerberProps {
+    type: GerberType;
+    side: GerberSide;
+}
+
 import promisify from 'pify';
 import { unzip as _unzip } from 'fflate';
 import stackup, { type InputLayer, type Stackup } from 'pcb-stackup';
@@ -56,11 +63,8 @@ export async function readLayers(entries: Record<string, Uint8Array>): Promise<I
 
         const ext = name.split('.').pop()?.toLowerCase() || '';
         // Skip obvious non-gerber documents & images
-        if (['pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'csv', 'bom', 'doc', 'docx', 'xlsx', 'xls', 'zip', 'rar', '7z', 'txt', 'html', 'json'].includes(ext)) {
-            // Check if txt file is a drill file
-            if (ext !== 'txt' || (!name.toLowerCase().includes('drl') && !name.toLowerCase().includes('drill'))) {
-                continue;
-            }
+        if (['pdf', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'csv', 'bom', 'doc', 'docx', 'xlsx', 'xls', 'zip', 'rar', '7z', 'html', 'json'].includes(ext)) {
+            continue;
         }
 
         const { type, side } = mapLayerType(name);
@@ -76,9 +80,10 @@ export function mapLayerType(name: string): GerberProps {
     let type: GerberType = null;
     let side: GerberSide = null;
 
-    const segments = name.toLowerCase().split(/_|-|\./);
-
+    const lowerName = name.toLowerCase();
+    const segments = lowerName.split(/_|-|\./);
     const ext = segments[segments.length - 1];
+
     switch (ext) {
         case 'gtl': return { type: 'copper', side: 'top' };
         case 'gto': return { type: 'silkscreen', side: 'top' };
@@ -88,10 +93,8 @@ export function mapLayerType(name: string): GerberProps {
         case 'gbo': return { type: 'silkscreen', side: 'bottom' };
         case 'gbp': return { type: 'solderpaste', side: 'bottom' };
         case 'gbs': return { type: 'soldermask', side: 'bottom' };
-        case 'gko': return { type: 'outline', side: 'all' };
-        case 'drl': return { type: 'drill', side: 'all' };
-        case 'txt': return { type: 'drill', side: 'all' };
-        case 'xln': return { type: 'drill', side: 'all' };
+        case 'gko': case 'gml': case 'gm1': case 'gm2': case 'gm3': case 'g1': return { type: 'outline', side: 'all' };
+        case 'drl': case 'txt': case 'xln': case 'drd': return { type: 'drill', side: 'all' };
         default:
             if (/^g[1-8]$/i.test(ext) || /^g[1-8]l$/i.test(ext) || /^in[1-8]$/i.test(ext) || /^l[1-8]$/i.test(ext) || /^gl[1-8]$/i.test(ext)) {
                 return { type: 'copper', side: 'inner' };
@@ -99,25 +102,29 @@ export function mapLayerType(name: string): GerberProps {
             break;
     }
 
-    if (segments.find(s => s.includes('edge')) || segments.find(s => s.includes('outline'))) {
+    if (segments.some(s => s.includes('edge') || s.includes('outline') || s.includes('border') || s.includes('profile') || s.includes('cutout') || s.includes('keepout'))) {
         return { type: 'outline', side: 'all' };
     }
 
-    if (segments.includes('sm') || segments.find(s => s.includes('mask'))) {
+    if (segments.some(s => s.includes('drill') || s.includes('hole') || s.includes('drl') || s.includes('nc'))) {
+        return { type: 'drill', side: 'all' };
+    }
+
+    if (segments.includes('sm') || segments.some(s => s.includes('mask') || s.includes('soldermask'))) {
         type = 'soldermask';
-    } else if (segments.includes('sp') || segments.find(s => s.includes('paste'))) {
+    } else if (segments.includes('sp') || segments.some(s => s.includes('paste') || s.includes('solderpaste'))) {
         type = 'solderpaste';
-    } else if (segments.includes('ss') || segments.find(s => s.includes('silk'))) {
+    } else if (segments.includes('ss') || segments.some(s => s.includes('silk') || s.includes('silkscreen') || s.includes('legend'))) {
         type = 'silkscreen';
-    } else if (segments.includes('cu') || segments.find(s => s.includes('copper'))) {
+    } else if (segments.includes('cu') || segments.some(s => s.includes('copper') || s.includes('art') || s.includes('layer'))) {
         type = 'copper';
     }
 
-    if (segments.find(s => s.startsWith('in'))) {
+    if (segments.some(s => s.startsWith('in'))) {
         side = 'inner';
-    } else if (segments.includes('f') || segments.find(s => s.includes('top'))) {
+    } else if (segments.includes('f') || segments.some(s => s.includes('top') || s.includes('front') || s.includes('cmp'))) {
         side = 'top';
-    } else if (segments.includes('b') || segments.find(s => s.includes('bottom'))) {
+    } else if (segments.includes('b') || segments.some(s => s.includes('bottom') || s.includes('back') || s.includes('sol'))) {
         side = 'bottom';
     }
 

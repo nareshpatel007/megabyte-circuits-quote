@@ -595,7 +595,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     }, []);
 
     // Load dynamic PCB calculation parameters from backend API
+    const fetchedPricingConfigRef = React.useRef(false);
     React.useEffect(() => {
+        if (fetchedPricingConfigRef.current) return;
+        fetchedPricingConfigRef.current = true;
         let active = true;
         async function fetchPricingConfig() {
             try {
