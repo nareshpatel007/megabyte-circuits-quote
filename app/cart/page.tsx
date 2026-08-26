@@ -201,14 +201,15 @@ export default function CartPage() {
                     if (!w) w = 100;
                     if (!h) h = 100;
 
-                    // Compute unit PCB manufacturing price (excluding previous shipping fee)
+                    // Compute PCB base price & recalculated shipping charge
                     const prevShippingCharge = item.shippingCharge || 0;
                     const prevPcbPrice = Math.max(item.price - prevShippingCharge, 0);
-                    const pcbUnitPrice = item.unitPrice || (item.qty > 0 ? prevPcbPrice / item.qty : prevPcbPrice);
 
+                    // Base PCB price scales directly with quantity change if unitPrice isn't set
+                    const pcbUnitPrice = item.unitPrice || (item.qty > 0 ? prevPcbPrice / item.qty : prevPcbPrice);
                     const newPcbPrice = Math.max(Math.round(pcbUnitPrice * validQty), 10);
 
-                    // Recalculate shipping fee based on updated weight
+                    // Recalculate shipping fee based on updated weight (in kg)
                     let newShippingCharge = prevShippingCharge;
                     if (item.shippingOption) {
                         const defaultShippingOptions = [
@@ -216,11 +217,12 @@ export default function CartPage() {
                             { key: "plus", location: "Plus", method: "Plus", rate: 150 },
                             { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
                         ];
-                        const foundOpt = defaultShippingOptions.find(o => 
-                            `${o.location} - ${o.method}` === item.shippingOption || 
-                            o.location === item.shippingOption || 
+                        const foundOpt = defaultShippingOptions.find(o =>
+                            `${o.location} - ${o.method}` === item.shippingOption ||
+                            o.location === item.shippingOption ||
                             o.key === item.shippingOptionKey
                         ) || defaultShippingOptions[0];
+
                         const totalAreaInSqM = (w / 1000) * (h / 1000) * validQty;
                         const weightPerSqM = item.material === "Flex" ? 0.3 : 3.8;
                         const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
@@ -452,7 +454,7 @@ export default function CartPage() {
                                                             <div className="flex items-center gap-1.5">
                                                                 <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">{item.boardName || (item as any).partNumber}</h3>
                                                             </div>
-                                                             {item.productType === "part" ? (
+                                                            {item.productType === "part" ? (
                                                                 <p className="text-[11px] text-gray-500 font-medium leading-relaxed line-clamp-2">
                                                                     {(item as any).description || "Electronic Component"}
                                                                 </p>
@@ -471,7 +473,7 @@ export default function CartPage() {
                                                     <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 shrink-0">
                                                         <div className="w-24 flex justify-center">
                                                             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-gray-50/50">
-                                                                 <button
+                                                                <button
                                                                     type="button"
                                                                     onClick={() => {
                                                                         const min = item.productType === "part" ? getMinCartQuantity() : 1;
@@ -537,7 +539,7 @@ export default function CartPage() {
                         <div className="w-full lg:w-80 shrink-0">
                             <div className="bg-white rounded-xl shadow-xs border border-gray-200/80 p-5 space-y-4 sticky top-20">
                                 <h2 className="text-xs font-bold text-gray-700 tracking-wider uppercase border-b border-gray-100 pb-3">SUMMARY</h2>
-                                
+
                                 {selectedCartItemsList.length > 0 && (
                                     <div className="space-y-2 py-2 border-b border-gray-100 text-xs">
                                         <div className="flex items-center justify-between text-gray-600 font-medium">
@@ -546,7 +548,7 @@ export default function CartPage() {
                                         </div>
                                         {selectedShippingTotal > 0 && (
                                             <div className="flex items-center justify-between text-gray-600 font-medium">
-                                                <span>Estimated Shipping</span>
+                                                <span>Shipping Cost</span>
                                                 <span className="font-semibold text-gray-800">{formatPrice(selectedShippingTotal)}</span>
                                             </div>
                                         )}
