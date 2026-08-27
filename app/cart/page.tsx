@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -52,6 +52,8 @@ export default function CartPage() {
     const [isLoaded, setIsLoaded] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+    const saveBackendTimerRef = useRef<NodeJS.Timeout | null>(null);
+
     useEffect(() => {
         try {
             const token = getAuthToken();
@@ -60,6 +62,23 @@ export default function CartPage() {
         } catch (e) {
             setIsLoggedIn(false);
         }
+    }, []);
+
+    // Flush any pending debounced backend save on unmount
+    useEffect(() => {
+        return () => {
+            if (saveBackendTimerRef.current) {
+                clearTimeout(saveBackendTimerRef.current);
+                saveBackendTimerRef.current = null;
+                const savedCart = typeof window !== "undefined" ? localStorage.getItem("megabyte_cart") : null;
+                if (savedCart) {
+                    try {
+                        const items = JSON.parse(savedCart);
+                        saveCartToBackend(items).catch(() => {});
+                    } catch (e) {}
+                }
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -132,9 +151,24 @@ export default function CartPage() {
         initCart();
     }, []);
 
-    const saveCart = async (items: CartItem[]) => {
+    const saveCart = async (items: CartItem[], immediate: boolean = false) => {
         setCartItems(items);
-        await saveCartToBackend(items);
+        localStorage.setItem("megabyte_cart", JSON.stringify(items));
+        window.dispatchEvent(new Event("megabyte_cart_updated"));
+
+        if (saveBackendTimerRef.current) {
+            clearTimeout(saveBackendTimerRef.current);
+            saveBackendTimerRef.current = null;
+        }
+
+        if (immediate) {
+            await saveCartToBackend(items);
+        } else {
+            saveBackendTimerRef.current = setTimeout(async () => {
+                await saveCartToBackend(items);
+                saveBackendTimerRef.current = null;
+            }, 600);
+        }
     };
 
     const handleRemoveItem = async (id: any) => {
@@ -149,7 +183,7 @@ export default function CartPage() {
         const remainingItems = cartItems.filter(
             (item) => !selectedItemIds.includes(String(item.id))
         );
-        await saveCart(remainingItems);
+        await saveCart(remainingItems, true);
         setSelectedItemIds([]);
     };
 
@@ -355,8 +389,14 @@ export default function CartPage() {
 
     const selectedTotal = effectiveSummaryItems.reduce((acc, item) => acc + item.price, 0);
 
-    const handleCheckoutClick = () => {
+    const handleCheckoutClick = async () => {
         if (selectedCartItemsList.length === 0) return;
+
+        if (saveBackendTimerRef.current) {
+            clearTimeout(saveBackendTimerRef.current);
+            saveBackendTimerRef.current = null;
+            await saveCartToBackend(cartItems);
+        }
 
         // Store ONLY checked items for checkout processing
         localStorage.setItem("megabyte_checkout_items", JSON.stringify(selectedCartItemsList));
