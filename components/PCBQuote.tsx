@@ -28,6 +28,9 @@ import {
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import JSZip from "jszip";
+import { processGerberFiles, ProcessedGerberProject } from "@/lib/gerber-engine";
+import { mapPCBAnalysisToQuoteOptions } from "@/lib/pcb-quote-integration/extractionMapper";
+import { GerberViewer } from "@/components/gerber-viewer";
 
 // Helpers
 const Pill = ({
@@ -351,11 +354,17 @@ export default function PCBQuote() {
     const [pcbRemark, setPcbRemark] = useState("");
     const [detectionAlert, setDetectionAlert] = useState<string | null>(null);
 
-    // File Upload State
+    // File Upload & Gerber Engine State
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [isValidating, setIsValidating] = useState(false);
+    const [loadingProgress, setLoadingProgress] = useState({ stage: "", percent: 0 });
     const [isGerberValidated, setIsGerberValidated] = useState(false);
+    const [processedProject, setProcessedProject] = useState<ProcessedGerberProject | null>(null);
+    const [fieldSources, setFieldSources] = useState<Record<string, "detected" | "user-selected">>({
+        layers: "user-selected",
+        dimensions: "user-selected"
+    });
     const [detectedLayers, setDetectedLayers] = useState<{ name: string; status: "detected" | "not_detected"; filename?: string }[]>([]);
     const [previewActiveTab, setPreviewActiveTab] = useState<"layout" | "schematic">("layout");
 
@@ -373,6 +382,7 @@ export default function PCBQuote() {
         setUploadError(null);
         setUploadedFile(null);
         setIsGerberValidated(false);
+        setProcessedProject(null);
         setDetectedLayers([]);
         setDetectionAlert(null);
 
@@ -391,196 +401,45 @@ export default function PCBQuote() {
 
         setIsValidating(true);
 
-        if (fileExtension === 'zip') {
-            try {
-                const zip = await JSZip.loadAsync(file);
-                const fileNames = Object.keys(zip.files);
+        try {
+            const project = await processGerberFiles(file, (stage, percent) => {
+                setLoadingProgress({ stage, percent });
+            });
 
-                const layersObj = {
-                    topCopper: { name: "Top Copper Layer", detected: false, file: "" },
-                    bottomCopper: { name: "Bottom Copper Layer", detected: false, file: "" },
-                    topSolderMask: { name: "Top Solder Mask", detected: false, file: "" },
-                    bottomSolderMask: { name: "Bottom Solder Mask", detected: false, file: "" },
-                    topSilkscreen: { name: "Top Silkscreen", detected: false, file: "" },
-                    bottomSilkscreen: { name: "Bottom Silkscreen", detected: false, file: "" },
-                    drills: { name: "Drill Holes", detected: false, file: "" },
-                    outline: { name: "Board Outline", detected: false, file: "" }
-                };
+            setProcessedProject(project);
+            setIsGerberValidated(true);
+            setUploadedFile(file);
 
-                let gerberCount = 0;
+            // Auto-select quotation options based on extracted PCB analysis
+            const autoSelected = mapPCBAnalysisToQuoteOptions(project.analysis);
+            setLayers(autoSelected.layers);
+            setPcbWidth(autoSelected.width);
+            setPcbHeight(autoSelected.height);
+            setPcbUnit("mm");
 
-                fileNames.forEach(name => {
-                    if (zip.files[name].dir) return;
+            setFieldSources({
+                layers: "detected",
+                dimensions: "detected"
+            });
 
-                    const lowerName = name.toLowerCase();
-                    if (GERBER_PATTERNS.topCopper.test(name)) {
-                        layersObj.topCopper.detected = true;
-                        layersObj.topCopper.file = name;
-                        gerberCount++;
-                    } else if (GERBER_PATTERNS.bottomCopper.test(name)) {
-                        layersObj.bottomCopper.detected = true;
-                        layersObj.bottomCopper.file = name;
-                        gerberCount++;
-                    } else if (GERBER_PATTERNS.topSolderMask.test(name)) {
-                        layersObj.topSolderMask.detected = true;
-                        layersObj.topSolderMask.file = name;
-                        gerberCount++;
-                    } else if (GERBER_PATTERNS.bottomSolderMask.test(name)) {
-                        layersObj.bottomSolderMask.detected = true;
-                        layersObj.bottomSolderMask.file = name;
-                        gerberCount++;
-                    } else if (GERBER_PATTERNS.topSilkscreen.test(name)) {
-                        layersObj.topSilkscreen.detected = true;
-                        layersObj.topSilkscreen.file = name;
-                        gerberCount++;
-                    } else if (GERBER_PATTERNS.bottomSilkscreen.test(name)) {
-                        layersObj.bottomSilkscreen.detected = true;
-                        layersObj.bottomSilkscreen.file = name;
-                        gerberCount++;
-                    } else if (GERBER_PATTERNS.drills.test(name)) {
-                        layersObj.drills.detected = true;
-                        layersObj.drills.file = name;
-                        gerberCount++;
-                    } else if (GERBER_PATTERNS.outline.test(name) || lowerName.endsWith('.gbr')) {
-                        layersObj.outline.detected = true;
-                        layersObj.outline.file = name;
-                        gerberCount++;
-                    }
-                });
+            setDetectionAlert(
+                `✓ Gerber Analysis Successful! Auto-detected ${project.analysis.layers.copper} Layer PCB, Dimensions: ${project.analysis.dimensions.width} x ${project.analysis.dimensions.height} mm.`
+            );
 
-                if (gerberCount === 0) {
-                    setUploadError("No valid Gerber files found in the ZIP archive. Make sure it contains file extensions like .gtl, .gbl, .gbr or .drl.");
-                    setIsValidating(false);
-                    return false;
-                }
-
-                // Auto-detect Layer Count
-                let copperLayersCount = 0;
-                if (layersObj.topCopper.detected) copperLayersCount++;
-                if (layersObj.bottomCopper.detected) copperLayersCount++;
-                const finalLayersCount = copperLayersCount > 0 ? copperLayersCount.toString() : "2";
-                setLayers(finalLayersCount);
-
-                // Parse Board Outline coordinates for dimensions
-                let parsedWidth = 91.62;
-                let parsedHeight = 54.35;
-
-                if (layersObj.outline.file) {
-                    try {
-                        const outlineContent = await zip.files[layersObj.outline.file].async("string");
-
-                        let isMetric = true;
-                        if (outlineContent.includes("G70") || outlineContent.includes("%MOIN*%")) {
-                            isMetric = false;
-                        }
-
-                        let divisor = 10000;
-                        const formatMatch = outlineContent.match(/%FSLAX(\d)(\d)Y/i);
-                        if (formatMatch) {
-                            divisor = Math.pow(10, parseInt(formatMatch[2], 10));
-                        }
-
-                        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                        let currentX = 0, currentY = 0;
-
-                        const lines = outlineContent.split('\n');
-                        lines.forEach(line => {
-                            const xMatch = line.match(/X(-?\d+)/i);
-                            const yMatch = line.match(/Y(-?\d+)/i);
-
-                            if (xMatch) currentX = parseInt(xMatch[1], 10) / divisor;
-                            if (yMatch) currentY = parseInt(yMatch[1], 10) / divisor;
-
-                            if (xMatch || yMatch) {
-                                if (currentX < minX) minX = currentX;
-                                if (currentX > maxX) maxX = currentX;
-                                if (currentY < minY) minY = currentY;
-                                if (currentY > maxY) maxY = currentY;
-                            }
-                        });
-
-                        if (minX !== Infinity && maxX !== -Infinity && minY !== Infinity && maxY !== -Infinity) {
-                            let w = maxX - minX;
-                            let h = maxY - minY;
-
-                            if (!isMetric) {
-                                w = w * 25.4;
-                                h = h * 25.4;
-                            }
-
-                            if (w > 1 && h > 1 && w < 1000 && h < 1000) {
-                                parsedWidth = parseFloat(w.toFixed(2));
-                                parsedHeight = parseFloat(h.toFixed(2));
-                            }
-                        }
-                    } catch (e) {
-                        console.error("Failed to parse outline coordinates", e);
-                    }
-                }
-
-                setPcbWidth(parsedWidth.toString());
-                setPcbHeight(parsedHeight.toString());
-                setPcbUnit("mm");
-                setDetectionAlert(`Gerber Analysis Successful! Auto-detected ${finalLayersCount} Layers, Dimensions: ${parsedWidth} mm x ${parsedHeight} mm. Quote parameters auto-filled.`);
-
-                const detectedLayersArray = Object.entries(layersObj).map(([key, value]) => ({
-                    name: value.name,
-                    status: value.detected ? "detected" as const : "not_detected" as const,
-                    filename: value.file || undefined
-                }));
-
-                setDetectedLayers(detectedLayersArray);
-                setIsGerberValidated(true);
-                setUploadedFile(file);
-            } catch (err) {
-                setUploadError("Failed to parse ZIP archive. Please make sure it is not corrupted.");
-                setIsValidating(false);
-                return false;
-            }
-        } else if (fileExtension === 'rar') {
-            try {
-                const headerBlob = file.slice(0, 7);
-                const buffer = await headerBlob.arrayBuffer();
-                const view = new Uint8Array(buffer);
-                const isRar = (view[0] === 0x52 && view[1] === 0x61 && view[2] === 0x72 && view[3] === 0x21) ||
-                              (view[0] === 0x50 && view[1] === 0x4b && view[2] === 0x03 && view[3] === 0x04); // RAR or ZIP magic bytes
-
-                if (!isRar && file.size === 0) {
-                    setUploadError("The file does not appear to be a valid RAR archive.");
-                    setIsValidating(false);
-                    return false;
-                }
-
-                const parsedLayers = "2";
-                const parsedWidth = 91.62;
-                const parsedHeight = 54.35;
-
-                setLayers(parsedLayers);
-                setPcbWidth(parsedWidth.toString());
-                setPcbHeight(parsedHeight.toString());
-                setPcbUnit("mm");
-                setDetectionAlert(`Gerber Analysis Successful! Auto-detected ${parsedLayers} Layers, Dimensions: ${parsedWidth} mm x ${parsedHeight} mm.`);
-
-                setDetectedLayers([
-                    { name: "Top Copper Layer", status: "detected", filename: "archive/top_copper.gtl" },
-                    { name: "Bottom Copper Layer", status: "detected", filename: "archive/bottom_copper.gbl" },
-                    { name: "Top Solder Mask", status: "detected", filename: "archive/top_solder_mask.gts" },
-                    { name: "Bottom Solder Mask", status: "detected", filename: "archive/bottom_solder_mask.gbs" },
-                    { name: "Top Silkscreen", status: "detected", filename: "archive/top_silkscreen.gto" },
-                    { name: "Drill Holes", status: "detected", filename: "archive/drills.drl" },
-                    { name: "Board Outline", status: "detected", filename: "archive/outline.gml" }
-                ]);
-                setIsGerberValidated(true);
-                setUploadedFile(file);
-            } catch (err) {
-                setUploadError("Failed to validate RAR archive.");
-                setIsValidating(false);
-                return false;
-            }
+            setDetectedLayers(
+                project.analysis.detectedFiles.map((f) => ({
+                    name: f.name,
+                    status: "detected" as const,
+                    filename: f.name
+                }))
+            );
+            setIsValidating(false);
+            return true;
+        } catch (err: any) {
+            setUploadError(err.message || "Failed to process Gerber archive.");
+            setIsValidating(false);
+            return false;
         }
-
-        setIsValidating(false);
-        return true;
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -783,127 +642,32 @@ export default function PCBQuote() {
                                 </div>
                             </div>
 
-                            {/* Gerber File Review and Live Preview Section */}
-                            {isGerberValidated && uploadedFile && (
-                                <div className="mt-6 border border-gray-200 rounded-lg p-5 bg-slate-50/50 backdrop-blur-sm animate-fade-in">
-                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-gray-200 mb-5">
-                                        <div>
-                                            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                                                <FileText className="w-5 h-5 text-primary" />
-                                                Gerber Verification Review
-                                            </h3>
-                                            <p className="text-xs text-gray-500 mt-1">Live inspection & trace diagnostics from the uploaded archive</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-gray-400 font-medium">Preview Theme:</span>
-                                            <span className="inline-block w-4 h-4 rounded-full border border-gray-300" style={{ backgroundColor: pcbColor }} />
-                                            <span className="text-xs font-semibold text-gray-700 capitalize">
-                                                {pcbColor === "#52c41a" ? "Green" :
-                                                    pcbColor === "#722ed1" ? "Purple" :
-                                                        pcbColor === "#f5222d" ? "Red" :
-                                                            pcbColor === "#fadb14" ? "Yellow" :
-                                                                pcbColor === "#1677ff" ? "Blue" :
-                                                                    pcbColor === "#ffffff" ? "White" : "Black"}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                        {/* Left Side: Layer Toggles & Checklist */}
-                                        <div className="lg:col-span-5 space-y-4">
-                                            <div className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
-                                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Detected Archive Layers</h4>
-                                                <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-                                                    {detectedLayers.map((layer, index) => (
-                                                        <div key={index} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-b-0">
-                                                            <div className="flex items-center gap-2 min-w-0">
-                                                                {layer.status === "detected" ? (
-                                                                    <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                                                                ) : (
-                                                                    <span className="w-2 h-2 rounded-full bg-gray-300 shrink-0" />
-                                                                )}
-                                                                <span className="text-sm font-medium text-gray-800 truncate">{layer.name}</span>
-                                                            </div>
-                                                            <span className="text-[10px] text-gray-500 font-mono truncate max-w-[150px]" title={layer.filename}>
-                                                                {layer.filename ? layer.filename.split('/').pop() : "Not Found"}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            <div className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
-                                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Visualizer Controls</h4>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {Object.entries({
-                                                        outline: "Board Outline",
-                                                        topCopper: "Top Copper",
-                                                        bottomCopper: "Bottom Copper",
-                                                        solderMask: "Solder Mask Grid",
-                                                        silkscreen: "Silkscreen Layer",
-                                                        drills: "Drill Holes"
-                                                    }).map(([key, label]) => (
-                                                        <label key={key} className="flex items-center gap-2 cursor-pointer py-1 px-2 rounded hover:bg-slate-50 transition-colors">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={(activeLayers as any)[key]}
-                                                                onChange={(e) => setActiveLayers(prev => ({ ...prev, [key]: e.target.checked }))}
-                                                                className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4 cursor-pointer"
-                                                            />
-                                                            <span className="text-xs text-gray-700 font-medium select-none">{label}</span>
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Right Side: Tabbed Preview Visualizer */}
-                                        <div className="lg:col-span-7 flex flex-col">
-                                            {/* Preview Tabs */}
-                                            <div className="flex gap-2 mb-3 bg-slate-100 p-1 rounded-lg self-start">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPreviewActiveTab("layout")}
-                                                    className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${previewActiveTab === "layout"
-                                                        ? "bg-white text-gray-900 shadow-sm"
-                                                        : "text-gray-500 hover:text-gray-900"
-                                                        }`}
-                                                >
-                                                    PCB 2D Layout Preview
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPreviewActiveTab("schematic")}
-                                                    className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${previewActiveTab === "schematic"
-                                                        ? "bg-white text-gray-900 shadow-sm"
-                                                        : "text-gray-500 hover:text-gray-900"
-                                                        }`}
-                                                >
-                                                    Circuit Schematic Diagram
-                                                </button>
-                                            </div>
-
-                                            {/* Preview Viewport */}
-                                            {previewActiveTab === "layout" ? (
-                                                <PCBPreviewCanvas pcbColor={pcbColor} activeLayers={activeLayers} />
-                                            ) : (
-                                                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white p-4 flex items-center justify-center min-h-[300px]">
-                                                    <div className="relative group overflow-hidden rounded border border-gray-100 shadow-sm max-w-full">
-                                                        <img
-                                                            src="/images/circuit_schematic.png"
-                                                            alt="Circuit Diagram"
-                                                            className="max-h-[280px] w-auto object-contain cursor-zoom-in hover:scale-105 transition-transform duration-300"
-                                                        />
-                                                        <div className="absolute top-2 right-2 bg-gray-900/80 backdrop-blur text-[10px] text-gray-300 px-2 py-1 rounded select-none opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            Original Schematic
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                            {/* Gerber File Review & Full Interactive 2D Gerber Viewer Package */}
+                            {isGerberValidated && processedProject && (
+                                <div className="mt-6">
+                                    <GerberViewer
+                                        layers={processedProject.layers}
+                                        analysis={processedProject.analysis}
+                                        drillData={processedProject.drillData}
+                                        validation={processedProject.validation}
+                                        solderMaskColor={
+                                            pcbColor === "#52c41a" ? "green" :
+                                                pcbColor === "#722ed1" ? "purple" :
+                                                    pcbColor === "#f5222d" ? "red" :
+                                                        pcbColor === "#fadb14" ? "yellow" :
+                                                            pcbColor === "#1677ff" ? "blue" :
+                                                                pcbColor === "#ffffff" ? "white" : "black"
+                                        }
+                                        silkscreenColor={silkscreen}
+                                        onReupload={() => {
+                                            setUploadedFile(null);
+                                            setIsGerberValidated(false);
+                                            setProcessedProject(null);
+                                        }}
+                                    />
                                 </div>
                             )}
+
 
                             <div className="mt-8 space-y-1">
                                 {/* Config Rows */}
@@ -914,20 +678,35 @@ export default function PCBQuote() {
                                 </ConfigRow>
 
                                 <ConfigRow label="Layers" tooltip="Number of copper layers.">
-                                    {["1", "2", "4", "6", "8", "10", "12", "14", "16", "More >"].map(l => (
-                                        <Pill
-                                            key={l}
-                                            active={layers === l}
-                                            onClick={() => setLayers(l)}
-                                            badge={l === "6" ? "High Precision PCB" : undefined}
-                                        >
-                                            {l}
-                                        </Pill>
-                                    ))}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {["1", "2", "4", "6", "8", "10", "12", "14", "16", "More >"].map(l => (
+                                            <Pill
+                                                key={l}
+                                                active={layers === l}
+                                                onClick={() => {
+                                                    setLayers(l);
+                                                    setFieldSources(prev => ({ ...prev, layers: "user-selected" }));
+                                                }}
+                                                badge={l === "6" ? "High Precision PCB" : undefined}
+                                            >
+                                                {l}
+                                            </Pill>
+                                        ))}
+
+                                        {fieldSources.layers === "detected" ? (
+                                            <span className="text-xs text-emerald-600 font-semibold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded inline-flex items-center gap-1 shadow-xs ml-2">
+                                                <Check className="w-3.5 h-3.5" /> Auto detected from Gerber
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-2.5 py-1 rounded inline-flex items-center gap-1 shadow-xs ml-2">
+                                                <Pencil className="w-3.5 h-3.5" /> Manually selected
+                                            </span>
+                                        )}
+                                    </div>
                                 </ConfigRow>
 
                                 <ConfigRow label="Dimensions" tooltip="Size of your single board or panel.">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
                                         <input
                                             type="number"
                                             min="0.1"
@@ -942,6 +721,7 @@ export default function PCBQuote() {
                                                 const val = e.target.value;
                                                 if (val === "" || parseFloat(val) >= 0) {
                                                     setPcbWidth(val);
+                                                    setFieldSources(prev => ({ ...prev, dimensions: "user-selected" }));
                                                 }
                                             }}
                                             onBlur={(e) => {
@@ -967,6 +747,7 @@ export default function PCBQuote() {
                                                 const val = e.target.value;
                                                 if (val === "" || parseFloat(val) >= 0) {
                                                     setPcbHeight(val);
+                                                    setFieldSources(prev => ({ ...prev, dimensions: "user-selected" }));
                                                 }
                                             }}
                                             onBlur={(e) => {
@@ -985,6 +766,16 @@ export default function PCBQuote() {
                                             <option value="mm">mm</option>
                                             <option value="inches">inches</option>
                                         </select>
+
+                                        {fieldSources.dimensions === "detected" ? (
+                                            <span className="text-xs text-emerald-600 font-semibold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded inline-flex items-center gap-1 shadow-xs ml-2">
+                                                <Check className="w-3.5 h-3.5" /> Detected from board outline
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-2.5 py-1 rounded inline-flex items-center gap-1 shadow-xs ml-2">
+                                                <Pencil className="w-3.5 h-3.5" /> Manually selected
+                                            </span>
+                                        )}
                                     </div>
                                 </ConfigRow>
 
@@ -1013,12 +804,6 @@ export default function PCBQuote() {
                                             className="w-24 h-9 px-3 border border-gray-300 rounded text-sm focus:border-primary outline-none"
                                         />
                                     </div>
-                                </ConfigRow>
-
-                                <ConfigRow label="Product Type" tooltip="Helps us optimize production parameters.">
-                                    {["Industrial/Consumer electronics", "Aerospace", "Medical"].map(t => (
-                                        <Pill key={t} active={productType === t} onClick={() => setProductType(t)}>{t}</Pill>
-                                    ))}
                                 </ConfigRow>
                             </div>
 

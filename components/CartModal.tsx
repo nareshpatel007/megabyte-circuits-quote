@@ -144,7 +144,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                 Your Cart is Empty
                             </h3>
                             <p className="text-[11px] text-gray-400 mb-4 max-w-[220px] leading-relaxed">
-                                No PCB or stencil products added yet.
+                                No PCB or products added yet.
                             </p>
                             <button
                                 type="button"

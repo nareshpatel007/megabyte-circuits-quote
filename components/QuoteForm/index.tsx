@@ -460,18 +460,6 @@ export default function QuoteForm({
                     </div>
                 </ConfigRow>
 
-                <ConfigRow label="Product Type" tooltip="Specify target operational standard environment.">
-                    {["Industrial/Consumer electronics", "Aerospace", "Medical"].map(t => (
-                        <Pill
-                            key={t}
-                            active={formData.productType === t}
-                            onClick={() => updateField("productType", t)}
-                        >
-                            {t}
-                        </Pill>
-                    ))}
-                </ConfigRow>
-
                 {/* Specs Accordion */}
                 <div className="mt-6">
                     <button
@@ -533,10 +521,10 @@ export default function QuoteForm({
                                 {(formData.baseMaterial === "Flex"
                                     ? ["0.11mm", "0.12mm", "0.2mm"]
                                     : formData.baseMaterial === "Rogers"
-                                    ? ["0.51mm", "0.76mm", "1.52mm"]
-                                    : formData.baseMaterial === "PTFE Teflon"
-                                    ? ["0.76mm", "1.52mm"]
-                                    : ["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"]
+                                        ? ["0.51mm", "0.76mm", "1.52mm"]
+                                        : formData.baseMaterial === "PTFE Teflon"
+                                            ? ["0.76mm", "1.52mm"]
+                                            : ["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"]
                                 ).map(t => (
                                     <Pill
                                         key={t}
@@ -666,8 +654,8 @@ export default function QuoteForm({
                                 {(formData.baseMaterial === "Flex"
                                     ? ["ENIG"]
                                     : formData.baseMaterial === "Rogers" || formData.baseMaterial === "PTFE Teflon"
-                                    ? ["OSP", "ENIG", "HASL(with lead)", "LeadFree HASL"]
-                                    : ["OSP", "HASL(with lead)", "LeadFree HASL", "ENIG"]
+                                        ? ["OSP", "ENIG", "HASL(with lead)", "LeadFree HASL"]
+                                        : ["OSP", "HASL(with lead)", "LeadFree HASL", "ENIG"]
                                 ).map(s => (
                                     <Pill
                                         key={s}

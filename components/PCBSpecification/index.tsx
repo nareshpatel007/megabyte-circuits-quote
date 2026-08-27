@@ -9,8 +9,8 @@ import GerberUploader from "../GerberUploader";
 import GerberStackupPreview from "../GerberStackupPreview";
 import QuoteForm from "../QuoteForm";
 import { GerberFile, QuoteFormData, UploadResponse } from "../../lib/gerber/types";
-import { loadLayers, renderStack, renderWithGerbersRenderer, type RenderOptions, COLORS, FINISHES } from "../../lib/gerber/clientRenderer";
-import { type InputLayer } from "pcb-stackup";
+import { loadLayers, renderStack, renderWithGerbersRenderer, type RenderOptions, type InputLayer, COLORS, FINISHES } from "../../lib/gerber/clientRenderer";
+
 import { submitOrder, OrderFormData } from "../../lib/api/orderService";
 import Toast, { ToastType } from "../Toast";
 import { saveCartToBackend } from "@/lib/cartSession";
@@ -1008,6 +1008,11 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
     const handleUploadSuccess = async (res: UploadResponse, file: File) => {
         setUploadedFile(file);
+        setPreviewLoading(true);
+        setTopSvg("");
+        setBottomSvg("");
+
+
         if (res?.gerber_file_id) {
             setUploadedGerberFileId(res.gerber_file_id);
         }
@@ -1120,6 +1125,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 width: "0.00",
                 height: "0.00"
             });
+        } finally {
+            setPreviewLoading(false);
         }
     };
 
