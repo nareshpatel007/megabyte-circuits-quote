@@ -38,6 +38,8 @@ interface CartItem {
     height?: number | string;
     date: string;
     customerNote?: string;
+    baseUnitPrice?: number;
+    standardPricing?: any[];
 }
 
 export default function CartPage() {
@@ -153,96 +155,112 @@ export default function CartPage() {
 
     const handleQuantityChange = async (id: any, newQty: number) => {
         const strId = String(id);
-        const updated = cartItems.map((item) => {
-            if (String(item.id) === strId) {
-                const minQty = item.productType === "part" ? getMinCartQuantity() : 1;
-                const validQty = Math.max(minQty, isNaN(newQty) ? minQty : newQty);
-                if (item.productType === "part") {
-                    // Determine base unit price (unit price at qty 1)
-                    let basePrice = (item as any).baseUnitPrice;
-                    if (!basePrice) {
-                        const currentUnit = item.unitPrice || (item.qty > 0 ? item.price / item.qty : item.price);
-                        let oldMult = 1;
-                        if (item.qty >= 500) oldMult = 0.62;
-                        else if (item.qty >= 100) oldMult = 0.70;
-                        else if (item.qty >= 50) oldMult = 0.78;
-                        else if (item.qty >= 25) oldMult = 0.85;
-                        else if (item.qty >= 10) oldMult = 0.92;
-                        basePrice = currentUnit / oldMult;
+        const targetItem = cartItems.find((i) => String(i.id) === strId);
+        if (!targetItem) return;
+
+        const minQty = targetItem.productType === "part" ? getMinCartQuantity() : 1;
+        const validQty = Math.max(minQty, isNaN(newQty) ? minQty : newQty);
+
+        let updatedItem = { ...targetItem, qty: validQty };
+
+        if (targetItem.productType === "part") {
+            const partNum = (targetItem as any).partNumber || targetItem.boardName;
+            let standardPricing = (targetItem as any).standardPricing || (targetItem as any).StandardPricing;
+
+            // Fetch latest DB product details & standard pricing tiers if not cached on item
+            if ((!standardPricing || standardPricing.length === 0) && partNum) {
+                try {
+                    const res = await fetch(`/api/digikey/products/${encodeURIComponent(partNum)}`);
+                    if (res.ok) {
+                        const prodData = await res.json();
+                        standardPricing = prodData.StandardPricing || prodData.ProductVariations?.[0]?.StandardPricing;
                     }
-
-                    let multiplier = 1;
-                    if (validQty >= 500) multiplier = 0.62;
-                    else if (validQty >= 100) multiplier = 0.70;
-                    else if (validQty >= 50) multiplier = 0.78;
-                    else if (validQty >= 25) multiplier = 0.85;
-                    else if (validQty >= 10) multiplier = 0.92;
-
-                    const effectiveUnitPrice = Math.round(basePrice * multiplier * 100) / 100;
-                    const newPrice = Math.round(effectiveUnitPrice * validQty * 100) / 100;
-                    return {
-                        ...item,
-                        qty: validQty,
-                        price: newPrice,
-                        unitPrice: effectiveUnitPrice,
-                        baseUnitPrice: basePrice,
-                    };
-                } else {
-                    // Extract width & height (or parse from dimensions string '100x100mm')
-                    let w = Number(item.width);
-                    let h = Number(item.height);
-                    if ((!w || !h) && item.dimensions) {
-                        const match = item.dimensions.match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i);
-                        if (match) {
-                            w = parseFloat(match[1]);
-                            h = parseFloat(match[2]);
-                        }
-                    }
-                    if (!w) w = 100;
-                    if (!h) h = 100;
-
-                    // Compute PCB base price & recalculated shipping charge
-                    const prevShippingCharge = item.shippingCharge || 0;
-                    const prevPcbPrice = Math.max(item.price - prevShippingCharge, 0);
-
-                    // Base PCB price scales directly with quantity change if unitPrice isn't set
-                    const pcbUnitPrice = item.unitPrice || (item.qty > 0 ? prevPcbPrice / item.qty : prevPcbPrice);
-                    const newPcbPrice = Math.max(Math.round(pcbUnitPrice * validQty), 10);
-
-                    // Recalculate shipping fee based on updated weight (in kg)
-                    let newShippingCharge = prevShippingCharge;
-                    if (item.shippingOption) {
-                        const defaultShippingOptions = [
-                            { key: "standard", location: "Standard", method: "Standard", rate: 0 },
-                            { key: "plus", location: "Plus", method: "Plus", rate: 150 },
-                            { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
-                        ];
-                        const foundOpt = defaultShippingOptions.find(o =>
-                            `${o.location} - ${o.method}` === item.shippingOption ||
-                            o.location === item.shippingOption ||
-                            o.key === item.shippingOptionKey
-                        ) || defaultShippingOptions[0];
-
-                        const totalAreaInSqM = (w / 1000) * (h / 1000) * validQty;
-                        const weightPerSqM = item.material === "Flex" ? 0.3 : 3.8;
-                        const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
-                        const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
-                        newShippingCharge = Math.round(foundOpt.rate * chargedWeightKg);
-                    }
-
-                    const totalPriceWithShipping = newPcbPrice + newShippingCharge;
-
-                    return {
-                        ...item,
-                        qty: validQty,
-                        price: totalPriceWithShipping,
-                        unitPrice: pcbUnitPrice,
-                        shippingCharge: newShippingCharge
-                    };
+                } catch (e) {
+                    console.error("Failed to fetch product tiers:", e);
                 }
             }
-            return item;
-        });
+
+            let basePrice = (targetItem as any).baseUnitPrice || targetItem.unitPrice || targetItem.price;
+            let unitPrice = basePrice;
+
+            if (Array.isArray(standardPricing) && standardPricing.length > 0) {
+                const sortedPricing = [...standardPricing].sort((a, b) => b.BreakQuantity - a.BreakQuantity);
+                const applicableTier = sortedPricing.find((tier) => validQty >= tier.BreakQuantity);
+                if (applicableTier) {
+                    unitPrice = applicableTier.UnitPrice;
+                }
+            } else {
+                let multiplier = 1;
+                if (validQty >= 500) multiplier = 0.62;
+                else if (validQty >= 100) multiplier = 0.70;
+                else if (validQty >= 50) multiplier = 0.78;
+                else if (validQty >= 25) multiplier = 0.85;
+                else if (validQty >= 10) multiplier = 0.92;
+                unitPrice = basePrice * multiplier;
+            }
+
+            const effectiveUnitPrice = Math.round(unitPrice * 100) / 100;
+            const newPrice = Math.round(effectiveUnitPrice * validQty * 100) / 100;
+
+            updatedItem = {
+                ...updatedItem,
+                price: newPrice,
+                unitPrice: effectiveUnitPrice,
+                baseUnitPrice: basePrice,
+                standardPricing: standardPricing,
+            };
+        } else {
+            // Extract width & height (or parse from dimensions string '100x100mm')
+            let w = Number(targetItem.width);
+            let h = Number(targetItem.height);
+            if ((!w || !h) && targetItem.dimensions) {
+                const match = targetItem.dimensions.match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i);
+                if (match) {
+                    w = parseFloat(match[1]);
+                    h = parseFloat(match[2]);
+                }
+            }
+            if (!w) w = 100;
+            if (!h) h = 100;
+
+            // Compute PCB base price & recalculated shipping charge
+            const prevShippingCharge = targetItem.shippingCharge || 0;
+            const prevPcbPrice = Math.max(targetItem.price - prevShippingCharge, 0);
+
+            const pcbUnitPrice = targetItem.unitPrice || (targetItem.qty > 0 ? prevPcbPrice / targetItem.qty : prevPcbPrice);
+            const newPcbPrice = Math.max(Math.round(pcbUnitPrice * validQty), 10);
+
+            let newShippingCharge = prevShippingCharge;
+            if (targetItem.shippingOption) {
+                const defaultShippingOptions = [
+                    { key: "standard", location: "Standard", method: "Standard", rate: 0 },
+                    { key: "plus", location: "Plus", method: "Plus", rate: 150 },
+                    { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
+                ];
+                const foundOpt = defaultShippingOptions.find(o =>
+                    `${o.location} - ${o.method}` === targetItem.shippingOption ||
+                    o.location === targetItem.shippingOption ||
+                    o.key === targetItem.shippingOptionKey
+                ) || defaultShippingOptions[0];
+
+                const totalAreaInSqM = (w / 1000) * (h / 1000) * validQty;
+                const weightPerSqM = targetItem.material === "Flex" ? 0.3 : 3.8;
+                const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
+                const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
+                newShippingCharge = Math.round(foundOpt.rate * chargedWeightKg);
+            }
+
+            const totalPriceWithShipping = newPcbPrice + newShippingCharge;
+
+            updatedItem = {
+                ...updatedItem,
+                price: totalPriceWithShipping,
+                unitPrice: pcbUnitPrice,
+                shippingCharge: newShippingCharge
+            };
+        }
+
+        const updated = cartItems.map((item) => (String(item.id) === strId ? updatedItem : item));
         await saveCart(updated);
     };
 
@@ -336,14 +354,6 @@ export default function CartPage() {
     );
 
     const selectedTotal = effectiveSummaryItems.reduce((acc, item) => acc + item.price, 0);
-
-    const selectedShippingOptionsList = effectiveSummaryItems
-        .filter((item) => item.shippingOption)
-        .map((item) => ({
-            name: item.boardName || item.gerberFileName || "PCB",
-            option: item.shippingOption!,
-            charge: item.shippingCharge || 0,
-        }));
 
     const handleCheckoutClick = () => {
         if (selectedCartItemsList.length === 0) return;
@@ -513,7 +523,7 @@ export default function CartPage() {
                                                                     type="button"
                                                                     onClick={() => {
                                                                         const min = item.productType === "part" ? getMinCartQuantity() : 1;
-                                                                        const step = item.productType === "part" ? 10 : 1;
+                                                                        const step = 1;
                                                                         handleQuantityChange(item.id, Math.max(min, (item.qty || min) - step));
                                                                     }}
                                                                     className="w-6 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
@@ -523,7 +533,7 @@ export default function CartPage() {
                                                                 <input
                                                                     type="number"
                                                                     min={item.productType === "part" ? getMinCartQuantity() : 1}
-                                                                    step={item.productType === "part" ? 10 : 1}
+                                                                    step={1}
                                                                     value={item.qty ?? (item.productType === "part" ? getMinCartQuantity() : 1)}
                                                                     onChange={(e) => {
                                                                         const val = parseInt(e.target.value, 10);
@@ -535,7 +545,7 @@ export default function CartPage() {
                                                                     type="button"
                                                                     onClick={() => {
                                                                         const min = item.productType === "part" ? getMinCartQuantity() : 1;
-                                                                        const step = item.productType === "part" ? 10 : 1;
+                                                                        const step = 1;
                                                                         handleQuantityChange(item.id, (item.qty || min) + step);
                                                                     }}
                                                                     className="w-6 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
