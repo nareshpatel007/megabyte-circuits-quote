@@ -43,7 +43,7 @@ interface CartItem {
 export default function CartPage() {
     const router = useRouter();
     const { symbol, formatPrice } = useCurrency();
-    const [activeTab, setActiveTab] = useState<"all" | "pcb" | "part" | "stencil">("all");
+    const [activeTab, setActiveTab] = useState<"all" | "pcb" | "part" | "stencil">("pcb");
     const [searchQuery, setSearchQuery] = useState("");
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
@@ -278,9 +278,21 @@ export default function CartPage() {
 
     const toggleSelectItem = (id: any) => {
         const strId = String(id);
+        const targetItem = cartItems.find((i) => String(i.id) === strId);
+        if (!targetItem) return;
+
         if (selectedItemIds.includes(strId)) {
             setSelectedItemIds(selectedItemIds.filter((itemId) => itemId !== strId));
         } else {
+            const existingSelected = cartItems.filter((i) => selectedItemIds.includes(String(i.id)));
+            if (existingSelected.length > 0) {
+                const existingCategory = existingSelected[0].productType === "part" ? "part" : "pcb";
+                const targetCategory = targetItem.productType === "part" ? "part" : "pcb";
+                if (existingCategory !== targetCategory) {
+                    setSelectedItemIds([strId]);
+                    return;
+                }
+            }
             setSelectedItemIds([...selectedItemIds, strId]);
         }
     };
@@ -289,22 +301,43 @@ export default function CartPage() {
     const partCount = cartItems.filter((i) => i.productType === "part").length;
     const stencilCount = cartItems.filter((i) => i.productType === "stencil").length;
 
-    const selectedCartItemsList = cartItems.filter((item) => selectedItemIds.includes(String(item.id)));
-    const selectedCount = selectedCartItemsList.length;
+    // Items matching the active tab (regardless of search filter)
+    const tabItems = cartItems.filter((item) => {
+        if (activeTab === "pcb") return item.productType === "pcb";
+        if (activeTab === "part") return item.productType === "part";
+        if (activeTab === "stencil") return item.productType === "stencil";
+        return true;
+    });
 
-    const selectedShippingTotal = selectedCartItemsList.reduce(
+    const selectedCartItemsList = cartItems.filter(
+        (item) =>
+            selectedItemIds.includes(String(item.id)) &&
+            (activeTab === "pcb"
+                ? item.productType === "pcb"
+                : activeTab === "part"
+                ? item.productType === "part"
+                : item.productType === "stencil")
+    );
+    
+    // Summary ALWAYS reflects the currently active tab.
+    // If specific items in the active tab are checked, calculate those.
+    // If no items in active tab are checked, calculate all items in the active tab.
+    const effectiveSummaryItems = selectedCartItemsList.length > 0 ? selectedCartItemsList : tabItems;
+    const selectedCount = effectiveSummaryItems.length;
+
+    const selectedShippingTotal = effectiveSummaryItems.reduce(
         (acc, item) => acc + (item.shippingCharge || 0),
         0
     );
 
-    const selectedSubtotal = selectedCartItemsList.reduce(
+    const selectedSubtotal = effectiveSummaryItems.reduce(
         (acc, item) => acc + (item.price - (item.shippingCharge || 0)),
         0
     );
 
-    const selectedTotal = selectedCartItemsList.reduce((acc, item) => acc + item.price, 0);
+    const selectedTotal = effectiveSummaryItems.reduce((acc, item) => acc + item.price, 0);
 
-    const selectedShippingOptionsList = selectedCartItemsList
+    const selectedShippingOptionsList = effectiveSummaryItems
         .filter((item) => item.shippingOption)
         .map((item) => ({
             name: item.boardName || item.gerberFileName || "PCB",
@@ -313,11 +346,10 @@ export default function CartPage() {
         }));
 
     const handleCheckoutClick = () => {
-        if (selectedCount === 0) return;
+        if (selectedCartItemsList.length === 0) return;
 
         // Store ONLY checked items for checkout processing
-        const selectedCartItems = cartItems.filter((item) => selectedItemIds.includes(String(item.id)));
-        localStorage.setItem("megabyte_checkout_items", JSON.stringify(selectedCartItems));
+        localStorage.setItem("megabyte_checkout_items", JSON.stringify(selectedCartItemsList));
 
         const userToken = typeof window !== "undefined" ? (localStorage.getItem("megabyte_user_token") || localStorage.getItem("megabyte_user")) : null;
         if (!userToken) {
@@ -361,7 +393,7 @@ export default function CartPage() {
                             <div className="bg-white rounded-xl shadow-xs border border-gray-200/80 p-4 sm:p-5">
                                 <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gray-200/80">
                                     <div className="flex items-center gap-6 overflow-x-auto text-xs sm:text-sm font-semibold text-gray-600 select-none">
-                                        <button type="button" onClick={() => setActiveTab("all")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "all" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>All ({cartItems.length})</button>
+                                        {/* <button type="button" onClick={() => setActiveTab("all")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "all" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>All ({cartItems.length})</button> */}
                                         <button type="button" onClick={() => setActiveTab("pcb")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "pcb" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>Megabyte PCB ({pcbCount})</button>
                                         <button type="button" onClick={() => setActiveTab("part")} className={`pb-1 transition-colors cursor-pointer whitespace-nowrap ${activeTab === "part" ? "text-primary border-b-2 border-primary font-bold" : "hover:text-gray-900"}`}>Parts ({partCount})</button>
                                         {stencilCount > 0 && (
@@ -383,8 +415,12 @@ export default function CartPage() {
                                         </div>
                                         <div className="hidden sm:flex items-center gap-3 sm:gap-5 text-[11px] uppercase">
                                             <span className="w-24 text-center">Qty</span>
-                                            <span className="w-20 text-center">Build Time</span>
-                                            <span className="w-36 text-center">Delivery Option</span>
+                                            {activeTab !== "part" && (
+                                                <>
+                                                    <span className="w-20 text-center">Build Time</span>
+                                                    <span className="w-36 text-center">Delivery Option</span>
+                                                </>
+                                            )}
                                             <span className="w-24 text-right">Price</span>
                                             <div className="w-8 flex justify-center">
                                                 <button type="button" onClick={handleRemoveSelectedItems} disabled={selectedItemIds.length === 0} className={`p-1 rounded transition-colors ${selectedItemIds.length > 0 ? "text-red-500 hover:bg-red-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`} title="Delete Selected">
@@ -508,21 +544,25 @@ export default function CartPage() {
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                        <div className="text-xs font-semibold text-gray-600 w-20 text-center flex justify-center items-center">
-                                                            {item.productType === "part" ? "-" : (item.buildTime || "-")}
-                                                        </div>
-                                                        <div className="w-36 text-center flex flex-col justify-center items-center">
-                                                            {item.shippingOption ? (
-                                                                <div className="bg-blue-50/80 border border-blue-100 rounded-lg px-2 py-1 text-[11px] font-bold text-blue-900 leading-tight">
-                                                                    <div>{item.shippingOption}</div>
-                                                                    <div className="text-[10px] text-primary font-semibold mt-0.5">
-                                                                        Fee: {formatPrice(item.shippingCharge || 0)}
-                                                                    </div>
+                                                        {item.productType !== "part" && (
+                                                            <>
+                                                                <div className="text-xs font-semibold text-gray-600 w-20 text-center flex justify-center items-center">
+                                                                    {item.buildTime || "-"}
                                                                 </div>
-                                                            ) : (
-                                                                <span className="text-xs text-gray-400 font-medium">-</span>
-                                                            )}
-                                                        </div>
+                                                                <div className="w-36 text-center flex flex-col justify-center items-center">
+                                                                    {item.shippingOption ? (
+                                                                        <div className="bg-blue-50/80 border border-blue-100 rounded-lg px-2 py-1 text-[11px] font-bold text-blue-900 leading-tight">
+                                                                            <div>{item.shippingOption}</div>
+                                                                            <div className="text-[10px] text-primary font-semibold mt-0.5">
+                                                                                Fee: {formatPrice(item.shippingCharge || 0)}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-xs text-gray-400 font-medium">-</span>
+                                                                    )}
+                                                                </div>
+                                                            </>
+                                                        )}
                                                         <div className="text-sm font-extrabold text-primary w-24 text-right flex justify-end items-center">{formatPrice(item.price)}</div>
                                                         <div className="w-8 flex justify-center items-center">
                                                             <button type="button" onClick={() => handleRemoveItem(item.id)} className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer" title="Remove item"><Trash2 className="w-4 h-4" /></button>
@@ -540,7 +580,7 @@ export default function CartPage() {
                             <div className="bg-white rounded-xl shadow-xs border border-gray-200/80 p-5 space-y-4 sticky top-20">
                                 <h2 className="text-xs font-bold text-gray-700 tracking-wider uppercase border-b border-gray-100 pb-3">SUMMARY</h2>
 
-                                {selectedCartItemsList.length > 0 && (
+                                {selectedCount > 0 && (
                                     <div className="space-y-2 py-2 border-b border-gray-100 text-xs">
                                         <div className="flex items-center justify-between text-gray-600 font-medium">
                                             <span>Subtotal ({selectedCount} {selectedCount === 1 ? "item" : "items"})</span>
