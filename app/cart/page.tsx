@@ -51,8 +51,24 @@ export default function CartPage() {
     const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [minPartsOrderAmount, setMinPartsOrderAmount] = useState<number>(3000);
 
     const saveBackendTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        const fetchPricingConfig = async () => {
+            try {
+                const res = await fetch("/api/pcb-pricing");
+                const data = await res.json();
+                if (data.success && data.data && data.data.minPartsOrderAmount !== undefined) {
+                    setMinPartsOrderAmount(Number(data.data.minPartsOrderAmount));
+                }
+            } catch (err) {
+                console.error("Failed to load pcb-pricing config in cart:", err);
+            }
+        };
+        fetchPricingConfig();
+    }, []);
 
     useEffect(() => {
         try {
@@ -391,6 +407,7 @@ export default function CartPage() {
 
     const handleCheckoutClick = async () => {
         if (selectedCartItemsList.length === 0) return;
+        if (activeTab === "part" && selectedTotal < minPartsOrderAmount) return;
 
         if (saveBackendTimerRef.current) {
             clearTimeout(saveBackendTimerRef.current);
@@ -649,7 +666,29 @@ export default function CartPage() {
                                     <span>Total Amount</span>
                                     <span className="text-lg text-primary">{formatPrice(selectedTotal)}</span>
                                 </div>
-                                <button type="button" onClick={handleCheckoutClick} disabled={selectedItemIds.length === 0} className={`w-full py-3 rounded-full text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs ${selectedItemIds.length > 0 ? "bg-primary hover:bg-secondary cursor-pointer active:scale-95" : "bg-gray-300 cursor-not-allowed"}`}>
+
+                                {activeTab === "part" && selectedTotal < minPartsOrderAmount && (
+                                    <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-xs flex items-start gap-2">
+                                        <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="font-bold">Minimum Order Requirement</p>
+                                            <p className="text-[11px] text-amber-700 mt-0.5">
+                                                Minimum order amount for parts is {formatPrice(minPartsOrderAmount)}. Please add {formatPrice(minPartsOrderAmount - selectedTotal)} more to proceed.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={handleCheckoutClick}
+                                    disabled={selectedItemIds.length === 0 || (activeTab === "part" && selectedTotal < minPartsOrderAmount)}
+                                    className={`w-full py-3 rounded-full text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs ${
+                                        selectedItemIds.length > 0 && !(activeTab === "part" && selectedTotal < minPartsOrderAmount)
+                                            ? "bg-primary hover:bg-secondary cursor-pointer active:scale-95"
+                                            : "bg-gray-300 cursor-not-allowed opacity-75"
+                                    }`}
+                                >
                                     <ShieldCheck className="w-4 h-4" />
                                     <span>Secure Checkout</span>
                                 </button>
