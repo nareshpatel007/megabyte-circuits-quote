@@ -1534,7 +1534,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                     <div className="flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-semibold">
                                         <span className="flex items-center gap-1.5">
                                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                            {isJlcpcbLoading ? "Fetching Live JLCPCB Quote..." : `${formData.layers} Layer PCB (JLCPCB Live API Pricing)`}
                                         </span>
                                     </div>
                                 )}
