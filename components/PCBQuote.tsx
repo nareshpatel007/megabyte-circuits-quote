@@ -688,6 +688,9 @@ export default function PCBQuote() {
                                                 if (m === "Flex" && !["1", "2", "4"].includes(layers)) {
                                                     setLayers("2");
                                                 }
+                                                if (["Rogers", "PTFE", "Teflon"].includes(m)) {
+                                                    setLayers("2");
+                                                }
                                             }}
                                         >
                                             {m}
@@ -727,7 +730,12 @@ export default function PCBQuote() {
 
                                 <ConfigRow label="Layers" tooltip="Number of copper layers.">
                                     <div className="flex flex-wrap items-center gap-2">
-                                        {(baseMaterial === "Flex" ? ["1", "2", "4"] : ["1", "2", "4", "6", "8", "10", "12", "14", "16", "More >"]).map(l => (
+                                        {(baseMaterial === "Rogers" || baseMaterial === "PTFE" || baseMaterial === "Teflon" || baseMaterial === "PTFE Teflon"
+                                            ? ["2"]
+                                            : baseMaterial === "Flex"
+                                                ? ["1", "2", "4"]
+                                                : ["1", "2", "4", "6", "8", "10", "12", "14", "16", "More >"]
+                                        ).map(l => (
                                             <Pill
                                                 key={l}
                                                 active={layers === l}

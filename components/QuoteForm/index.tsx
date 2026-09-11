@@ -159,6 +159,7 @@ export default function QuoteForm({
                 else if (next.layers === "2") next.thickness = "0.11mm";
                 else if (next.layers === "4") next.thickness = "0.2mm";
             } else if (field === "baseMaterial" && value === "Rogers") {
+                next.layers = "2";
                 next.materialType = "RO4350B(Dk=3.48,Df=0.0037)";
                 next.surfaceFinish = "ENIG";
                 next.goldThickness = next.goldThickness || "1 U\"";
@@ -166,6 +167,7 @@ export default function QuoteForm({
                     next.thickness = "0.51mm";
                 }
             } else if (field === "baseMaterial" && value === "PTFE Teflon") {
+                next.layers = "2";
                 next.materialType = "ZYF300CA-C(Dk=2.94,Df=0.0016)";
                 next.surfaceFinish = "ENIG";
                 next.goldThickness = next.goldThickness || "1 U\"";
@@ -402,7 +404,10 @@ export default function QuoteForm({
 
                 <ConfigRow label="Layers" tooltip="Total layers count. Matches coordinates in drill outline files.">
                     <div className="flex items-center gap-2">
-                        {["1", "2", "4"].map(l => (
+                        {(formData.baseMaterial === "Rogers" || formData.baseMaterial === "PTFE Teflon"
+                            ? ["2"]
+                            : ["1", "2", "4"]
+                        ).map(l => (
                             <Pill
                                 key={l}
                                 active={formData.layers === l}
@@ -416,7 +421,7 @@ export default function QuoteForm({
                         ))}
                     </div>
 
-                    {formData.baseMaterial !== "Flex" && (
+                    {formData.baseMaterial !== "Flex" && formData.baseMaterial !== "Rogers" && formData.baseMaterial !== "PTFE Teflon" && (
                         <div className="flex flex-wrap items-center gap-2.5 px-3 py-1.5 bg-primary/5 border border-primary/30 rounded-lg shadow-2xs">
                             <span className="text-xs font-bold text-primary flex items-center gap-1">
                                 ✨ High Precision PCB
