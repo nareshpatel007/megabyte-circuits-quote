@@ -105,6 +105,8 @@ export interface QuoteFormData {
     rogersMaterial?: string;
     ptfeMaterial?: string;
     datasheetLink?: string;
+    panelColumn?: string;
+    panelRow?: string;
     buildTime: string;
     boardName: string;
     userMobile: string;

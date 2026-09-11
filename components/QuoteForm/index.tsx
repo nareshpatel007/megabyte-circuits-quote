@@ -5,6 +5,7 @@ import { Info, Check, ChevronUp, ChevronDown, Pencil } from "lucide-react";
 import { QuoteFormData, ParsedGerberFile } from "../../lib/gerber/types";
 import QuantitySelectorPopover from "../QuantitySelectorPopover";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { PanelModal } from "../PanelModal";
 
 interface QuoteFormProps {
     formData: QuoteFormData;
@@ -141,6 +142,8 @@ export default function QuoteForm({
     topSvg = "",
     bottomSvg = ""
 }: QuoteFormProps) {
+    const [panelModalOpen, setPanelModalOpen] = useState(false);
+
     const updateField = (field: keyof QuoteFormData, value: any) => {
         setFormData(prev => {
             const next = { ...prev, [field]: value };
@@ -552,12 +555,49 @@ export default function QuoteForm({
                                     <Pill
                                         key={d}
                                         active={(formData.deliveryFormat || "Single PCB") === d}
-                                        onClick={() => updateField("deliveryFormat", d)}
+                                        onClick={() => {
+                                            updateField("deliveryFormat", d);
+                                            if (d === "Panel by Megabyte Circuit") {
+                                                setPanelModalOpen(true);
+                                            }
+                                        }}
                                     >
                                         {d}
                                     </Pill>
                                 ))}
                             </ConfigRow>
+
+                            {(formData.deliveryFormat === "Panel by Customer") && (
+                                <ConfigRow label="Panel Format" tooltip="Specify number of columns and rows in your panel layout.">
+                                    <div className="flex flex-col space-y-1.5 w-full">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm font-semibold text-gray-700">Column :</span>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={formData.panelColumn || ""}
+                                                    onChange={(e) => updateField("panelColumn", e.target.value)}
+                                                    className="w-20 px-2.5 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm font-semibold text-gray-700">Row :</span>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={formData.panelRow || ""}
+                                                    onChange={(e) => updateField("panelRow", e.target.value)}
+                                                    className="w-20 px-2.5 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                                />
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-red-500 font-medium">
+                                            *You supply the panel data. If need us to panelize your board, pls select &quot;Panel by Megabyte Circuit&quot; option.
+                                        </p>
+                                    </div>
+                                </ConfigRow>
+                            )}
 
 
 
@@ -1147,6 +1187,18 @@ export default function QuoteForm({
                 </div> */}
 
 
+            <PanelModal
+                isOpen={panelModalOpen}
+                onClose={() => setPanelModalOpen(false)}
+                onSubmit={(data) => {
+                    updateField("panelColumn", data.panelColumn);
+                    updateField("panelRow", data.panelRow);
+                }}
+                singleWidth={formData.width}
+                singleHeight={formData.height}
+                initialColumn={formData.panelColumn}
+                initialRow={formData.panelRow}
+            />
             </div>
         </TooltipProvider>
     );

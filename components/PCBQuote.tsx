@@ -32,6 +32,7 @@ import JSZip from "jszip";
 import { processGerberFiles, ProcessedGerberProject } from "@/lib/gerber-engine";
 import { mapPCBAnalysisToQuoteOptions } from "@/lib/pcb-quote-integration/extractionMapper";
 import { GerberViewer } from "@/components/gerber-viewer";
+import { PanelModal } from "@/components/PanelModal";
 
 // Helpers
 const Pill = ({
@@ -470,6 +471,9 @@ export default function PCBQuote() {
     const [productType, setProductType] = useState("Industrial");
     const [differentDesign, setDifferentDesign] = useState("1");
     const [deliveryFormat, setDeliveryFormat] = useState("Single PCB");
+    const [panelModalOpen, setPanelModalOpen] = useState(false);
+    const [panelColumn, setPanelColumn] = useState("");
+    const [panelRow, setPanelRow] = useState("");
     const [thickness, setThickness] = useState("1.6mm");
     const [pcbColor, setPcbColor] = useState("#52c41a"); // green hex
     const [silkscreen, setSilkscreen] = useState("White");
@@ -879,9 +883,52 @@ export default function PCBQuote() {
 
                                         <ConfigRow label="Delivery Format">
                                             {["Single PCB", "Panel by Customer", "Panel by Megabyte Circuit"].map(d => (
-                                                <Pill key={d} active={deliveryFormat === d} onClick={() => setDeliveryFormat(d)}>{d}</Pill>
+                                                <Pill
+                                                    key={d}
+                                                    active={deliveryFormat === d}
+                                                    onClick={() => {
+                                                        setDeliveryFormat(d);
+                                                        if (d === "Panel by Megabyte Circuit") {
+                                                            setPanelModalOpen(true);
+                                                        }
+                                                    }}
+                                                >
+                                                    {d}
+                                                </Pill>
                                             ))}
                                         </ConfigRow>
+
+                                        {deliveryFormat === "Panel by Customer" && (
+                                            <ConfigRow label="Panel Format">
+                                                <div className="flex flex-col space-y-1.5 w-full">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-sm font-semibold text-gray-700">Column :</span>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                value={panelColumn}
+                                                                onChange={(e) => setPanelColumn(e.target.value)}
+                                                                className="w-20 px-2.5 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                                            />
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-sm font-semibold text-gray-700">Row :</span>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                value={panelRow}
+                                                                onChange={(e) => setPanelRow(e.target.value)}
+                                                                className="w-20 px-2.5 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-red-500 font-medium">
+                                                        *You supply the panel data. If need us to panelize your board, pls select &quot;Panel by Megabyte Circuit&quot; option.
+                                                    </p>
+                                                </div>
+                                            </ConfigRow>
+                                        )}
 
                                         <ConfigRow label="PCB Thickness">
                                             {(baseMaterial === "Flex"
@@ -1290,6 +1337,19 @@ export default function PCBQuote() {
                     </div>
                 </div>
             </footer>
+
+            <PanelModal
+                isOpen={panelModalOpen}
+                onClose={() => setPanelModalOpen(false)}
+                onSubmit={(data) => {
+                    setPanelColumn(data.panelColumn);
+                    setPanelRow(data.panelRow);
+                }}
+                singleWidth={pcbWidth}
+                singleHeight={pcbHeight}
+                initialColumn={panelColumn}
+                initialRow={panelRow}
+            />
         </div>
     );
 }
