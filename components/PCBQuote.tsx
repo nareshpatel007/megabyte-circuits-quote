@@ -704,7 +704,19 @@ export default function PCBQuote() {
                                                     key={sub}
                                                     active={substrateType === sub}
                                                     disabled={isDisabled}
-                                                    onClick={() => setSubstrateType(sub)}
+                                                    onClick={() => {
+                                                        setSubstrateType(sub);
+                                                        if (sub === "Transparent") {
+                                                            if (layers === "1") setThickness("0.14mm");
+                                                            else if (layers === "2") setThickness("0.24mm");
+                                                        } else if (sub === "50µm dielectric thickness") {
+                                                            if (layers === "1") setThickness("0.12mm");
+                                                            else if (layers === "2") setThickness("0.19mm");
+                                                        } else {
+                                                            if (layers === "1") setThickness("0.07mm");
+                                                            else if (layers === "2") setThickness("0.11mm");
+                                                        }
+                                                    }}
                                                 >
                                                     {sub}
                                                 </Pill>
@@ -721,8 +733,19 @@ export default function PCBQuote() {
                                                 active={layers === l}
                                                 onClick={() => {
                                                     setLayers(l);
-                                                    if (baseMaterial === "Flex" && l === "4") {
-                                                        setSubstrateType("25µm dielectric thickness");
+                                                    if (baseMaterial === "Flex") {
+                                                        if (l === "4") {
+                                                            setSubstrateType("25µm dielectric thickness");
+                                                            setThickness("0.2mm");
+                                                        } else if (l === "1") {
+                                                            if (substrateType === "Transparent") setThickness("0.14mm");
+                                                            else if (substrateType === "50µm dielectric thickness") setThickness("0.12mm");
+                                                            else setThickness("0.07mm");
+                                                        } else if (l === "2") {
+                                                            if (substrateType === "Transparent") setThickness("0.24mm");
+                                                            else if (substrateType === "50µm dielectric thickness") setThickness("0.19mm");
+                                                            else setThickness("0.11mm");
+                                                        }
                                                     }
                                                     setFieldSources(prev => ({ ...prev, layers: "user-selected" }));
                                                 }}
@@ -854,11 +877,24 @@ export default function PCBQuote() {
 
                                         <ConfigRow label="PCB Thickness">
                                             {(baseMaterial === "Flex"
-                                                ? (layers === "1"
-                                                    ? [{ val: "0.07mm", disabled: false }, { val: "0.11mm", disabled: false }]
-                                                    : layers === "4"
-                                                        ? [{ val: "0.2mm", disabled: false }, { val: "0.25mm", disabled: false }, { val: "0.3mm", disabled: false }, { val: "0.35mm", disabled: false }, { val: "0.4mm", disabled: true }, { val: "0.45mm", disabled: true }]
-                                                        : [{ val: "0.11mm", disabled: false }, { val: "0.12mm", disabled: false }, { val: "0.2mm", disabled: false }]
+                                                ? (substrateType === "Transparent"
+                                                    ? (layers === "1"
+                                                        ? [{ val: "0.14mm", disabled: false }]
+                                                        : [{ val: "0.24mm", disabled: false }]
+                                                      )
+                                                    : substrateType === "50µm dielectric thickness"
+                                                        ? (layers === "1"
+                                                            ? [{ val: "0.07mm", disabled: true }, { val: "0.12mm", disabled: false }]
+                                                            : layers === "4"
+                                                                ? [{ val: "0.2mm", disabled: false }, { val: "0.25mm", disabled: false }, { val: "0.3mm", disabled: false }, { val: "0.35mm", disabled: false }, { val: "0.4mm", disabled: true }, { val: "0.45mm", disabled: true }]
+                                                                : [{ val: "0.11mm", disabled: true }, { val: "0.12mm", disabled: true }, { val: "0.19mm", disabled: false }, { val: "0.2mm", disabled: false }]
+                                                          )
+                                                        : (layers === "1"
+                                                            ? [{ val: "0.07mm", disabled: false }, { val: "0.11mm", disabled: false }]
+                                                            : layers === "4"
+                                                                ? [{ val: "0.2mm", disabled: false }, { val: "0.25mm", disabled: false }, { val: "0.3mm", disabled: false }, { val: "0.35mm", disabled: false }, { val: "0.4mm", disabled: true }, { val: "0.45mm", disabled: true }]
+                                                                : [{ val: "0.11mm", disabled: false }, { val: "0.12mm", disabled: false }, { val: "0.2mm", disabled: false }]
+                                                          )
                                                   )
                                                 : ["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(v => ({ val: v, disabled: false }))
                                             ).map(item => (
@@ -868,11 +904,15 @@ export default function PCBQuote() {
 
                                         {baseMaterial === "Flex" ? (
                                             <ConfigRow label="Coverlay Color">
-                                                <div className="flex gap-3">
-                                                    <ColorCircle color="#fadb14" active={pcbColor === "#fadb14"} onClick={() => setPcbColor("#fadb14")} />
-                                                    <ColorCircle color="#000000" active={pcbColor === "#000000"} onClick={() => setPcbColor("#000000")} />
-                                                    <ColorCircle color="#ffffff" active={pcbColor === "#ffffff"} onClick={() => setPcbColor("#ffffff")} />
-                                                </div>
+                                                {substrateType === "Transparent" ? (
+                                                    <Pill active={true} onClick={() => {}}>Transparent</Pill>
+                                                ) : (
+                                                    <div className="flex gap-3">
+                                                        <ColorCircle color="#fadb14" active={pcbColor === "#fadb14"} onClick={() => setPcbColor("#fadb14")} />
+                                                        <ColorCircle color="#000000" active={pcbColor === "#000000"} onClick={() => setPcbColor("#000000")} />
+                                                        <ColorCircle color="#ffffff" active={pcbColor === "#ffffff"} onClick={() => setPcbColor("#ffffff")} />
+                                                    </div>
+                                                )}
                                             </ConfigRow>
                                         ) : (
                                             <ConfigRow label="PCB Color">
@@ -905,15 +945,40 @@ export default function PCBQuote() {
 
                                         {baseMaterial !== "Flex" && (
                                             <ConfigRow label="Material Type">
-                                                {["FR4-TG135"].map(m => (
+                                                {(baseMaterial === "Rogers"
+                                                    ? ["RO4350B(Dk=3.48,Df=0.0037)"]
+                                                    : baseMaterial === "PTFE" || baseMaterial === "PTFE Teflon"
+                                                        ? [
+                                                            "ZYF300CA-P(Dk=3.0,Df=0.0018)",
+                                                            "ZYF300CA-C(Dk=2.94,Df=0.0016)",
+                                                            "ZYF265D(Dk=2.65,Df=0.0019)",
+                                                            "ZYF255DA(Dk=2.55,Df=0.0018)"
+                                                          ]
+                                                        : ["FR4-TG135"]
+                                                ).map(m => (
                                                     <Pill key={m} active={materialType === m} onClick={() => setMaterialType(m)}>{m}</Pill>
                                                 ))}
                                             </ConfigRow>
                                         )}
 
                                         <ConfigRow label="Surface Finish">
-                                            {(baseMaterial === "Flex" ? ["ENIG"] : ["HASL(Leaded)", "Roller Tin"]).map(s => (
-                                                <Pill key={s} active={surfaceFinish === s} onClick={() => setSurfaceFinish(s)} activeColor="blue">{s}</Pill>
+                                            {(baseMaterial === "Flex"
+                                                ? [{ val: "ENIG", disabled: false }]
+                                                : baseMaterial === "Rogers" || baseMaterial === "PTFE" || baseMaterial === "PTFE Teflon"
+                                                    ? [
+                                                        { val: "OSP", disabled: false },
+                                                        { val: "ENIG", disabled: false },
+                                                        { val: "HASL(with lead)", disabled: true },
+                                                        { val: "LeadFree HASL", disabled: true }
+                                                      ]
+                                                    : [
+                                                        { val: "OSP", disabled: false },
+                                                        { val: "HASL(Leaded)", disabled: false },
+                                                        { val: "LeadFree HASL", disabled: false },
+                                                        { val: "ENIG", disabled: false }
+                                                      ]
+                                            ).map(item => (
+                                                <Pill key={item.val} disabled={item.disabled} active={surfaceFinish === item.val} onClick={() => setSurfaceFinish(item.val)} activeColor="blue">{item.val}</Pill>
                                             ))}
                                         </ConfigRow>
 

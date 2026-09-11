@@ -158,12 +158,50 @@ export default function QuoteForm({
                 if (next.layers === "1") next.thickness = "0.07mm";
                 else if (next.layers === "2") next.thickness = "0.11mm";
                 else if (next.layers === "4") next.thickness = "0.2mm";
+            } else if (field === "baseMaterial" && value === "Rogers") {
+                next.materialType = "RO4350B(Dk=3.48,Df=0.0037)";
+                next.surfaceFinish = "ENIG";
+                next.goldThickness = next.goldThickness || "1 U\"";
+                if (!["0.51mm", "0.76mm", "1.52mm"].includes(next.thickness)) {
+                    next.thickness = "0.51mm";
+                }
+            } else if (field === "baseMaterial" && value === "PTFE Teflon") {
+                next.materialType = "ZYF300CA-C(Dk=2.94,Df=0.0016)";
+                next.surfaceFinish = "ENIG";
+                next.goldThickness = next.goldThickness || "1 U\"";
+                if (!["0.76mm", "1.52mm"].includes(next.thickness)) {
+                    next.thickness = "0.76mm";
+                }
+            } else if (field === "substrateType" && next.baseMaterial === "Flex") {
+                if (value === "Transparent") {
+                    next.coverlayColor = "Transparent";
+                    if (next.layers === "1") next.thickness = "0.14mm";
+                    else if (next.layers === "2") next.thickness = "0.24mm";
+                } else {
+                    if (next.coverlayColor === "Transparent") {
+                        next.coverlayColor = "Yellow";
+                    }
+                    if (value === "50µm dielectric thickness") {
+                        if (next.layers === "1") next.thickness = "0.12mm";
+                        else if (next.layers === "2") next.thickness = "0.19mm";
+                    } else if (value === "25µm dielectric thickness") {
+                        if (next.layers === "1") next.thickness = "0.07mm";
+                        else if (next.layers === "2") next.thickness = "0.11mm";
+                    }
+                }
             } else if (field === "layers" && next.baseMaterial === "Flex") {
-                if (value === "1") next.thickness = "0.07mm";
-                else if (value === "2") next.thickness = "0.11mm";
-                else if (value === "4") {
+                if (value === "1") {
+                    if (next.substrateType === "Transparent") next.thickness = "0.14mm";
+                    else if (next.substrateType === "50µm dielectric thickness") next.thickness = "0.12mm";
+                    else next.thickness = "0.07mm";
+                } else if (value === "2") {
+                    if (next.substrateType === "Transparent") next.thickness = "0.24mm";
+                    else if (next.substrateType === "50µm dielectric thickness") next.thickness = "0.19mm";
+                    else next.thickness = "0.11mm";
+                } else if (value === "4") {
                     next.thickness = "0.2mm";
                     next.substrateType = "25µm dielectric thickness";
+                    if (next.coverlayColor === "Transparent") next.coverlayColor = "Yellow";
                 }
             }
             return next;
@@ -537,38 +575,57 @@ export default function QuoteForm({
 
                             {/* PCB Thickness - Dynamic options for Flex vs Others */}
                             <ConfigRow label="PCB Thickness">
-                                {(formData.baseMaterial === "Flex"
-                                    ? (formData.layers === "1"
-                                        ? [{ val: "0.07mm", disabled: false }, { val: "0.11mm", disabled: false }]
-                                        : formData.layers === "4"
-                                            ? [{ val: "0.2mm", disabled: false }, { val: "0.25mm", disabled: false }, { val: "0.3mm", disabled: false }, { val: "0.35mm", disabled: false }, { val: "0.4mm", disabled: true }, { val: "0.45mm", disabled: true }]
-                                            : [{ val: "0.11mm", disabled: false }, { val: "0.12mm", disabled: false }, { val: "0.2mm", disabled: false }]
-                                      )
-                                    : formData.baseMaterial === "Rogers"
-                                        ? ["0.51mm", "0.76mm", "1.52mm"].map(v => ({ val: v, disabled: false }))
-                                        : formData.baseMaterial === "PTFE Teflon"
-                                            ? ["0.76mm", "1.52mm"].map(v => ({ val: v, disabled: false }))
-                                            : ["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(v => ({ val: v, disabled: false }))
-                                ).map(item => (
-                                    <Pill
-                                        key={item.val}
-                                        disabled={item.disabled}
-                                        active={formData.thickness === item.val}
-                                        onClick={() => updateField("thickness", item.val)}
-                                    >
-                                        {item.val}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
+                                 {(formData.baseMaterial === "Flex"
+                                     ? (formData.substrateType === "Transparent"
+                                         ? (formData.layers === "1"
+                                             ? [{ val: "0.14mm", disabled: false }]
+                                             : [{ val: "0.24mm", disabled: false }]
+                                           )
+                                         : formData.substrateType === "50µm dielectric thickness"
+                                             ? (formData.layers === "1"
+                                                 ? [{ val: "0.07mm", disabled: true }, { val: "0.12mm", disabled: false }]
+                                                 : formData.layers === "4"
+                                                     ? [{ val: "0.2mm", disabled: false }, { val: "0.25mm", disabled: false }, { val: "0.3mm", disabled: false }, { val: "0.35mm", disabled: false }, { val: "0.4mm", disabled: true }, { val: "0.45mm", disabled: true }]
+                                                     : [{ val: "0.11mm", disabled: true }, { val: "0.12mm", disabled: true }, { val: "0.19mm", disabled: false }, { val: "0.2mm", disabled: false }]
+                                               )
+                                             : (formData.layers === "1"
+                                                 ? [{ val: "0.07mm", disabled: false }, { val: "0.11mm", disabled: false }]
+                                                 : formData.layers === "4"
+                                                     ? [{ val: "0.2mm", disabled: false }, { val: "0.25mm", disabled: false }, { val: "0.3mm", disabled: false }, { val: "0.35mm", disabled: false }, { val: "0.4mm", disabled: true }, { val: "0.45mm", disabled: true }]
+                                                     : [{ val: "0.11mm", disabled: false }, { val: "0.12mm", disabled: false }, { val: "0.2mm", disabled: false }]
+                                               )
+                                       )
+                                     : formData.baseMaterial === "Rogers"
+                                         ? ["0.51mm", "0.76mm", "1.52mm"].map(v => ({ val: v, disabled: false }))
+                                         : formData.baseMaterial === "PTFE Teflon"
+                                             ? ["0.76mm", "1.52mm"].map(v => ({ val: v, disabled: false }))
+                                             : ["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(v => ({ val: v, disabled: false }))
+                                 ).map(item => (
+                                     <Pill
+                                         key={item.val}
+                                         disabled={item.disabled}
+                                         active={formData.thickness === item.val}
+                                         onClick={() => updateField("thickness", item.val)}
+                                     >
+                                         {item.val}
+                                     </Pill>
+                                 ))}
+                             </ConfigRow>
 
                             {/* Coverlay Color for Flex vs PCB Color for FR-4/Rogers/PTFE */}
                             {formData.baseMaterial === "Flex" ? (
                                 <ConfigRow label="Coverlay Color">
-                                    <div className="flex flex-wrap gap-2.5">
-                                        <ColorCirclePill color="#fadb14" name="Yellow" active={(formData.coverlayColor || "Yellow") === "Yellow"} onClick={() => updateField("coverlayColor", "Yellow")} />
-                                        <ColorCirclePill color="#000000" name="Black" active={formData.coverlayColor === "Black"} onClick={() => updateField("coverlayColor", "Black")} />
-                                        <ColorCirclePill color="#ffffff" name="White" active={formData.coverlayColor === "White"} onClick={() => updateField("coverlayColor", "White")} />
-                                    </div>
+                                    {formData.substrateType === "Transparent" ? (
+                                        <Pill active={true} onClick={() => {}}>
+                                            Transparent
+                                        </Pill>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-2.5">
+                                            <ColorCirclePill color="#fadb14" name="Yellow" active={(formData.coverlayColor || "Yellow") === "Yellow"} onClick={() => updateField("coverlayColor", "Yellow")} />
+                                            <ColorCirclePill color="#000000" name="Black" active={formData.coverlayColor === "Black"} onClick={() => updateField("coverlayColor", "Black")} />
+                                            <ColorCirclePill color="#ffffff" name="White" active={formData.coverlayColor === "White"} onClick={() => updateField("coverlayColor", "White")} />
+                                        </div>
+                                    )}
                                 </ConfigRow>
                             ) : (
                                 <ConfigRow label="PCB Color">
@@ -671,17 +728,28 @@ export default function QuoteForm({
                             {/* Surface Finish */}
                             <ConfigRow label="Surface Finish">
                                 {(formData.baseMaterial === "Flex"
-                                    ? ["ENIG"]
+                                    ? [{ val: "ENIG", disabled: false }]
                                     : formData.baseMaterial === "Rogers" || formData.baseMaterial === "PTFE Teflon"
-                                        ? ["OSP", "ENIG", "HASL(with lead)", "LeadFree HASL"]
-                                        : ["OSP", "HASL(with lead)", "LeadFree HASL", "ENIG"]
-                                ).map(s => (
+                                        ? [
+                                            { val: "OSP", disabled: false },
+                                            { val: "ENIG", disabled: false },
+                                            { val: "HASL(with lead)", disabled: true },
+                                            { val: "LeadFree HASL", disabled: true }
+                                          ]
+                                        : [
+                                            { val: "OSP", disabled: false },
+                                            { val: "HASL(with lead)", disabled: false },
+                                            { val: "LeadFree HASL", disabled: false },
+                                            { val: "ENIG", disabled: false }
+                                          ]
+                                ).map(item => (
                                     <Pill
-                                        key={s}
-                                        active={formData.surfaceFinish === s}
-                                        onClick={() => updateField("surfaceFinish", s)}
+                                        key={item.val}
+                                        disabled={item.disabled}
+                                        active={formData.surfaceFinish === item.val}
+                                        onClick={() => updateField("surfaceFinish", item.val)}
                                     >
-                                        {s}
+                                        {item.val}
                                     </Pill>
                                 ))}
                             </ConfigRow>
