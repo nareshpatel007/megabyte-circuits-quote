@@ -168,8 +168,8 @@ function LoginContent() {
 
     return (
         <div className="min-h-screen w-full bg-white flex flex-col md:flex-row font-sans">
-            {/* Left Column: Slimmer Full-Height PCB Image */}
-            <div className="w-full md:w-[320px] lg:w-[360px] xl:w-[380px] h-[300px] md:h-screen md:sticky md:top-0 md:self-start relative overflow-hidden shrink-0 p-0 m-0 bg-emerald-950">
+            {/* Left Column: Slimmer Full-Height PCB Image (Hidden on mobile) */}
+            <div className="hidden md:block md:w-[320px] lg:w-[360px] xl:w-[380px] h-[300px] md:h-screen md:sticky md:top-0 md:self-start relative overflow-hidden shrink-0 p-0 m-0 bg-emerald-950">
                 <img
                     src="/images/login-wide-pcb.png"
                     alt="PCB Circuit Board"
