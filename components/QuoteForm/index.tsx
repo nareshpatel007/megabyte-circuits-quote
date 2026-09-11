@@ -148,10 +148,20 @@ export default function QuoteForm({
                 if (!["1", "2", "4"].includes(next.layers)) {
                     next.layers = "2";
                 }
-                next.materialType = "Polyimide (PI)";
-                next.thickness = "0.12mm";
+                next.substrateType = next.substrateType || "25µm dielectric thickness";
                 next.surfaceFinish = "ENIG";
-                next.copperWeight = "0.5 oz";
+                next.silkscreen = "White";
+                next.copperType = "Electro-deposited";
+                next.coverlayColor = next.coverlayColor || "Yellow";
+                next.goldThickness = next.goldThickness || "1 U\"";
+
+                if (next.layers === "1") next.thickness = "0.07mm";
+                else if (next.layers === "2") next.thickness = "0.11mm";
+                else if (next.layers === "4") next.thickness = "0.2mm";
+            } else if (field === "layers" && next.baseMaterial === "Flex") {
+                if (value === "1") next.thickness = "0.07mm";
+                else if (value === "2") next.thickness = "0.11mm";
+                else if (value === "4") next.thickness = "0.2mm";
             }
             return next;
         });
@@ -462,6 +472,23 @@ export default function QuoteForm({
                     />
                 </ConfigRow>
 
+                <ConfigRow label="Product Type" tooltip="Target application domain.">
+                    {[
+                        { label: "Industrial/Consumer electronics", disabled: false },
+                        { label: "Aerospace", disabled: formData.baseMaterial === "Flex" },
+                        { label: "Medical", disabled: formData.baseMaterial === "Flex" }
+                    ].map(pt => (
+                        <Pill
+                            key={pt.label}
+                            disabled={pt.disabled}
+                            active={(formData.productType || "Industrial/Consumer electronics") === pt.label || (pt.label === "Industrial/Consumer electronics" && formData.productType === "Industrial")}
+                            onClick={() => updateField("productType", pt.label)}
+                        >
+                            {pt.label}
+                        </Pill>
+                    ))}
+                </ConfigRow>
+
                 {/* Specs Accordion */}
                 <div className="mt-6">
                     <button
@@ -504,19 +531,25 @@ export default function QuoteForm({
                             {/* PCB Thickness - Dynamic options for Flex vs Others */}
                             <ConfigRow label="PCB Thickness">
                                 {(formData.baseMaterial === "Flex"
-                                    ? ["0.11mm", "0.12mm", "0.2mm"]
+                                    ? (formData.layers === "1"
+                                        ? [{ val: "0.07mm", disabled: false }, { val: "0.11mm", disabled: false }]
+                                        : formData.layers === "4"
+                                            ? [{ val: "0.2mm", disabled: false }, { val: "0.25mm", disabled: false }, { val: "0.3mm", disabled: false }, { val: "0.35mm", disabled: false }, { val: "0.4mm", disabled: true }, { val: "0.45mm", disabled: true }]
+                                            : [{ val: "0.11mm", disabled: false }, { val: "0.12mm", disabled: false }, { val: "0.2mm", disabled: false }]
+                                      )
                                     : formData.baseMaterial === "Rogers"
-                                        ? ["0.51mm", "0.76mm", "1.52mm"]
+                                        ? ["0.51mm", "0.76mm", "1.52mm"].map(v => ({ val: v, disabled: false }))
                                         : formData.baseMaterial === "PTFE Teflon"
-                                            ? ["0.76mm", "1.52mm"]
-                                            : ["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"]
-                                ).map(t => (
+                                            ? ["0.76mm", "1.52mm"].map(v => ({ val: v, disabled: false }))
+                                            : ["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(v => ({ val: v, disabled: false }))
+                                ).map(item => (
                                     <Pill
-                                        key={t}
-                                        active={formData.thickness === t}
-                                        onClick={() => updateField("thickness", t)}
+                                        key={item.val}
+                                        disabled={item.disabled}
+                                        active={formData.thickness === item.val}
+                                        onClick={() => updateField("thickness", item.val)}
                                     >
-                                        {t}
+                                        {item.val}
                                     </Pill>
                                 ))}
                             </ConfigRow>
@@ -556,83 +589,77 @@ export default function QuoteForm({
                             {/* Copper Type for Flex */}
                             {formData.baseMaterial === "Flex" && (
                                 <ConfigRow label="Copper Type">
-                                    {["Electro-deposited", "Rolled Annealed"].map(ct => (
+                                    {[
+                                        { val: "Electro-deposited", disabled: false },
+                                        { val: "Rolled Annealed", disabled: true }
+                                    ].map(ct => (
                                         <Pill
-                                            key={ct}
-                                            active={(formData.copperType || "Electro-deposited") === ct}
-                                            onClick={() => updateField("copperType", ct)}
+                                            key={ct.val}
+                                            disabled={ct.disabled}
+                                            active={(formData.copperType || "Electro-deposited") === ct.val}
+                                            onClick={() => updateField("copperType", ct.val)}
                                         >
-                                            {ct}
+                                            {ct.val}
                                         </Pill>
                                     ))}
                                 </ConfigRow>
                             )}
 
-                            {/* Material Type dropdown/options depending on Base Material */}
-                            <ConfigRow label="Material Type">
-                                {formData.baseMaterial === "FR-4" && (
-                                    ["FR4-TG135"].map(m => (
-                                        <Pill
-                                            key={m}
-                                            active={(formData.materialType || "FR4-TG135") === m}
-                                            onClick={() => updateField("materialType", m)}
-                                        >
-                                            {m}
-                                        </Pill>
-                                    ))
-                                )}
-
-                                {formData.baseMaterial === "Flex" && (
-                                    ["Polyimide (PI)"].map(m => (
-                                        <Pill
-                                            key={m}
-                                            active={(formData.materialType || "Polyimide (PI)") === m}
-                                            onClick={() => updateField("materialType", m)}
-                                        >
-                                            {m}
-                                        </Pill>
-                                    ))
-                                )}
-
-                                {formData.baseMaterial === "Rogers" && (
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {["RO4350B(Dk=3.48,Df=0.0037)"].map(m => (
+                            {/* Material Type dropdown/options for non-Flex */}
+                            {formData.baseMaterial !== "Flex" && (
+                                <ConfigRow label="Material Type">
+                                    {formData.baseMaterial === "FR-4" && (
+                                        ["FR4-TG135"].map(m => (
                                             <Pill
                                                 key={m}
-                                                active={(formData.materialType || "RO4350B(Dk=3.48,Df=0.0037)") === m}
+                                                active={(formData.materialType || "FR4-TG135") === m}
                                                 onClick={() => updateField("materialType", m)}
                                             >
                                                 {m}
                                             </Pill>
-                                        ))}
-                                        <a href="https://jlpcb.com/datasheet/RO4350B.pdf" target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline hover:text-secondary ml-1">
-                                            Datasheet
-                                        </a>
-                                    </div>
-                                )}
+                                        ))
+                                    )}
 
-                                {formData.baseMaterial === "PTFE Teflon" && (
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {[
-                                            "ZYF300CA-P(Dk=3.0,Df=0.0016)",
-                                            "ZYF300CA-O(Dk=2.94,Df=0.0016)",
-                                            "ZYF265D(Dk=2.65,Df=0.0019)",
-                                            "ZYF255DA(Dk=2.55,Df=0.0018)"
-                                        ].map(m => (
-                                            <Pill
-                                                key={m}
-                                                active={(formData.materialType || "ZYF300CA-P(Dk=3.0,Df=0.0016)") === m}
-                                                onClick={() => updateField("materialType", m)}
-                                            >
-                                                {m}
-                                            </Pill>
-                                        ))}
-                                        <a href="https://jlpcb.com/datasheet/PTFE.pdf" target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline hover:text-secondary ml-1">
-                                            Datasheet
-                                        </a>
-                                    </div>
-                                )}
-                            </ConfigRow>
+                                    {formData.baseMaterial === "Rogers" && (
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            {["RO4350B(Dk=3.48,Df=0.0037)"].map(m => (
+                                                <Pill
+                                                    key={m}
+                                                    active={(formData.materialType || "RO4350B(Dk=3.48,Df=0.0037)") === m}
+                                                    onClick={() => updateField("materialType", m)}
+                                                >
+                                                    {m}
+                                                </Pill>
+                                            ))}
+                                            <a href="https://jlpcb.com/datasheet/RO4350B.pdf" target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline hover:text-secondary ml-1">
+                                                Datasheet
+                                            </a>
+                                        </div>
+                                    )}
+
+                                    {formData.baseMaterial === "PTFE Teflon" && (
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            {[
+                                                "ZYF300CA-P(Dk=3.0,Df=0.0016)",
+                                                "ZYF300CA-O(Dk=2.94,Df=0.0016)",
+                                                "ZYF265D(Dk=2.65,Df=0.0019)",
+                                                "ZYF255DA(Dk=2.55,Df=0.0018)"
+                                            ].map(m => (
+                                                <Pill
+                                                    key={m}
+                                                    active={(formData.materialType || "ZYF300CA-P(Dk=3.0,Df=0.0016)") === m}
+                                                    onClick={() => updateField("materialType", m)}
+                                                >
+                                                    {m}
+                                                </Pill>
+                                            ))}
+                                            <a href="https://jlpcb.com/datasheet/PTFE.pdf" target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline hover:text-secondary ml-1">
+                                                Datasheet
+                                            </a>
+                                        </div>
+                                    )}
+                                </ConfigRow>
+                            )}
 
                             {/* Surface Finish */}
                             <ConfigRow label="Surface Finish">
@@ -654,10 +681,10 @@ export default function QuoteForm({
 
                             {(formData.surfaceFinish === "ENIG" || formData.baseMaterial === "Flex") && (
                                 <ConfigRow label="Gold Thickness">
-                                    {["1 U*", "2 U*"].map(gt => (
+                                    {["1 U\"", "2 U\""].map(gt => (
                                         <Pill
                                             key={gt}
-                                            active={(formData.goldThickness || "1 U*") === gt}
+                                            active={(formData.goldThickness || "1 U\"") === gt || (gt === "1 U\"" && formData.goldThickness === "1 U*")}
                                             onClick={() => updateField("goldThickness", gt)}
                                         >
                                             {gt}

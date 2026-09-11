@@ -39,15 +39,18 @@ const Pill = ({
     children,
     onClick,
     activeColor = "blue",
-    badge
+    badge,
+    disabled
 }: {
     active: boolean;
     children: React.ReactNode;
     onClick: () => void;
     activeColor?: "blue" | "orange" | "green";
     badge?: string;
+    disabled?: boolean;
 }) => {
-    const baseClasses = "px-4 py-1.5 rounded text-sm font-medium transition-all relative border cursor-pointer";
+    const baseClasses = "px-4 py-1.5 rounded text-sm font-medium transition-all relative border";
+    const disabledClasses = "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed";
 
     const colors = {
         blue: "border-primary bg-primary/10 text-primary",
@@ -55,12 +58,14 @@ const Pill = ({
         green: "border-[#52c41a] bg-[#f6ffed] text-[#52c41a]"
     };
 
-    const inactiveClasses = "border-gray-300 bg-white text-gray-700 hover:border-primary/50 hover:text-primary";
+    const inactiveClasses = "border-gray-300 bg-white text-gray-700 hover:border-primary/50 hover:text-primary cursor-pointer";
 
     return (
         <button
-            onClick={onClick}
-            className={`${baseClasses} ${active ? colors[activeColor] : inactiveClasses}`}
+            type="button"
+            disabled={disabled}
+            onClick={disabled ? undefined : onClick}
+            className={`${baseClasses} ${disabled ? disabledClasses : (active ? colors[activeColor] : inactiveClasses)}`}
         >
             {children}
             {badge && (
@@ -841,38 +846,77 @@ export default function PCBQuote() {
                                         </ConfigRow>
 
                                         <ConfigRow label="PCB Thickness">
-                                            {["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(t => (
-                                                <Pill key={t} active={thickness === t} onClick={() => setThickness(t)}>{t}</Pill>
+                                            {(baseMaterial === "Flex"
+                                                ? (layers === "1"
+                                                    ? [{ val: "0.07mm", disabled: false }, { val: "0.11mm", disabled: false }]
+                                                    : layers === "4"
+                                                        ? [{ val: "0.2mm", disabled: false }, { val: "0.25mm", disabled: false }, { val: "0.3mm", disabled: false }, { val: "0.35mm", disabled: false }, { val: "0.4mm", disabled: true }, { val: "0.45mm", disabled: true }]
+                                                        : [{ val: "0.11mm", disabled: false }, { val: "0.12mm", disabled: false }, { val: "0.2mm", disabled: false }]
+                                                  )
+                                                : ["0.6mm", "0.8mm", "1.0mm", "1.2mm", "1.6mm", "2.0mm"].map(v => ({ val: v, disabled: false }))
+                                            ).map(item => (
+                                                <Pill key={item.val} disabled={item.disabled} active={thickness === item.val} onClick={() => setThickness(item.val)}>{item.val}</Pill>
                                             ))}
                                         </ConfigRow>
 
-                                        <ConfigRow label="PCB Color">
-                                            <div className="flex gap-3">
-                                                <ColorCircle color="#52c41a" active={pcbColor === "#52c41a"} onClick={() => setPcbColor("#52c41a")} />
-                                                <ColorCircle color="#722ed1" active={pcbColor === "#722ed1"} onClick={() => setPcbColor("#722ed1")} />
-                                                <ColorCircle color="#f5222d" active={pcbColor === "#f5222d"} onClick={() => setPcbColor("#f5222d")} />
-                                                <ColorCircle color="#fadb14" active={pcbColor === "#fadb14"} onClick={() => setPcbColor("#fadb14")} />
-                                                <ColorCircle color="#1677ff" active={pcbColor === "#1677ff"} onClick={() => setPcbColor("#1677ff")} />
-                                                <ColorCircle color="#ffffff" active={pcbColor === "#ffffff"} onClick={() => setPcbColor("#ffffff")} />
-                                                <ColorCircle color="#000000" active={pcbColor === "#000000"} onClick={() => setPcbColor("#000000")} />
-                                            </div>
-                                        </ConfigRow>
+                                        {baseMaterial === "Flex" ? (
+                                            <ConfigRow label="Coverlay Color">
+                                                <div className="flex gap-3">
+                                                    <ColorCircle color="#fadb14" active={pcbColor === "#fadb14"} onClick={() => setPcbColor("#fadb14")} />
+                                                    <ColorCircle color="#000000" active={pcbColor === "#000000"} onClick={() => setPcbColor("#000000")} />
+                                                    <ColorCircle color="#ffffff" active={pcbColor === "#ffffff"} onClick={() => setPcbColor("#ffffff")} />
+                                                </div>
+                                            </ConfigRow>
+                                        ) : (
+                                            <ConfigRow label="PCB Color">
+                                                <div className="flex gap-3">
+                                                    <ColorCircle color="#52c41a" active={pcbColor === "#52c41a"} onClick={() => setPcbColor("#52c41a")} />
+                                                    <ColorCircle color="#722ed1" active={pcbColor === "#722ed1"} onClick={() => setPcbColor("#722ed1")} />
+                                                    <ColorCircle color="#f5222d" active={pcbColor === "#f5222d"} onClick={() => setPcbColor("#f5222d")} />
+                                                    <ColorCircle color="#fadb14" active={pcbColor === "#fadb14"} onClick={() => setPcbColor("#fadb14")} />
+                                                    <ColorCircle color="#1677ff" active={pcbColor === "#1677ff"} onClick={() => setPcbColor("#1677ff")} />
+                                                    <ColorCircle color="#ffffff" active={pcbColor === "#ffffff"} onClick={() => setPcbColor("#ffffff")} />
+                                                    <ColorCircle color="#000000" active={pcbColor === "#000000"} onClick={() => setPcbColor("#000000")} />
+                                                </div>
+                                            </ConfigRow>
+                                        )}
 
                                         <ConfigRow label="Silkscreen">
                                             <Pill active={silkscreen === "White"} onClick={() => setSilkscreen("White")}>White</Pill>
                                         </ConfigRow>
 
-                                        <ConfigRow label="Material Type">
-                                            {["FR4-TG135"].map(m => (
-                                                <Pill key={m} active={materialType === m} onClick={() => setMaterialType(m)}>{m}</Pill>
-                                            ))}
-                                        </ConfigRow>
+                                        {baseMaterial === "Flex" && (
+                                            <ConfigRow label="Copper Type">
+                                                {[
+                                                    { val: "Electro-deposited", disabled: false },
+                                                    { val: "Rolled Annealed", disabled: true }
+                                                ].map(ct => (
+                                                    <Pill key={ct.val} disabled={ct.disabled} active={copperWeight === ct.val} onClick={() => setCopperWeight(ct.val)}>{ct.val}</Pill>
+                                                ))}
+                                            </ConfigRow>
+                                        )}
+
+                                        {baseMaterial !== "Flex" && (
+                                            <ConfigRow label="Material Type">
+                                                {["FR4-TG135"].map(m => (
+                                                    <Pill key={m} active={materialType === m} onClick={() => setMaterialType(m)}>{m}</Pill>
+                                                ))}
+                                            </ConfigRow>
+                                        )}
 
                                         <ConfigRow label="Surface Finish">
-                                            {["HASL(Leaded)", "Roller Tin"].map(s => (
+                                            {(baseMaterial === "Flex" ? ["ENIG"] : ["HASL(Leaded)", "Roller Tin"]).map(s => (
                                                 <Pill key={s} active={surfaceFinish === s} onClick={() => setSurfaceFinish(s)} activeColor="blue">{s}</Pill>
                                             ))}
                                         </ConfigRow>
+
+                                        {(surfaceFinish === "ENIG" || baseMaterial === "Flex") && (
+                                            <ConfigRow label="Gold Thickness">
+                                                {["1 U\"", "2 U\""].map(gt => (
+                                                    <Pill key={gt} active={true} onClick={() => {}}>{gt}</Pill>
+                                                ))}
+                                            </ConfigRow>
+                                        )}
                                     </div>
                                 )}
                             </div>
