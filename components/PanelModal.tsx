@@ -54,13 +54,14 @@ export const PanelModal: React.FC<PanelModalProps> = ({
     const colSpace = parseFloat(columnSpacing) || 0;
     const rSpace = parseFloat(rowSpacing) || 0;
 
-    let railSize = 0;
-    if (edgeRails.includes("5mm")) railSize = 5;
-    else if (edgeRails.includes("7mm")) railSize = 7;
-    else if (edgeRails.includes("10mm")) railSize = 10;
+    let railW = 0;
+    let railH = 0;
+    if (edgeRails === "On top and bottom sides") railH = 5;
+    else if (edgeRails === "On left and right sides") railW = 5;
+    else if (edgeRails === "On four sides") { railW = 5; railH = 5; }
 
-    const calcPanelWidth = (sWidth * colCount + colSpace * (colCount - 1) + railSize * 2).toFixed(2);
-    const calcPanelHeight = (sHeight * rowCount + rSpace * (rowCount - 1) + railSize * 2).toFixed(2);
+    const calcPanelWidth = (sWidth * colCount + colSpace * (colCount - 1) + railW * 2).toFixed(2);
+    const calcPanelHeight = (sHeight * rowCount + rSpace * (rowCount - 1) + railH * 2).toFixed(2);
 
     const isSizeWarning =
         parseFloat(calcPanelWidth) < 70 ||
@@ -114,7 +115,7 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                             <span className="w-32 shrink-0 text-slate-600">Panel Type</span>
                             <button
                                 type="button"
-                                className="px-3 py-1 rounded bg-sky-50 border border-sky-500 text-sky-600 font-bold text-xs"
+                                className="px-3 py-1 rounded bg-primary/10 border border-primary text-primary font-bold text-xs"
                             >
                                 {panelType}
                             </button>
@@ -133,7 +134,7 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                                             max="30"
                                             value={panelColumn}
                                             onChange={(e) => setPanelColumn(e.target.value)}
-                                            className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-sky-500 text-slate-800 font-mono"
+                                            className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-slate-800 font-mono"
                                         />
                                     </div>
                                     <div>
@@ -144,7 +145,7 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                                             max="30"
                                             value={panelRow}
                                             onChange={(e) => setPanelRow(e.target.value)}
-                                            className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-sky-500 text-slate-800 font-mono"
+                                            className="w-full px-2.5 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-slate-800 font-mono"
                                         />
                                     </div>
                                 </div>
@@ -152,7 +153,7 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                                 <div className="grid grid-cols-2 gap-3 pt-1">
                                     <div>
                                         <label className="block text-[11px] text-slate-500 font-normal mb-1">Column Spacing</label>
-                                        <div className="flex items-center border border-slate-300 rounded overflow-hidden focus-within:ring-1 focus-within:ring-sky-500">
+                                        <div className="flex items-center border border-slate-300 rounded overflow-hidden focus-within:ring-1 focus-within:ring-primary focus-within:border-primary">
                                             <input
                                                 type="number"
                                                 min="0"
@@ -166,7 +167,7 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                                     </div>
                                     <div>
                                         <label className="block text-[11px] text-slate-500 font-normal mb-1">Row Spacing</label>
-                                        <div className="flex items-center border border-slate-300 rounded overflow-hidden focus-within:ring-1 focus-within:ring-sky-500">
+                                        <div className="flex items-center border border-slate-300 rounded overflow-hidden focus-within:ring-1 focus-within:ring-primary focus-within:border-primary">
                                             <input
                                                 type="number"
                                                 min="0"
@@ -188,15 +189,12 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                             <select
                                 value={edgeRails}
                                 onChange={(e) => setEdgeRails(e.target.value)}
-                                className="flex-1 px-2.5 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-sky-500 text-slate-800 bg-white"
+                                className="flex-1 px-2.5 py-1.5 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-slate-800 bg-white"
                             >
                                 <option value="No rails">No rails</option>
-                                <option value="Top and Bottom 5mm">Top and Bottom 5mm</option>
-                                <option value="Left and Right 5mm">Left and Right 5mm</option>
-                                <option value="All 4 sides 5mm">All 4 sides 5mm</option>
-                                <option value="Top and Bottom 7mm">Top and Bottom 7mm</option>
-                                <option value="Left and Right 7mm">Left and Right 7mm</option>
-                                <option value="All 4 sides 7mm">All 4 sides 7mm</option>
+                                <option value="On top and bottom sides">On top and bottom sides</option>
+                                <option value="On left and right sides">On left and right sides</option>
+                                <option value="On four sides">On four sides</option>
                             </select>
                         </div>
 
@@ -225,14 +223,14 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                         <div className="flex items-center gap-3 pt-4">
                             <button
                                 type="submit"
-                                className="px-6 py-2 rounded-full bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
+                                className="px-6 py-2 rounded-full bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
                             >
                                 Submit
                             </button>
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-6 py-2 rounded-full border border-sky-400 text-sky-600 hover:bg-sky-50 font-bold text-xs transition-colors cursor-pointer"
+                                className="px-6 py-2 rounded-full border border-primary text-primary hover:bg-primary/5 font-bold text-xs transition-colors cursor-pointer"
                             >
                                 Cancel
                             </button>
@@ -256,7 +254,7 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                         <button
                             type="button"
                             onClick={() => setActiveTab("outline")}
-                            className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${activeTab === "outline" ? "bg-sky-500 text-white" : "text-slate-300 hover:text-white"
+                            className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${activeTab === "outline" ? "bg-primary text-white" : "text-slate-300 hover:text-white"
                                 }`}
                         >
                             Board Outline
@@ -264,7 +262,7 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                         <button
                             type="button"
                             onClick={() => setActiveTab("preview")}
-                            className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${activeTab === "preview" ? "bg-sky-500 text-white" : "text-slate-300 hover:text-white"
+                            className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${activeTab === "preview" ? "bg-primary text-white" : "text-slate-300 hover:text-white"
                                 }`}
                         >
                             2D Preview
@@ -272,10 +270,10 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                     </div>
 
                     {/* Preview Canvas Container */}
-                    <div className="flex-1 min-h-[280px] flex items-center justify-center relative rounded border border-purple-900/40 bg-black overflow-hidden">
+                    <div className="flex-1 min-h-[280px] flex items-center justify-center relative rounded border border-emerald-900/40 bg-black overflow-hidden">
                         {isRendering ? (
                             <div className="flex flex-col items-center gap-2 text-slate-400">
-                                <Loader2 className="w-6 h-6 animate-spin text-sky-400" />
+                                <Loader2 className="w-6 h-6 animate-spin text-primary" />
                                 <span className="text-[11px]">Generating panel geometry...</span>
                             </div>
                         ) : (
