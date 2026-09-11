@@ -683,7 +683,7 @@ export default function QuoteForm({
                                                     {m}
                                                 </Pill>
                                             ))}
-                                            <a href="https://jlpcb.com/datasheet/RO4350B.pdf" target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline hover:text-secondary ml-1">
+                                            <a href="https://static.jlcpcb.com/pdf/ROGERS_Datasheet.pdf" target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline hover:text-secondary ml-1">
                                                 Datasheet
                                             </a>
                                         </div>
@@ -692,20 +692,20 @@ export default function QuoteForm({
                                     {formData.baseMaterial === "PTFE Teflon" && (
                                         <div className="flex flex-wrap items-center gap-2">
                                             {[
-                                                "ZYF300CA-P(Dk=3.0,Df=0.0016)",
-                                                "ZYF300CA-O(Dk=2.94,Df=0.0016)",
+                                                "ZYF300CA-P(Dk=3.0,Df=0.0018)",
+                                                "ZYF300CA-C(Dk=2.94,Df=0.0016)",
                                                 "ZYF265D(Dk=2.65,Df=0.0019)",
                                                 "ZYF255DA(Dk=2.55,Df=0.0018)"
                                             ].map(m => (
                                                 <Pill
                                                     key={m}
-                                                    active={(formData.materialType || "ZYF300CA-P(Dk=3.0,Df=0.0016)") === m}
+                                                    active={(formData.materialType || "ZYF300CA-C(Dk=2.94,Df=0.0016)") === m}
                                                     onClick={() => updateField("materialType", m)}
                                                 >
                                                     {m}
                                                 </Pill>
                                             ))}
-                                            <a href="https://jlpcb.com/datasheet/PTFE.pdf" target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline hover:text-secondary ml-1">
+                                            <a href="https://static.jlcpcb.com/pdf/PTFE_Teflon_Datasheet.pdf" target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary underline hover:text-secondary ml-1">
                                                 Datasheet
                                             </a>
                                         </div>
