@@ -697,15 +697,19 @@ export default function PCBQuote() {
 
                                 {baseMaterial === "Flex" && (
                                     <ConfigRow label="Substrate Type" tooltip="Thickness of dielectric layer.">
-                                        {["25µm dielectric thickness", "50µm dielectric thickness", "Transparent"].map(sub => (
-                                            <Pill
-                                                key={sub}
-                                                active={substrateType === sub}
-                                                onClick={() => setSubstrateType(sub)}
-                                            >
-                                                {sub}
-                                            </Pill>
-                                        ))}
+                                        {["25µm dielectric thickness", "50µm dielectric thickness", "Transparent"].map(sub => {
+                                            const isDisabled = layers === "4" && (sub === "50µm dielectric thickness" || sub === "Transparent");
+                                            return (
+                                                <Pill
+                                                    key={sub}
+                                                    active={substrateType === sub}
+                                                    disabled={isDisabled}
+                                                    onClick={() => setSubstrateType(sub)}
+                                                >
+                                                    {sub}
+                                                </Pill>
+                                            );
+                                        })}
                                     </ConfigRow>
                                 )}
 
@@ -717,6 +721,9 @@ export default function PCBQuote() {
                                                 active={layers === l}
                                                 onClick={() => {
                                                     setLayers(l);
+                                                    if (baseMaterial === "Flex" && l === "4") {
+                                                        setSubstrateType("25µm dielectric thickness");
+                                                    }
                                                     setFieldSources(prev => ({ ...prev, layers: "user-selected" }));
                                                 }}
                                                 badge={l === "6" ? "High Precision PCB" : undefined}

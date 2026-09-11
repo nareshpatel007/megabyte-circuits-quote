@@ -161,7 +161,10 @@ export default function QuoteForm({
             } else if (field === "layers" && next.baseMaterial === "Flex") {
                 if (value === "1") next.thickness = "0.07mm";
                 else if (value === "2") next.thickness = "0.11mm";
-                else if (value === "4") next.thickness = "0.2mm";
+                else if (value === "4") {
+                    next.thickness = "0.2mm";
+                    next.substrateType = "25µm dielectric thickness";
+                }
             }
             return next;
         });
@@ -343,15 +346,19 @@ export default function QuoteForm({
                             { label: "25µm dielectric thickness", val: "25µm dielectric thickness" },
                             { label: "50µm dielectric thickness", val: "50µm dielectric thickness" },
                             { label: "Transparent", val: "Transparent" }
-                        ].map(sub => (
-                            <Pill
-                                key={sub.val}
-                                active={(formData.substrateType || "25µm dielectric thickness") === sub.val}
-                                onClick={() => updateField("substrateType", sub.val)}
-                            >
-                                {sub.label}
-                            </Pill>
-                        ))}
+                        ].map(sub => {
+                            const isDisabled = formData.layers === "4" && (sub.val === "50µm dielectric thickness" || sub.val === "Transparent");
+                            return (
+                                <Pill
+                                    key={sub.val}
+                                    active={(formData.substrateType || "25µm dielectric thickness") === sub.val}
+                                    disabled={isDisabled}
+                                    onClick={() => updateField("substrateType", sub.val)}
+                                >
+                                    {sub.label}
+                                </Pill>
+                            );
+                        })}
                     </ConfigRow>
                 )}
 
