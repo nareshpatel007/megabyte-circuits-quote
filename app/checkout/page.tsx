@@ -177,14 +177,14 @@ function CheckoutContent() {
                 }
 
                 // Load Cart Items (Prioritize explicitly checked items for checkout)
-                const savedCheckoutItems = localStorage.getItem("megabyte_checkout_items");
+                const savedCheckoutItems = localStorage.getItem("megabyte_checkout_items") || sessionStorage.getItem("megabyte_checkout_items");
                 if (savedCheckoutItems) {
                     const parsed = JSON.parse(savedCheckoutItems);
                     if (Array.isArray(parsed) && parsed.length > 0) {
                         setCartItems(parsed);
                     }
                 } else {
-                    const savedCart = localStorage.getItem("megabyte_cart");
+                    const savedCart = localStorage.getItem("megabyte_cart") || sessionStorage.getItem("megabyte_cart");
                     if (savedCart) {
                         setCartItems(JSON.parse(savedCart));
                     }

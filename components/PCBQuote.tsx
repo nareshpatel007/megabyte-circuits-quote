@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import QuantitySelectorPopover from "./QuantitySelectorPopover";
 import {
     Menu,
     Search,
@@ -780,30 +781,11 @@ export default function PCBQuote() {
                                 </ConfigRow>
 
                                 <ConfigRow label="PCB Qty" tooltip="Total number of boards.">
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            value={qty}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === ".") {
-                                                    e.preventDefault();
-                                                }
-                                            }}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                if (val === "" || parseInt(val, 10) >= 0) {
-                                                    setQty(val);
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                let val = parseInt(e.target.value, 10);
-                                                if (isNaN(val) || val < 1) val = 1;
-                                                setQty(val.toString());
-                                            }}
-                                            className="w-24 h-9 px-3 border border-gray-300 rounded text-sm focus:border-primary outline-none"
-                                        />
-                                    </div>
+                                    <QuantitySelectorPopover
+                                        value={qty}
+                                        onChange={(val) => setQty(val)}
+                                        minQty={5}
+                                    />
                                 </ConfigRow>
                             </div>
 

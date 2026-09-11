@@ -675,7 +675,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
             const width = Math.max(1, Math.round((parseFloat(formData.width) || 100) * unitMultiplier));
             const height = Math.max(1, Math.round((parseFloat(formData.height) || 100) * unitMultiplier));
-            const qty = Math.max(1, parseInt(formData.qty, 10) || 5);
+            const qty = Math.max(5, parseInt(formData.qty, 10) || 5);
 
             const colorMap: Record<string, number> = {
                 "#52c41a": 0, // Green
@@ -847,7 +847,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
         const length = (parseFloat(formData.width) || 0) * unitMultiplier;
         const width = (parseFloat(formData.height) || 0) * unitMultiplier;
-        const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
+        const quantity = Math.max(parseInt(formData.qty, 10) || 5, 5);
         const solderMask = formData.pcbColor === "#52c41a" ? "Green" : "Other";
         const copperWeight = formData.copperWeight.replace(" ", "");
         const rawThicknessStr = (formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "");
@@ -1162,8 +1162,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         }
 
         const qty = parseInt(formData.qty, 10);
-        if (isNaN(qty) || qty < 3) {
-            setToast({ message: 'Minimum order quantity is 3', type: 'warning' });
+        if (isNaN(qty) || qty < 5) {
+            setToast({ message: 'Minimum order quantity is 5', type: 'warning' });
             return;
         }
 
@@ -1299,7 +1299,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
         const length = (parseFloat(formData.width) || 0) * unitMultiplier;
         const width = (parseFloat(formData.height) || 0) * unitMultiplier;
-        const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
+        const quantity = Math.max(parseInt(formData.qty, 10) || 5, 5);
         const layers = parseInt(formData.layers, 10) || 1;
 
         const defaultOrderValue = Math.max(Math.round(length * width * 0.05 * quantity), 100);
@@ -1560,7 +1560,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                     const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
                                     const length = (parseFloat(formData.width) || 0) * unitMultiplier;
                                     const width = (parseFloat(formData.height) || 0) * unitMultiplier;
-                                    const quantity = Math.max(parseInt(formData.qty, 10) || 3, 3);
+                                    const quantity = Math.max(parseInt(formData.qty, 10) || 5, 5);
 
                                     const defaultOrderValue = Math.max(Math.round(length * width * 0.05 * quantity), 100);
                                     const defaultUnitPrice = (defaultOrderValue / quantity).toFixed(2);

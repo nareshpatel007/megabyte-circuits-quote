@@ -50,14 +50,85 @@ export function getOrCreateCartSessionId(): string {
 }
 
 /**
- * Saves cart items to backend API and updates local storage
+ * Sanitizes cart items for browser storage by stripping heavy inline SVG or data URL strings
+ */
+export function sanitizeCartItemsForStorage(items: any[]): any[] {
+    if (!Array.isArray(items)) return [];
+    return items.map((item) => {
+        if (!item || typeof item !== "object") return item;
+        const cleaned = { ...item };
+
+        if (typeof cleaned.gerberPreview === "string" && (cleaned.gerberPreview.length > 2000 || cleaned.gerberPreview.includes("<svg"))) {
+            delete cleaned.gerberPreview;
+        }
+        if (typeof cleaned.topSvg === "string" && (cleaned.topSvg.length > 2000 || cleaned.topSvg.includes("<svg"))) {
+            delete cleaned.topSvg;
+        }
+        if (typeof cleaned.bottomSvg === "string" && (cleaned.bottomSvg.length > 2000 || cleaned.bottomSvg.includes("<svg"))) {
+            delete cleaned.bottomSvg;
+        }
+        if (typeof cleaned.previewUrl === "string" && cleaned.previewUrl.startsWith("data:") && cleaned.previewUrl.length > 2000) {
+            delete cleaned.previewUrl;
+        }
+        if (typeof cleaned.gerberDataUrl === "string" && cleaned.gerberDataUrl.startsWith("data:") && cleaned.gerberDataUrl.length > 2000) {
+            delete cleaned.gerberDataUrl;
+        }
+
+        return cleaned;
+    });
+}
+
+/**
+ * Safely sets items into localStorage / sessionStorage without exceeding storage quota
+ */
+export function safeSetStorage(key: string, value: any, primaryStorage: "local" | "session" = "local"): boolean {
+    if (typeof window === "undefined") return false;
+    const sanitized = Array.isArray(value) ? sanitizeCartItemsForStorage(value) : value;
+    const serialized = JSON.stringify(sanitized);
+
+    try {
+        if (primaryStorage === "local") {
+            localStorage.setItem(key, serialized);
+            sessionStorage.setItem(key, serialized);
+        } else {
+            sessionStorage.setItem(key, serialized);
+            localStorage.setItem(key, serialized);
+        }
+        return true;
+    } catch (err) {
+        console.warn(`Primary storage failed for key ${key}, attempting ultra-stripped fallback:`, err);
+        try {
+            const ultraStripped = Array.isArray(value)
+                ? value.map((item: any) => {
+                      if (!item || typeof item !== "object") return item;
+                      const { gerberPreview, topSvg, bottomSvg, previewUrl, gerberDataUrl, ...rest } = item;
+                      return rest;
+                  })
+                : value;
+            const strippedSerialized = JSON.stringify(ultraStripped);
+            sessionStorage.setItem(key, strippedSerialized);
+            try {
+                localStorage.setItem(key, strippedSerialized);
+            } catch (e) {
+                // Ignore if localStorage quota is exhausted
+            }
+            return true;
+        } catch (e) {
+            console.error(`Storage quota error for key ${key}:`, e);
+            return false;
+        }
+    }
+}
+
+/**
+ * Saves cart items to backend API and updates local storage safely
  */
 export async function saveCartToBackend(items: any[]): Promise<boolean> {
     try {
         const sessionId = getOrCreateCartSessionId();
         
-        // Save to localStorage immediately
-        localStorage.setItem("megabyte_cart", JSON.stringify(items));
+        // Save to localStorage safely without raw heavy SVGs
+        safeSetStorage("megabyte_cart", items);
         window.dispatchEvent(new Event("megabyte_cart_updated"));
 
         // Save to backend database

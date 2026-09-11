@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Info, Check, ChevronUp, ChevronDown, Pencil } from "lucide-react";
 import { QuoteFormData, ParsedGerberFile } from "../../lib/gerber/types";
+import QuantitySelectorPopover from "../QuantitySelectorPopover";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 interface QuoteFormProps {
@@ -422,42 +423,11 @@ export default function QuoteForm({
                 </ConfigRow>
 
                 <ConfigRow label="PCB Qty" tooltip="Enter any custom quantity for your PCB order.">
-                    <div className="flex flex-wrap items-center gap-2">
-                        {["5", "10", "15", "20", "25", "30", "50", "100"].map(q => (
-                            <Pill
-                                key={q}
-                                active={formData.qty === q}
-                                onClick={() => updateField("qty", q)}
-                            >
-                                {q}
-                            </Pill>
-                        ))}
-                        <div className="flex items-center gap-1.5 ml-1">
-                            <span className="text-xs text-gray-500 font-semibold">Other:</span>
-                            <input
-                                type="number"
-                                min="1"
-                                value={formData.qty}
-                                onKeyDown={(e) => {
-                                    if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === ".") {
-                                        e.preventDefault();
-                                    }
-                                }}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === "" || parseInt(val, 10) >= 0) {
-                                        updateField("qty", val);
-                                    }
-                                }}
-                                onBlur={(e) => {
-                                    let val = parseInt(e.target.value, 10);
-                                    if (isNaN(val) || val < 1) val = 1;
-                                    updateField("qty", val.toString());
-                                }}
-                                className="w-20 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary outline-none shadow-sm font-semibold"
-                            />
-                        </div>
-                    </div>
+                    <QuantitySelectorPopover
+                        value={formData.qty}
+                        onChange={(val) => updateField("qty", val)}
+                        minQty={5}
+                    />
                 </ConfigRow>
 
                 {/* Specs Accordion */}

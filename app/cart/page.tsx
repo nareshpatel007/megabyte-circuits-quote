@@ -9,7 +9,7 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
 import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
-import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend, setCartSessionId, getMinCartQuantity } from "@/lib/cartSession";
+import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend, setCartSessionId, getMinCartQuantity, safeSetStorage } from "@/lib/cartSession";
 
 import { getAuthToken, getAuthUser } from "@/lib/auth";
 
@@ -139,6 +139,12 @@ export default function CartPage() {
                             baseUnitPrice: basePrice,
                         };
                     }
+                    if (item.productType !== "part" && (!item.qty || item.qty < 5)) {
+                        return {
+                            ...item,
+                            qty: 5
+                        };
+                    }
                     return item;
                 });
                 setCartItems(items);
@@ -169,7 +175,7 @@ export default function CartPage() {
 
     const saveCart = async (items: CartItem[], immediate: boolean = false) => {
         setCartItems(items);
-        localStorage.setItem("megabyte_cart", JSON.stringify(items));
+        safeSetStorage("megabyte_cart", items);
         window.dispatchEvent(new Event("megabyte_cart_updated"));
 
         if (saveBackendTimerRef.current) {
@@ -208,7 +214,7 @@ export default function CartPage() {
         const targetItem = cartItems.find((i) => String(i.id) === strId);
         if (!targetItem) return;
 
-        const minQty = targetItem.productType === "part" ? getMinCartQuantity() : 1;
+        const minQty = targetItem.productType === "part" ? getMinCartQuantity() : 5;
         const validQty = Math.max(minQty, isNaN(newQty) ? minQty : newQty);
 
         let updatedItem = { ...targetItem, qty: validQty };
@@ -415,8 +421,8 @@ export default function CartPage() {
             await saveCartToBackend(cartItems);
         }
 
-        // Store ONLY checked items for checkout processing
-        localStorage.setItem("megabyte_checkout_items", JSON.stringify(selectedCartItemsList));
+        // Store ONLY checked items for checkout processing safely without heavy SVGs
+        safeSetStorage("megabyte_checkout_items", selectedCartItemsList);
 
         const userToken = typeof window !== "undefined" ? (localStorage.getItem("megabyte_user_token") || localStorage.getItem("megabyte_user")) : null;
         if (!userToken) {
@@ -576,39 +582,57 @@ export default function CartPage() {
                                                     <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 shrink-0">
                                                         <div className="w-24 flex justify-center">
                                                             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-gray-50/50">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        const min = item.productType === "part" ? getMinCartQuantity() : 1;
-                                                                        const step = 1;
-                                                                        handleQuantityChange(item.id, Math.max(min, (item.qty || min) - step));
-                                                                    }}
-                                                                    className="w-6 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
-                                                                >
-                                                                    -
-                                                                </button>
-                                                                <input
-                                                                    type="number"
-                                                                    min={item.productType === "part" ? getMinCartQuantity() : 1}
-                                                                    step={1}
-                                                                    value={item.qty ?? (item.productType === "part" ? getMinCartQuantity() : 1)}
-                                                                    onChange={(e) => {
-                                                                        const val = parseInt(e.target.value, 10);
-                                                                        handleQuantityChange(item.id, val);
-                                                                    }}
-                                                                    className="w-11 text-center text-xs font-bold text-gray-800 bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        const min = item.productType === "part" ? getMinCartQuantity() : 1;
-                                                                        const step = 1;
-                                                                        handleQuantityChange(item.id, (item.qty || min) + step);
-                                                                    }}
-                                                                    className="w-6 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
-                                                                >
-                                                                    +
-                                                                </button>
+                                                                {(() => {
+                                                                    const min = item.productType === "part" ? getMinCartQuantity() : 5;
+                                                                    const currentQty = item.qty ?? min;
+                                                                    const isMinReached = currentQty <= min;
+                                                                    return (
+                                                                        <>
+                                                                            <button
+                                                                                type="button"
+                                                                                disabled={isMinReached}
+                                                                                onClick={() => {
+                                                                                    const step = 1;
+                                                                                    handleQuantityChange(item.id, Math.max(min, currentQty - step));
+                                                                                }}
+                                                                                className={`w-6 h-full flex items-center justify-center text-xs font-bold transition-colors ${
+                                                                                    isMinReached
+                                                                                        ? "text-gray-300 bg-gray-100 cursor-not-allowed"
+                                                                                        : "text-gray-500 hover:bg-gray-200 cursor-pointer"
+                                                                                }`}
+                                                                            >
+                                                                                -
+                                                                            </button>
+                                                                            <input
+                                                                                type="number"
+                                                                                min={min}
+                                                                                step={1}
+                                                                                value={currentQty}
+                                                                                onChange={(e) => {
+                                                                                    const val = parseInt(e.target.value, 10);
+                                                                                    handleQuantityChange(item.id, val);
+                                                                                }}
+                                                                                onBlur={(e) => {
+                                                                                    const val = parseInt(e.target.value, 10);
+                                                                                    if (isNaN(val) || val < min) {
+                                                                                        handleQuantityChange(item.id, min);
+                                                                                    }
+                                                                                }}
+                                                                                className="w-11 text-center text-xs font-bold text-gray-800 bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                            />
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    const step = 1;
+                                                                                    handleQuantityChange(item.id, currentQty + step);
+                                                                                }}
+                                                                                className="w-6 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
+                                                                            >
+                                                                                +
+                                                                            </button>
+                                                                        </>
+                                                                    );
+                                                                })()}
                                                             </div>
                                                         </div>
                                                         {item.productType !== "part" && (
