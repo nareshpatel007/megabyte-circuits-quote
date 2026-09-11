@@ -142,7 +142,19 @@ export default function QuoteForm({
     bottomSvg = ""
 }: QuoteFormProps) {
     const updateField = (field: keyof QuoteFormData, value: any) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+        setFormData(prev => {
+            const next = { ...prev, [field]: value };
+            if (field === "baseMaterial" && value === "Flex") {
+                if (!["1", "2", "4"].includes(next.layers)) {
+                    next.layers = "2";
+                }
+                next.materialType = "Polyimide (PI)";
+                next.thickness = "0.12mm";
+                next.surfaceFinish = "ENIG";
+                next.copperWeight = "0.5 oz";
+            }
+            return next;
+        });
     };
 
     const validateDimensions = (w: number, h: number, l: number) => {
@@ -331,25 +343,27 @@ export default function QuoteForm({
                         ))}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2.5 px-3 py-1.5 bg-primary/5 border border-primary/30 rounded-lg shadow-2xs">
-                        <span className="text-xs font-bold text-primary flex items-center gap-1">
-                            ✨ High Precision PCB
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                            {["6", "8", "10", "12", "14", "16"].map(l => (
-                                <Pill
-                                    key={l}
-                                    active={formData.layers === l}
-                                    onClick={() => {
-                                        updateField("layers", l);
-                                        validateDimensions(parseFloat(formData.width) || 0, parseFloat(formData.height) || 0, parseInt(l));
-                                    }}
-                                >
-                                    <span className="flex items-center gap-0.5">{l}</span>
-                                </Pill>
-                            ))}
+                    {formData.baseMaterial !== "Flex" && (
+                        <div className="flex flex-wrap items-center gap-2.5 px-3 py-1.5 bg-primary/5 border border-primary/30 rounded-lg shadow-2xs">
+                            <span className="text-xs font-bold text-primary flex items-center gap-1">
+                                ✨ High Precision PCB
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                                {["6", "8", "10", "12", "14", "16"].map(l => (
+                                    <Pill
+                                        key={l}
+                                        active={formData.layers === l}
+                                        onClick={() => {
+                                            updateField("layers", l);
+                                            validateDimensions(parseFloat(formData.width) || 0, parseFloat(formData.height) || 0, parseInt(l));
+                                        }}
+                                    >
+                                        <span className="flex items-center gap-0.5">{l}</span>
+                                    </Pill>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </ConfigRow>
 
                 <ConfigRow label="Dimensions" tooltip="Input custom board dimensions in millimeters or inches.">

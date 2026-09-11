@@ -674,13 +674,24 @@ export default function PCBQuote() {
                                 {/* Config Rows */}
                                 <ConfigRow label="Base Material" tooltip="Choose the material for your board. FR-4 is standard.">
                                     {["FR-4", "Flex", "Aluminum", "Copper Core", "Rogers", "PTFE", "Teflon"].map(m => (
-                                        <Pill key={m} active={baseMaterial === m} onClick={() => setBaseMaterial(m)}>{m}</Pill>
+                                        <Pill
+                                            key={m}
+                                            active={baseMaterial === m}
+                                            onClick={() => {
+                                                setBaseMaterial(m);
+                                                if (m === "Flex" && !["1", "2", "4"].includes(layers)) {
+                                                    setLayers("2");
+                                                }
+                                            }}
+                                        >
+                                            {m}
+                                        </Pill>
                                     ))}
                                 </ConfigRow>
 
                                 <ConfigRow label="Layers" tooltip="Number of copper layers.">
                                     <div className="flex flex-wrap items-center gap-2">
-                                        {["1", "2", "4", "6", "8", "10", "12", "14", "16", "More >"].map(l => (
+                                        {(baseMaterial === "Flex" ? ["1", "2", "4"] : ["1", "2", "4", "6", "8", "10", "12", "14", "16", "More >"]).map(l => (
                                             <Pill
                                                 key={l}
                                                 active={layers === l}

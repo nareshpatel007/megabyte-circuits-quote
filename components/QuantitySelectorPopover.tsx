@@ -77,17 +77,17 @@ export default function QuantitySelectorPopover({
 
     return (
         <div className="relative inline-block" ref={containerRef}>
-            {/* Trigger Button as shown in Reference Image 2 */}
+            {/* Trigger Button */}
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="h-9 px-4 border border-gray-300 hover:border-blue-500 rounded-md bg-white text-sm font-medium text-gray-800 flex items-center justify-between min-w-[90px] sm:min-w-[120px] gap-3 shadow-xs focus:outline-none transition-colors cursor-pointer select-none"
+                className="h-9 px-4 border border-gray-300 hover:border-primary focus:border-primary rounded-md bg-white text-sm font-medium text-gray-800 flex items-center justify-between min-w-[90px] sm:min-w-[120px] gap-3 shadow-xs focus:outline-none transition-colors cursor-pointer select-none"
             >
                 <span>{displayQty}</span>
                 <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
             </button>
 
-            {/* Popover Dropdown as shown in Reference Image 3 */}
+            {/* Popover Dropdown using theme primary color */}
             {isOpen && (
                 <div className="absolute top-full left-0 mt-2 z-50 bg-white border border-gray-200 rounded-lg shadow-2xl p-4 w-[340px] sm:w-[500px] md:w-[560px] max-w-[92vw]">
                     {/* Grid of preset quantities (7 columns) */}
@@ -101,13 +101,13 @@ export default function QuantitySelectorPopover({
                                     onClick={() => handleSelectPreset(q)}
                                     className={`h-9 border rounded text-xs sm:text-sm font-medium flex items-center justify-center relative overflow-hidden transition-all cursor-pointer select-none ${
                                         isSelected
-                                            ? "border-2 border-blue-500 text-blue-600 font-bold bg-white"
-                                            : "border-gray-200 hover:border-blue-400 hover:text-blue-600 text-gray-700 bg-white"
+                                            ? "border-2 border-primary text-primary font-bold bg-primary/5"
+                                            : "border-gray-200 hover:border-primary/60 hover:text-primary text-gray-700 bg-white"
                                     }`}
                                 >
                                     <span>{q}</span>
                                     {isSelected && (
-                                        <div className="absolute top-0 right-0 w-0 h-0 border-t-[14px] border-l-[14px] border-t-blue-500 border-l-transparent">
+                                        <div className="absolute top-0 right-0 w-0 h-0 border-t-[14px] border-l-[14px] border-t-primary border-l-transparent">
                                             <Check className="w-2.5 h-2.5 text-white absolute -top-[14px] -right-[1px] stroke-[3]" />
                                         </div>
                                     )}
@@ -116,7 +116,7 @@ export default function QuantitySelectorPopover({
                         })}
                     </div>
 
-                    {/* Bottom Bar: Custom Qty input & Confirm button */}
+                    {/* Bottom Bar: Custom Qty input & Confirm button using theme primary color */}
                     <div className="pt-3 border-t border-gray-100 flex items-center gap-3">
                         <span className="text-xs sm:text-sm font-medium text-gray-700 shrink-0">Custom Qty</span>
                         <input
@@ -137,12 +137,12 @@ export default function QuantitySelectorPopover({
                                     setTempQty(String(minQty));
                                 }
                             }}
-                            className="w-24 sm:w-36 h-9 px-3 border border-gray-300 rounded text-xs sm:text-sm font-medium text-gray-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            className="w-24 sm:w-36 h-9 px-3 border border-gray-300 rounded text-xs sm:text-sm font-medium text-gray-800 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                         />
                         <button
                             type="button"
                             onClick={handleConfirm}
-                            className="ml-auto bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs sm:text-sm px-6 py-2 rounded-full transition-colors shadow-xs cursor-pointer"
+                            className="ml-auto bg-primary hover:bg-primary/90 text-white font-semibold text-xs sm:text-sm px-6 py-2 rounded-full transition-colors shadow-xs cursor-pointer"
                         >
                             Confirm
                         </button>
