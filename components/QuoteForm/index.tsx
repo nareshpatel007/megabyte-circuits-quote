@@ -522,23 +522,6 @@ export default function QuoteForm({
                     />
                 </ConfigRow>
 
-                <ConfigRow label="Product Type" tooltip="Target application domain.">
-                    {[
-                        { label: "Industrial/Consumer electronics", disabled: false },
-                        { label: "Aerospace", disabled: formData.baseMaterial === "Flex" },
-                        { label: "Medical", disabled: formData.baseMaterial === "Flex" }
-                    ].map(pt => (
-                        <Pill
-                            key={pt.label}
-                            disabled={pt.disabled}
-                            active={(formData.productType || "Industrial/Consumer electronics") === pt.label || (pt.label === "Industrial/Consumer electronics" && formData.productType === "Industrial")}
-                            onClick={() => updateField("productType", pt.label)}
-                        >
-                            {pt.label}
-                        </Pill>
-                    ))}
-                </ConfigRow>
-
                 {/* Specs Accordion */}
                 <div className="mt-6">
                     <button
