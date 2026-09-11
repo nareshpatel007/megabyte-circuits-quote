@@ -115,7 +115,7 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                             <span className="w-32 shrink-0 text-slate-600">Panel Type</span>
                             <button
                                 type="button"
-                                className="px-3 py-1 rounded bg-primary/10 border border-primary text-primary font-bold text-xs"
+                                className="px-3 py-1 rounded bg-primary/10 border border-primary text-primary font-bold text-xs cursor-pointer"
                             >
                                 {panelType}
                             </button>
@@ -244,17 +244,18 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="absolute top-3 right-3 text-slate-400 hover:text-white z-10 transition-colors"
+                        className="absolute top-3 right-3 text-slate-400 hover:text-white z-50 p-1.5 rounded-full hover:bg-slate-800/80 transition-colors cursor-pointer"
+                        aria-label="Close modal"
                     >
                         <X className="w-5 h-5" />
                     </button>
 
                     {/* View Switcher Tabs */}
-                    <div className="flex gap-1 mb-4 z-10">
+                    <div className="flex gap-1 mb-4 z-10 pr-8">
                         <button
                             type="button"
                             onClick={() => setActiveTab("outline")}
-                            className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${activeTab === "outline" ? "bg-primary text-white" : "text-slate-300 hover:text-white"
+                            className={`px-3 py-1 rounded text-xs font-semibold transition-colors cursor-pointer ${activeTab === "outline" ? "bg-primary text-white" : "text-slate-300 hover:text-white hover:bg-slate-800"
                                 }`}
                         >
                             Board Outline
@@ -262,7 +263,7 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                         <button
                             type="button"
                             onClick={() => setActiveTab("preview")}
-                            className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${activeTab === "preview" ? "bg-primary text-white" : "text-slate-300 hover:text-white"
+                            className={`px-3 py-1 rounded text-xs font-semibold transition-colors cursor-pointer ${activeTab === "preview" ? "bg-primary text-white" : "text-slate-300 hover:text-white hover:bg-slate-800"
                                 }`}
                         >
                             2D Preview
