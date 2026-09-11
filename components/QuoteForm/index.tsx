@@ -327,6 +327,24 @@ export default function QuoteForm({
                     ))}
                 </ConfigRow>
 
+                {formData.baseMaterial === "Flex" && (
+                    <ConfigRow label="Substrate Type" tooltip="Thickness of dielectric layer.">
+                        {[
+                            { label: "25µm dielectric thickness", val: "25µm dielectric thickness" },
+                            { label: "50µm dielectric thickness", val: "50µm dielectric thickness" },
+                            { label: "Transparent", val: "Transparent" }
+                        ].map(sub => (
+                            <Pill
+                                key={sub.val}
+                                active={(formData.substrateType || "25µm dielectric thickness") === sub.val}
+                                onClick={() => updateField("substrateType", sub.val)}
+                            >
+                                {sub.label}
+                            </Pill>
+                        ))}
+                    </ConfigRow>
+                )}
+
                 <ConfigRow label="Layers" tooltip="Total layers count. Matches coordinates in drill outline files.">
                     <div className="flex items-center gap-2">
                         {["1", "2", "4"].map(l => (
@@ -481,24 +499,7 @@ export default function QuoteForm({
                                 ))}
                             </ConfigRow>
 
-                            {/* Material-specific options or Substrate Type for Flex */}
-                            {formData.baseMaterial === "Flex" && (
-                                <ConfigRow label="Substrate Type" tooltip="Thickness of dielectric layer.">
-                                    {[
-                                        { label: "25µm dielectric thickness", val: "25µm dielectric thickness" },
-                                        { label: "50µm dielectric thickness", val: "50µm dielectric thickness" },
-                                        { label: "Transparent", val: "Transparent" }
-                                    ].map(sub => (
-                                        <Pill
-                                            key={sub.val}
-                                            active={(formData.substrateType || "25µm dielectric thickness") === sub.val}
-                                            onClick={() => updateField("substrateType", sub.val)}
-                                        >
-                                            {sub.label}
-                                        </Pill>
-                                    ))}
-                                </ConfigRow>
-                            )}
+
 
                             {/* PCB Thickness - Dynamic options for Flex vs Others */}
                             <ConfigRow label="PCB Thickness">

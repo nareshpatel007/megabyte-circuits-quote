@@ -459,6 +459,7 @@ export default function PCBQuote() {
 
     // Form State
     const [baseMaterial, setBaseMaterial] = useState("FR-4");
+    const [substrateType, setSubstrateType] = useState("25µm dielectric thickness");
     const [layers, setLayers] = useState("2");
     const [qty, setQty] = useState("5");
     const [productType, setProductType] = useState("Industrial");
@@ -688,6 +689,20 @@ export default function PCBQuote() {
                                         </Pill>
                                     ))}
                                 </ConfigRow>
+
+                                {baseMaterial === "Flex" && (
+                                    <ConfigRow label="Substrate Type" tooltip="Thickness of dielectric layer.">
+                                        {["25µm dielectric thickness", "50µm dielectric thickness", "Transparent"].map(sub => (
+                                            <Pill
+                                                key={sub}
+                                                active={substrateType === sub}
+                                                onClick={() => setSubstrateType(sub)}
+                                            >
+                                                {sub}
+                                            </Pill>
+                                        ))}
+                                    </ConfigRow>
+                                )}
 
                                 <ConfigRow label="Layers" tooltip="Number of copper layers.">
                                     <div className="flex flex-wrap items-center gap-2">
