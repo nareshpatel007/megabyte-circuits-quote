@@ -183,13 +183,13 @@ function LoginContent() {
 
                     {/* Logo & Title Header */}
                     <div className="text-center sm:text-left space-y-3">
-                        <Link href="/" className="inline-block">
+                        <a href={process.env.NEXT_PUBLIC_MAIN_URL || "https://megabytecircuit.com"} className="inline-block">
                             <img
                                 src="/images/logo.png"
                                 alt="Megabyte Circuits"
                                 className="h-10 w-auto object-contain cursor-pointer hover:opacity-90 transition-opacity"
                             />
-                        </Link>
+                        </a>
                         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                             {viewMode === "signin" ? "Sign in to Megabyte" : "Create Your Account"}
                         </h1>

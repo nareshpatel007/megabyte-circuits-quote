@@ -515,9 +515,9 @@ export default function PCBQuote() {
             <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
                 <div className="max-w-[1400px] mx-auto px-4 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link href="/" className="flex items-center gap-2 group">
+                        <a href={process.env.NEXT_PUBLIC_MAIN_URL || "https://megabytecircuit.com"} className="flex items-center gap-2 group">
                             <img src="/images/logo.png" alt="Megabyte Circuit Logo" className="h-18 w-auto object-contain" />
-                        </Link>
+                        </a>
                     </div>
 
                     <div className="hidden lg:flex flex-1 max-w-2xl px-8">

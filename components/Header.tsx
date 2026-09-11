@@ -146,13 +146,13 @@ export default function Header() {
                     {/* Brand Logo (visible only when not logged in or in header layout) */}
                     {!user ? (
                         <div className="flex items-center gap-4 shrink-0">
-                            <Link href="/" className="flex items-center gap-2 group">
+                            <a href={process.env.NEXT_PUBLIC_MAIN_URL || "https://megabytecircuit.com"} className="flex items-center gap-2 group">
                                 <img
                                     src="/images/logo.png"
                                     alt="Megabyte Circuit Logo"
                                     className="h-9 sm:h-10 w-auto object-contain transition-transform group-hover:scale-[1.02] dark:brightness-0 dark:invert"
                                 />
-                            </Link>
+                            </a>
                         </div>
                     ) : (
                         <div className="flex items-center gap-3">
