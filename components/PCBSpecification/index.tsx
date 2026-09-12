@@ -958,13 +958,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
         // Days setup
         const daysList = [1, 3, 5, 7, 10, 13, 15, 17, 20];
-        const options = daysList.map((day) => {
-            let costPerSqCm = applicablePrices[4] ?? applicablePrices[0];
-            if (day === 1) costPerSqCm = applicablePrices[0];
-            else if (day === 3) costPerSqCm = applicablePrices[1];
-            else if (day === 5) costPerSqCm = applicablePrices[2];
-            else if (day === 7) costPerSqCm = applicablePrices[3];
-            else if (day === 20) {
+        const options = daysList.map((day, idx) => {
+            let costPerSqCm = applicablePrices[idx] !== undefined ? applicablePrices[idx] : (applicablePrices[4] ?? applicablePrices[0]);
+            if (day === 20 && applicablePrices[8] === undefined) {
                 costPerSqCm = (layers >= 4 && layers <= 10)
                     ? applicablePrices[0]
                     : (applicablePrices[4] ?? applicablePrices[0]) * 0.85;
