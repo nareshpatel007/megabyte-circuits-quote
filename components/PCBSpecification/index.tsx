@@ -894,7 +894,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 const usdTotalFee = parseFloat(jlcpcbQuote?.pcbCostInfo?.totalFee || jlcpcbQuote?.priceWithoutFreight || 0);
                 if (usdTotalFee > 0) {
                     const inrTotalFee = Math.max(Math.round(usdTotalFee * 88.5), 100);
-                    const daysList = [1, 3, 5, 7, 10, 20];
+                    const daysList = [1, 3, 5, 7, 10, 13, 15, 17, 20];
                     const options = daysList.map((day) => {
                         const unitPrice = inrTotalFee / quantity;
                         return {
@@ -911,7 +911,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             // Fallback calculation for > 2 layers when live quote is pending
             const layerFactor = 1 + (layers - 2) * 0.4;
             const baseCost = Math.round(5500 * layerFactor + (areaInSqCm * 1.2 * layerFactor));
-            const daysList = [1, 3, 5, 7, 10, 20];
+            const daysList = [1, 3, 5, 7, 10, 13, 15, 17, 20];
             const options = daysList.map((day) => {
                 const dayFactor = day === 1 ? 1.5 : day === 3 ? 1.3 : day === 5 ? 1.1 : 1.0;
                 const totalCost = Math.round(baseCost * dayFactor);
@@ -928,9 +928,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
 
         const fixedCosts: Record<string, Record<number, number>> = pricingConfig?.fixedCosts || {
-
-            '1': { 1: 3100, 3: 2100, 5: 1600, 7: 1500, 10: 1400, 20: 1000 },
-            '2': { 1: 8100, 3: 4100, 5: 2600, 7: 2200, 10: 1900, 20: 1400 },
+            '1': { 1: 3100, 3: 2100, 5: 1600, 7: 1500, 10: 1400, 13: 1280, 15: 1200, 17: 1120, 20: 1000 },
+            '2': { 1: 8100, 3: 4100, 5: 2600, 7: 2200, 10: 1900, 13: 1750, 15: 1650, 17: 1550, 20: 1400 },
             '4': { 20: 6000 },
             '6': { 20: 7000 },
             '8': { 20: 8000 },
@@ -958,10 +957,14 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         }
 
         // Days setup
-        const daysList = [1, 3, 5, 7, 10, 20];
-        const options = daysList.map((day, idx) => {
-            let costPerSqCm = applicablePrices[idx];
-            if (day === 20) {
+        const daysList = [1, 3, 5, 7, 10, 13, 15, 17, 20];
+        const options = daysList.map((day) => {
+            let costPerSqCm = applicablePrices[4] ?? applicablePrices[0];
+            if (day === 1) costPerSqCm = applicablePrices[0];
+            else if (day === 3) costPerSqCm = applicablePrices[1];
+            else if (day === 5) costPerSqCm = applicablePrices[2];
+            else if (day === 7) costPerSqCm = applicablePrices[3];
+            else if (day === 20) {
                 costPerSqCm = (layers >= 4 && layers <= 10)
                     ? applicablePrices[0]
                     : (applicablePrices[4] ?? applicablePrices[0]) * 0.85;
