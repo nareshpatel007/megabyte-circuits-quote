@@ -1596,6 +1596,12 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                     let workingDayCounter = 0;
 
+                                    const getShortMonthYear = (d: Date) => {
+                                        const monthStr = d.toLocaleDateString("en-IN", { month: "short" });
+                                        const formattedMonth = monthStr === "Sep" ? "Sept" : monthStr;
+                                        return `${formattedMonth} ${d.getFullYear()}`;
+                                    };
+
                                     const next20Days = Array.from({ length: 20 }, (_, i) => {
                                         const daysAhead = i + 1;
                                         const date = new Date();
@@ -1699,6 +1705,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                             dateNum: date.getDate(),
                                             monthStr: date.toLocaleDateString("en-IN", { month: "short" }),
                                             fullMonthYear: date.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+                                            shortMonthYear: getShortMonthYear(date),
                                             weekday: date.toLocaleDateString("en-IN", { weekday: "short" }),
                                             formattedDate: date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
                                             orderValue: isUnavailable ? "0.00" : matchedOrderValue.toFixed(2),
@@ -1712,10 +1719,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                         };
                                     });
 
-                                    const uniqueMonths = Array.from(new Set(next20Days.map(item => item.fullMonthYear)));
+                                    const uniqueMonths = Array.from(new Set(next20Days.map(item => item.shortMonthYear)));
                                     const calendarHeaderTitle = uniqueMonths.length > 1
                                         ? `${uniqueMonths[0]} - ${uniqueMonths[uniqueMonths.length - 1]}`
-                                        : uniqueMonths[0] || new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+                                        : uniqueMonths[0] || getShortMonthYear(new Date());
 
                                     // Ensure selectedDay is valid available date
                                     const selectedDayData = next20Days.find(item => item.day === selectedDay && !item.isUnavailable) || next20Days.find(item => !item.isUnavailable);
