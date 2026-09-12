@@ -472,9 +472,7 @@ export default function QuoteForm({
                                 validateDimensions(val, parseFloat(formData.height) || 0, parseInt(formData.layers));
                             }}
                             placeholder="100"
-                            readOnly={isUploaded}
-                            className={`w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all ${isUploaded ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-100" : ""
-                                }`}
+                            className="w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all"
                         />
                         <span className="text-gray-400 font-semibold">×</span>
                         <input
@@ -500,16 +498,12 @@ export default function QuoteForm({
                                 validateDimensions(parseFloat(formData.width) || 0, val, parseInt(formData.layers));
                             }}
                             placeholder="100"
-                            readOnly={isUploaded}
-                            className={`w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all ${isUploaded ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-100" : ""
-                                }`}
+                            className="w-24 h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all"
                         />
                         <select
                             value={formData.unit}
                             onChange={(e) => updateField("unit", e.target.value)}
-                            disabled={isUploaded}
-                            className={`h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary outline-none bg-white shadow-sm font-semibold text-gray-700 ${isUploaded ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100" : ""
-                                }`}
+                            className="h-9 px-3 border border-gray-200 rounded-xl text-sm focus:border-primary outline-none bg-white shadow-sm font-semibold text-gray-700"
                         >
                             <option value="mm">mm</option>
                             <option value="inches">inches</option>
