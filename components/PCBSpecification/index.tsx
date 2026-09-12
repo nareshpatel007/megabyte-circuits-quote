@@ -639,8 +639,16 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const today = new Date();
             const future = new Date();
             future.setDate(today.getDate() + 60);
-            const startStr = today.toISOString().split("T")[0];
-            const endStr = future.toISOString().split("T")[0];
+
+            const formatYmd = (d: Date) => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, "0");
+                const day = String(d.getDate()).padStart(2, "0");
+                return `${y}-${m}-${day}`;
+            };
+
+            const startStr = formatYmd(today);
+            const endStr = formatYmd(future);
             const list = await fetchPublicHolidays(startStr, endStr);
             if (active) {
                 setPublicHolidays(list);
@@ -1599,7 +1607,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                         const isoDateStr = `${year}-${month}-${dayOfMonth}`;
 
                                         const isSunday = date.getDay() === 0;
-                                        const activeHoliday = publicHolidays.find(h => h.date === isoDateStr);
+                                        const activeHoliday = publicHolidays.find(h => (typeof h.date === "string" ? h.date.split("T")[0] : "") === isoDateStr);
                                         const isHoliday = !!activeHoliday;
                                         const isUnavailable = isSunday || isHoliday;
 

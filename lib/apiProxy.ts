@@ -90,6 +90,9 @@ export async function handleApiProxy(
         if (!apiUrl.endsWith("/api") && !path.startsWith("/api/")) {
             path = `/api${path}`;
         }
+        if (req.nextUrl.search && !path.includes("?")) {
+            path += req.nextUrl.search;
+        }
 
         const apiRes = await fetch(`${apiUrl}${path}`, fetchOptions);
         const text = await apiRes.text();
