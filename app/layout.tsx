@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
+import { Analytics } from "@vercel/analytics/next";
 import Providers from "./providers";
 import Script from "next/script";
 
@@ -39,6 +40,7 @@ export default function RootLayout({
                         <Toaster />
                     </TooltipProvider>
                 </Providers>
+                <Analytics />
             </body>
         </html>
     );
