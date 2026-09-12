@@ -1723,34 +1723,34 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                     return (
                                         <div className="space-y-4">
-                                            <div className="bg-[#8DD3A5]/15 dark:bg-[#0F7438]/20 p-4 rounded-2xl border border-[#41A96A]/30 shadow-inner relative overflow-hidden">
+                                            <div className="bg-[#8DD3A5]/15 dark:bg-[#0F7438]/20 p-5 sm:p-6 rounded-2xl border border-[#41A96A]/30 shadow-inner relative overflow-hidden">
                                                 {/* Subtle brand theme grid texture background */}
                                                 <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#41A96A_1px,transparent_1px)] [background-size:14px_14px] pointer-events-none" />
 
-                                                <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-[#41A96A]/20 dark:border-[#69C48A]/30 relative z-10">
+                                                <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-[#41A96A]/20 dark:border-[#69C48A]/30 relative z-10">
                                                     <div>
-                                                        <h3 className="text-xs font-black text-[#0F7438] dark:text-[#8DD3A5] uppercase tracking-wider flex items-center gap-1.5">
-                                                            <span className="w-2 h-2 rounded-full bg-[#238E4E] inline-block ring-2 ring-[#8DD3A5]/50" />
+                                                        <h3 className="text-xs sm:text-sm font-black text-[#0F7438] dark:text-[#8DD3A5] uppercase tracking-wider flex items-center gap-1.5">
+                                                            <span className="w-2.5 h-2.5 rounded-full bg-[#238E4E] inline-block ring-2 ring-[#8DD3A5]/50" />
                                                             Select Delivery Date
                                                         </h3>
-                                                        <p className="text-[10px] text-[#238E4E] dark:text-[#69C48A] font-semibold">
+                                                        <p className="text-[11px] text-[#238E4E] dark:text-[#69C48A] font-semibold mt-0.5">
                                                             Prices are per order
                                                         </p>
                                                     </div>
-                                                    <div className="bg-white dark:bg-[#0F7438]/80 text-[#0F7438] dark:text-[#8DD3A5] px-2.5 py-1 rounded-md text-xs font-black shadow-sm border border-[#69C48A]/60 dark:border-[#41A96A]/60 flex items-center gap-1">
+                                                    <div className="bg-white dark:bg-[#0F7438]/80 text-[#0F7438] dark:text-[#8DD3A5] px-3 py-1 rounded-md text-xs sm:text-sm font-black shadow-sm border border-[#69C48A]/60 dark:border-[#41A96A]/60 flex items-center gap-1">
                                                         <span>{calendarHeaderTitle}</span>
                                                     </div>
                                                 </div>
 
-                                                <div className="grid grid-cols-5 gap-3 relative z-10">
+                                                <div className="grid grid-cols-5 gap-3.5 sm:gap-4 relative z-10">
                                                     {next20Days.map((item, idx) => {
                                                         const isSelected = selectedDayData?.day === item.day;
                                                         const stickyColors = [
-                                                            { bg: "bg-[#8DD3A5]/20", border: "border-[#8DD3A5]", text: "text-[#0F7438]", subtext: "text-[#238E4E]", pin: "bg-[#0F7438]", activeBg: "bg-[#8DD3A5]/50" },
-                                                            { bg: "bg-[#69C48A]/20", border: "border-[#69C48A]", text: "text-[#0F7438]", subtext: "text-[#238E4E]", pin: "bg-[#238E4E]", activeBg: "bg-[#69C48A]/50" },
-                                                            { bg: "bg-[#41A96A]/15", border: "border-[#41A96A]/60", text: "text-[#0F7438]", subtext: "text-[#238E4E]", pin: "bg-[#41A96A]", activeBg: "bg-[#41A96A]/40" },
-                                                            { bg: "bg-[#8DD3A5]/30", border: "border-[#69C48A]", text: "text-[#0F7438]", subtext: "text-[#238E4E]", pin: "bg-[#238E4E]", activeBg: "bg-[#8DD3A5]/60" },
-                                                            { bg: "bg-[#69C48A]/15", border: "border-[#8DD3A5]/80", text: "text-[#0F7438]", subtext: "text-[#238E4E]", pin: "bg-[#0F7438]", activeBg: "bg-[#69C48A]/40" },
+                                                            { bg: "bg-[#8DD3A5]/20", border: "border-[#8DD3A5]", text: "text-[#0F7438]", subtext: "text-[#0F7438]", pin: "bg-[#0F7438]", activeBg: "bg-[#8DD3A5]/50" },
+                                                            { bg: "bg-[#69C48A]/20", border: "border-[#69C48A]", text: "text-[#0F7438]", subtext: "text-[#0F7438]", pin: "bg-[#238E4E]", activeBg: "bg-[#69C48A]/50" },
+                                                            { bg: "bg-[#41A96A]/15", border: "border-[#41A96A]/60", text: "text-[#0F7438]", subtext: "text-[#0F7438]", pin: "bg-[#41A96A]", activeBg: "bg-[#41A96A]/40" },
+                                                            { bg: "bg-[#8DD3A5]/30", border: "border-[#69C48A]", text: "text-[#0F7438]", subtext: "text-[#0F7438]", pin: "bg-[#238E4E]", activeBg: "bg-[#8DD3A5]/60" },
+                                                            { bg: "bg-[#69C48A]/15", border: "border-[#8DD3A5]/80", text: "text-[#0F7438]", subtext: "text-[#0F7438]", pin: "bg-[#0F7438]", activeBg: "bg-[#69C48A]/40" },
                                                         ];
                                                         const color = stickyColors[idx % stickyColors.length];
                                                         const rotations = ["rotate-[-1.5deg]", "rotate-[1deg]", "rotate-[-0.5deg]", "rotate-[2deg]", "rotate-[-1deg]"];
@@ -1762,15 +1762,15 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                     key={item.day}
                                                                     aria-disabled="true"
                                                                     title={`${item.formattedDate} - Sunday - Unavailable`}
-                                                                    className={`relative flex flex-col items-center justify-between p-1.5 rounded-sm select-none aspect-square shadow-2xs opacity-80 bg-slate-100 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 cursor-not-allowed ${rotation}`}
+                                                                    className={`relative flex flex-col items-center justify-between p-2 sm:p-2.5 rounded-md select-none aspect-square shadow-2xs opacity-80 bg-slate-100 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 cursor-not-allowed ${rotation}`}
                                                                 >
-                                                                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
-                                                                        <div className="w-2.5 h-2.5 rounded-full bg-slate-400 border border-white/80 shadow-2xs" />
+                                                                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-20">
+                                                                        <div className="w-3 h-3 rounded-full bg-slate-400 border border-white/80 shadow-2xs" />
                                                                     </div>
-                                                                    <span className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400 leading-none mt-1">{item.weekday}</span>
-                                                                    <span className="text-xs font-black my-0.5 leading-tight text-slate-600 dark:text-slate-300">{item.dateNum}</span>
+                                                                    <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 leading-none mt-0.5">{item.weekday}</span>
+                                                                    <span className="text-sm sm:text-base font-black my-0.5 leading-tight text-slate-600 dark:text-slate-300">{item.dateNum}</span>
                                                                     <div className="flex flex-col items-center leading-none pb-0.5">
-                                                                        <span className="text-[7.5px] font-extrabold uppercase tracking-tight text-slate-500 bg-slate-200 dark:bg-slate-700 px-1 py-0.5 rounded-xs">Sunday</span>
+                                                                        <span className="text-[8.5px] sm:text-[9.5px] font-extrabold uppercase tracking-tight text-slate-500 bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded-xs">Sunday</span>
                                                                     </div>
                                                                 </div>
                                                             );
@@ -1782,17 +1782,17 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                     key={item.day}
                                                                     aria-disabled="true"
                                                                     title={`${item.formattedDate} - ${item.holidayName} - Holiday`}
-                                                                    className={`relative flex flex-col items-center justify-between p-1.5 rounded-sm select-none aspect-square shadow-2xs bg-amber-50 dark:bg-amber-950/30 border border-amber-400/80 dark:border-amber-600/60 cursor-not-allowed ${rotation}`}
+                                                                    className={`relative flex flex-col items-center justify-between p-2 sm:p-2.5 rounded-md select-none aspect-square shadow-2xs bg-amber-50 dark:bg-amber-950/30 border border-amber-400/80 dark:border-amber-600/60 cursor-not-allowed ${rotation}`}
                                                                 >
-                                                                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
-                                                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white/80 shadow-2xs" />
+                                                                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-20">
+                                                                        <div className="w-3 h-3 rounded-full bg-amber-500 border border-white/80 shadow-2xs" />
                                                                     </div>
-                                                                    <span className="text-[8px] font-black uppercase text-amber-700 dark:text-amber-400 leading-none mt-1">{item.weekday}</span>
-                                                                    <span className="text-[9px] font-extrabold my-0.5 leading-tight text-amber-900 dark:text-amber-200 text-center truncate max-w-full px-0.5" title={item.holidayName || "Holiday"}>
+                                                                    <span className="text-[9px] sm:text-[10px] font-black uppercase text-amber-700 dark:text-amber-400 leading-none mt-0.5">{item.weekday}</span>
+                                                                    <span className="text-[10px] sm:text-[11px] font-extrabold my-0.5 leading-tight text-amber-900 dark:text-amber-200 text-center truncate max-w-full px-0.5" title={item.holidayName || "Holiday"}>
                                                                         {item.holidayName || "Holiday"}
                                                                     </span>
                                                                     <div className="flex flex-col items-center leading-none pb-0.5">
-                                                                        <span className="text-[7.5px] font-extrabold uppercase tracking-tight text-amber-800 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-900/60 px-1 py-0.5 rounded-xs">Holiday</span>
+                                                                        <span className="text-[8.5px] sm:text-[9.5px] font-extrabold uppercase tracking-tight text-amber-800 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-900/60 px-1.5 py-0.5 rounded-xs">Holiday</span>
                                                                     </div>
                                                                 </div>
                                                             );
@@ -1802,18 +1802,18 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                             <div
                                                                 key={item.day}
                                                                 onClick={() => setSelectedDay(item.day)}
-                                                                className={`relative flex flex-col items-center justify-between p-1.5 rounded-sm transition-all duration-200 cursor-pointer select-none aspect-square shadow-sm ${rotation} ${isSelected
+                                                                className={`relative flex flex-col items-center justify-between p-2 sm:p-2.5 rounded-md transition-all duration-200 cursor-pointer select-none aspect-square shadow-sm ${rotation} ${isSelected
                                                                     ? `${color.activeBg} ring-2 ring-[#238E4E] border-2 border-[#0F7438] scale-[1.08] z-20 shadow-md rotate-0`
                                                                     : `${color.bg} border ${color.border} hover:scale-[1.04] hover:rotate-0 hover:z-10 hover:shadow-md`
                                                                     }`}
                                                             >
-                                                                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
-                                                                    <div className={`w-2.5 h-2.5 rounded-full ${color.pin} border border-white/80 shadow-xs`} />
+                                                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-20">
+                                                                    <div className={`w-3 h-3 rounded-full ${color.pin} border border-white/80 shadow-xs`} />
                                                                 </div>
 
-                                                                <span className="text-[8px] font-black uppercase text-[#0F7438]/70 dark:text-[#8DD3A5]/70 leading-none mt-1">{item.weekday}</span>
-                                                                <span className={`text-xs font-black my-0.5 leading-tight ${color.text}`}>{item.dateNum}</span>
-                                                                <span className={`text-[9px] font-extrabold ${color.subtext} leading-none pb-0.5`}>
+                                                                <span className="text-[9px] sm:text-[10px] font-black uppercase text-[#0F7438]/75 dark:text-[#8DD3A5]/80 leading-none mt-0.5">{item.weekday}</span>
+                                                                <span className={`text-sm sm:text-base font-black my-0.5 leading-tight ${color.text}`}>{item.dateNum}</span>
+                                                                <span className={`text-[10.5px] sm:text-xs font-black ${color.subtext} leading-none pb-0.5 tracking-tight`}>
                                                                     {formatPrice(item.orderValue)}
                                                                 </span>
                                                             </div>
