@@ -1731,9 +1731,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                     return (
                                         <div className="space-y-4">
                                             <div className="bg-[#8DD3A5]/15 dark:bg-[#0F7438]/20 p-4 sm:p-5 rounded-2xl border border-[#41A96A]/30 shadow-inner relative overflow-hidden">
-                                                {/* Subtle brand theme grid texture background */}
-                                                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#41A96A_1px,transparent_1px)] [background-size:14px_14px] pointer-events-none" />
-
                                                 <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-[#41A96A]/20 dark:border-[#69C48A]/30 relative z-10 gap-2">
                                                     <div className="min-w-0">
                                                         <h3 className="text-xs sm:text-sm font-bold text-[#0F7438] dark:text-[#8DD3A5] uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
