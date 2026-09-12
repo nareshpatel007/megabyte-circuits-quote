@@ -12,6 +12,7 @@ import { GerberFile, QuoteFormData, UploadResponse } from "../../lib/gerber/type
 import { loadLayers, renderStack, renderWithGerbersRenderer, type RenderOptions, type InputLayer, COLORS, FINISHES } from "../../lib/gerber/clientRenderer";
 
 import { submitOrder, OrderFormData } from "../../lib/api/orderService";
+import { fetchPublicHolidays, PublicHoliday } from "../../lib/api/deliveryService";
 import Toast, { ToastType } from "../Toast";
 import { saveCartToBackend } from "@/lib/cartSession";
 import { useCurrency } from "../../context/CurrencyContext";
@@ -630,6 +631,24 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [isChargeDetailsOpen, setIsChargeDetailsOpen] = useState(true);
     const [selectedBuildTime, setSelectedBuildTime] = useState<"3days" | "24hours" | "24hours_pcba">("3days");
     const [selectedDay, setSelectedDay] = useState<number | null>(null);
+    const [publicHolidays, setPublicHolidays] = useState<PublicHoliday[]>([]);
+
+    React.useEffect(() => {
+        let active = true;
+        async function loadPublicHolidays() {
+            const today = new Date();
+            const future = new Date();
+            future.setDate(today.getDate() + 60);
+            const startStr = today.toISOString().split("T")[0];
+            const endStr = future.toISOString().split("T")[0];
+            const list = await fetchPublicHolidays(startStr, endStr);
+            if (active) {
+                setPublicHolidays(list);
+            }
+        }
+        loadPublicHolidays();
+        return () => { active = false; };
+    }, []);
     const [shippingOptionKey, setShippingOptionKey] = useState<string>("standard");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [checkoutData, setCheckoutData] = useState<{ day: number; unitPrice: string; orderValue: string; dateStr: string } | null>(null);
@@ -1564,99 +1583,124 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                     const defaultOrderValue = Math.max(Math.round(length * width * 0.05 * quantity), 100);
                                     const defaultUnitPrice = (defaultOrderValue / quantity).toFixed(2);
 
-                                    // Generate 20 days with interpolated/averaged pricing for intermediate days
+                                    // Generate 20 calendar days while mapping lead time prices ONLY to valid working days
                                     const getOption = (dayNum: number) => options.find(o => o.day === dayNum && o.visible);
+
+                                    let workingDayCounter = 0;
 
                                     const next20Days = Array.from({ length: 20 }, (_, i) => {
                                         const daysAhead = i + 1;
                                         const date = new Date();
                                         date.setDate(date.getDate() + daysAhead);
 
+                                        const year = date.getFullYear();
+                                        const month = String(date.getMonth() + 1).padStart(2, "0");
+                                        const dayOfMonth = String(date.getDate()).padStart(2, "0");
+                                        const isoDateStr = `${year}-${month}-${dayOfMonth}`;
+
+                                        const isSunday = date.getDay() === 0;
+                                        const activeHoliday = publicHolidays.find(h => h.date === isoDateStr);
+                                        const isHoliday = !!activeHoliday;
+                                        const isUnavailable = isSunday || isHoliday;
+
                                         let matchedOrderValue = defaultOrderValue;
                                         let matchedUnitPrice = parseFloat(defaultUnitPrice);
                                         let visible = false;
+                                        let workingDayNum = 0;
 
-                                        if (layers > 2) {
-                                            const optAny = options.find(o => o.visible);
-                                            if (optAny) {
-                                                matchedOrderValue = parseFloat(optAny.orderValue);
-                                                matchedUnitPrice = parseFloat(optAny.unitPrice);
-                                                visible = true;
-                                            }
-                                        } else if (layers >= 4 && layers <= 10) {
-                                            const opt20 = getOption(20);
-                                            if (opt20) {
-                                                matchedOrderValue = parseFloat(opt20.orderValue);
-                                                matchedUnitPrice = parseFloat(opt20.unitPrice);
-                                                visible = true;
-                                            }
-                                        } else {
-                                            const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
-                                                const o1 = getOption(d1);
-                                                const o2 = getOption(d2);
-                                                if (o1 && o2) {
-                                                    const val1 = parseFloat(o1.orderValue);
-                                                    const val2 = parseFloat(o2.orderValue);
-                                                    const u1 = parseFloat(o1.unitPrice);
-                                                    const u2 = parseFloat(o2.unitPrice);
-                                                    return {
-                                                        orderValue: val1 + (val2 - val1) * ratio,
-                                                        unitPrice: u1 + (u2 - u1) * ratio,
-                                                        visible: true
-                                                    };
-                                                } else if (o2) {
-                                                    return { orderValue: parseFloat(o2.orderValue), unitPrice: parseFloat(o2.unitPrice), visible: true };
-                                                } else if (o1) {
-                                                    return { orderValue: parseFloat(o1.orderValue), unitPrice: parseFloat(o1.unitPrice), visible: true };
+                                        if (!isUnavailable) {
+                                            workingDayCounter++;
+                                            workingDayNum = workingDayCounter;
+
+                                            if (layers > 2) {
+                                                const optAny = options.find(o => o.visible);
+                                                if (optAny) {
+                                                    matchedOrderValue = parseFloat(optAny.orderValue);
+                                                    matchedUnitPrice = parseFloat(optAny.unitPrice);
+                                                    visible = true;
                                                 }
-                                                return null;
-                                            };
+                                            } else if (layers >= 4 && layers <= 10) {
+                                                const opt20 = getOption(20);
+                                                if (opt20) {
+                                                    matchedOrderValue = parseFloat(opt20.orderValue);
+                                                    matchedUnitPrice = parseFloat(opt20.unitPrice);
+                                                    visible = true;
+                                                }
+                                            } else {
+                                                const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
+                                                    const o1 = getOption(d1);
+                                                    const o2 = getOption(d2);
+                                                    if (o1 && o2) {
+                                                        const val1 = parseFloat(o1.orderValue);
+                                                        const val2 = parseFloat(o2.orderValue);
+                                                        const u1 = parseFloat(o1.unitPrice);
+                                                        const u2 = parseFloat(o2.unitPrice);
+                                                        return {
+                                                            orderValue: val1 + (val2 - val1) * ratio,
+                                                            unitPrice: u1 + (u2 - u1) * ratio,
+                                                            visible: true
+                                                        };
+                                                    } else if (o2) {
+                                                        return { orderValue: parseFloat(o2.orderValue), unitPrice: parseFloat(o2.unitPrice), visible: true };
+                                                    } else if (o1) {
+                                                        return { orderValue: parseFloat(o1.orderValue), unitPrice: parseFloat(o1.unitPrice), visible: true };
+                                                    }
+                                                    return null;
+                                                };
 
-
-                                            if (daysAhead === 1) {
-                                                const o = getOption(1);
-                                                if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
-                                            } else if (daysAhead === 2) {
-                                                const res = interpolate(1, 3, 0.5); // Average of day 1 & day 3
-                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                            } else if (daysAhead === 3) {
-                                                const o = getOption(3);
-                                                if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
-                                            } else if (daysAhead === 4) {
-                                                const res = interpolate(3, 5, 0.5); // Average of day 3 & day 5
-                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                            } else if (daysAhead === 5) {
-                                                const o = getOption(5);
-                                                if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
-                                            } else if (daysAhead === 6) {
-                                                const res = interpolate(5, 7, 0.5); // Average of day 5 & day 7
-                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                            } else if (daysAhead === 7) {
-                                                const o = getOption(7);
-                                                if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
-                                            } else if (daysAhead === 8) {
-                                                const res = interpolate(7, 10, 1 / 3); // Step 1 between 7 and 10
-                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                            } else if (daysAhead === 9) {
-                                                const res = interpolate(7, 10, 2 / 3); // Step 2 between 7 and 10
-                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                            } else if (daysAhead >= 10 && daysAhead <= 20) {
-                                                const ratio = (daysAhead - 10) / 10;
-                                                const res = interpolate(10, 20, ratio);
-                                                if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                                const dayNum = workingDayNum;
+                                                if (dayNum === 1) {
+                                                    const o = getOption(1);
+                                                    if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
+                                                } else if (dayNum === 2) {
+                                                    const res = interpolate(1, 3, 0.5);
+                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                                } else if (dayNum === 3) {
+                                                    const o = getOption(3);
+                                                    if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
+                                                } else if (dayNum === 4) {
+                                                    const res = interpolate(3, 5, 0.5);
+                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                                } else if (dayNum === 5) {
+                                                    const o = getOption(5);
+                                                    if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
+                                                } else if (dayNum === 6) {
+                                                    const res = interpolate(5, 7, 0.5);
+                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                                } else if (dayNum === 7) {
+                                                    const o = getOption(7);
+                                                    if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
+                                                } else if (dayNum === 8) {
+                                                    const res = interpolate(7, 10, 1 / 3);
+                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                                } else if (dayNum === 9) {
+                                                    const res = interpolate(7, 10, 2 / 3);
+                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                                } else if (dayNum >= 10) {
+                                                    const ratio = Math.min((dayNum - 10) / 10, 1);
+                                                    const res = interpolate(10, 20, ratio);
+                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                                }
                                             }
                                         }
 
                                         return {
                                             day: daysAhead,
+                                            dateObj: date,
+                                            isoDateStr,
                                             dateNum: date.getDate(),
                                             monthStr: date.toLocaleDateString("en-IN", { month: "short" }),
                                             fullMonthYear: date.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
                                             weekday: date.toLocaleDateString("en-IN", { weekday: "short" }),
                                             formattedDate: date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-                                            orderValue: matchedOrderValue.toFixed(2),
-                                            unitPrice: matchedUnitPrice.toFixed(2),
-                                            visible
+                                            orderValue: isUnavailable ? "0.00" : matchedOrderValue.toFixed(2),
+                                            unitPrice: isUnavailable ? "0.00" : matchedUnitPrice.toFixed(2),
+                                            visible,
+                                            isSunday,
+                                            isHoliday,
+                                            holidayName: activeHoliday?.name || null,
+                                            isUnavailable,
+                                            workingDayNum
                                         };
                                     });
 
@@ -1665,7 +1709,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                         ? `${uniqueMonths[0]} - ${uniqueMonths[uniqueMonths.length - 1]}`
                                         : uniqueMonths[0] || new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
-                                    const selectedDayData = next20Days.find(item => item.day === selectedDay);
+                                    // Ensure selectedDay is valid available date
+                                    const selectedDayData = next20Days.find(item => item.day === selectedDay && !item.isUnavailable) || next20Days.find(item => !item.isUnavailable);
                                     const hasValidGerber = !!uploadedFile && detectedInfo?.layers !== "0" && (!!topSvg || !!bottomSvg || previewLoading);
 
                                     return (
@@ -1691,8 +1736,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                                 <div className="grid grid-cols-5 gap-3 relative z-10">
                                                     {next20Days.map((item, idx) => {
-                                                        const isSelected = selectedDay === item.day;
-                                                        // Palette based sticky note colors using hex codes: #0F7438, #238E4E, #41A96A, #69C48A, #8DD3A5
+                                                        const isSelected = selectedDayData?.day === item.day;
                                                         const stickyColors = [
                                                             { bg: "bg-[#8DD3A5]/20", border: "border-[#8DD3A5]", text: "text-[#0F7438]", subtext: "text-[#238E4E]", pin: "bg-[#0F7438]", activeBg: "bg-[#8DD3A5]/50" },
                                                             { bg: "bg-[#69C48A]/20", border: "border-[#69C48A]", text: "text-[#0F7438]", subtext: "text-[#238E4E]", pin: "bg-[#238E4E]", activeBg: "bg-[#69C48A]/50" },
@@ -1701,10 +1745,50 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                             { bg: "bg-[#69C48A]/15", border: "border-[#8DD3A5]/80", text: "text-[#0F7438]", subtext: "text-[#238E4E]", pin: "bg-[#0F7438]", activeBg: "bg-[#69C48A]/40" },
                                                         ];
                                                         const color = stickyColors[idx % stickyColors.length];
-
-                                                        // Slight natural rotations
                                                         const rotations = ["rotate-[-1.5deg]", "rotate-[1deg]", "rotate-[-0.5deg]", "rotate-[2deg]", "rotate-[-1deg]"];
                                                         const rotation = rotations[idx % rotations.length];
+
+                                                        if (item.isSunday) {
+                                                            return (
+                                                                <div
+                                                                    key={item.day}
+                                                                    aria-disabled="true"
+                                                                    title={`${item.formattedDate} - Sunday - Unavailable`}
+                                                                    className={`relative flex flex-col items-center justify-between p-1.5 rounded-sm select-none aspect-square shadow-2xs opacity-80 bg-slate-100 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 cursor-not-allowed ${rotation}`}
+                                                                >
+                                                                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
+                                                                        <div className="w-2.5 h-2.5 rounded-full bg-slate-400 border border-white/80 shadow-2xs" />
+                                                                    </div>
+                                                                    <span className="text-[8px] font-black uppercase text-slate-500 dark:text-slate-400 leading-none mt-1">{item.weekday}</span>
+                                                                    <span className="text-xs font-black my-0.5 leading-tight text-slate-600 dark:text-slate-300">{item.dateNum}</span>
+                                                                    <div className="flex flex-col items-center leading-none pb-0.5">
+                                                                        <span className="text-[7.5px] font-extrabold uppercase tracking-tight text-slate-500 bg-slate-200 dark:bg-slate-700 px-1 py-0.5 rounded-xs">Sunday</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        if (item.isHoliday) {
+                                                            return (
+                                                                <div
+                                                                    key={item.day}
+                                                                    aria-disabled="true"
+                                                                    title={`${item.formattedDate} - ${item.holidayName} - Holiday`}
+                                                                    className={`relative flex flex-col items-center justify-between p-1.5 rounded-sm select-none aspect-square shadow-2xs bg-amber-50 dark:bg-amber-950/30 border border-amber-400/80 dark:border-amber-600/60 cursor-not-allowed ${rotation}`}
+                                                                >
+                                                                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
+                                                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white/80 shadow-2xs" />
+                                                                    </div>
+                                                                    <span className="text-[8px] font-black uppercase text-amber-700 dark:text-amber-400 leading-none mt-1">{item.weekday}</span>
+                                                                    <span className="text-[9px] font-extrabold my-0.5 leading-tight text-amber-900 dark:text-amber-200 text-center truncate max-w-full px-0.5" title={item.holidayName || "Holiday"}>
+                                                                        {item.holidayName || "Holiday"}
+                                                                    </span>
+                                                                    <div className="flex flex-col items-center leading-none pb-0.5">
+                                                                        <span className="text-[7.5px] font-extrabold uppercase tracking-tight text-amber-800 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-900/60 px-1 py-0.5 rounded-xs">Holiday</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
 
                                                         return (
                                                             <div
@@ -1715,7 +1799,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                     : `${color.bg} border ${color.border} hover:scale-[1.04] hover:rotate-0 hover:z-10 hover:shadow-md`
                                                                     }`}
                                                             >
-                                                                {/* Push Pin */}
                                                                 <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
                                                                     <div className={`w-2.5 h-2.5 rounded-full ${color.pin} border border-white/80 shadow-xs`} />
                                                                 </div>
