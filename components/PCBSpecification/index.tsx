@@ -1727,17 +1727,17 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                 {/* Subtle brand theme grid texture background */}
                                                 <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#41A96A_1px,transparent_1px)] [background-size:14px_14px] pointer-events-none" />
 
-                                                <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-[#41A96A]/20 dark:border-[#69C48A]/30 relative z-10">
-                                                    <div>
-                                                        <h3 className="text-xs sm:text-sm font-bold text-[#0F7438] dark:text-[#8DD3A5] uppercase tracking-wider flex items-center gap-1.5">
-                                                            <span className="w-2 h-2 rounded-full bg-[#238E4E] inline-block ring-2 ring-[#8DD3A5]/50" />
-                                                            Select Delivery Date
+                                                <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-[#41A96A]/20 dark:border-[#69C48A]/30 relative z-10 gap-2">
+                                                    <div className="min-w-0">
+                                                        <h3 className="text-xs sm:text-sm font-bold text-[#0F7438] dark:text-[#8DD3A5] uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
+                                                            <span className="w-2 h-2 rounded-full bg-[#238E4E] inline-block ring-2 ring-[#8DD3A5]/50 shrink-0" />
+                                                            <span>Select Delivery Date</span>
                                                         </h3>
-                                                        <p className="text-[10px] sm:text-[11px] text-[#238E4E] dark:text-[#69C48A] font-medium mt-0.5">
+                                                        <p className="text-[10px] sm:text-[11px] text-[#238E4E] dark:text-[#69C48A] font-medium mt-0.5 whitespace-nowrap">
                                                             Prices are per order
                                                         </p>
                                                     </div>
-                                                    <div className="bg-white dark:bg-[#0F7438]/80 text-[#0F7438] dark:text-[#8DD3A5] px-2.5 py-1 rounded-md text-xs font-bold shadow-xs border border-[#69C48A]/60 dark:border-[#41A96A]/60 flex items-center gap-1 whitespace-nowrap">
+                                                    <div className="bg-white dark:bg-[#0F7438]/80 text-[#0F7438] dark:text-[#8DD3A5] px-2.5 py-1 rounded-md text-xs font-bold shadow-xs border border-[#69C48A]/60 dark:border-[#41A96A]/60 flex items-center gap-1 whitespace-nowrap shrink-0">
                                                         <span>{calendarHeaderTitle}</span>
                                                     </div>
                                                 </div>
