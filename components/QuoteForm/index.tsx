@@ -1049,31 +1049,6 @@ export default function QuoteForm({
                                     ))}
                                 </ConfigRow>
                             )}
-
-                            <ConfigRow label="UL Marking">
-                                {["No", "Yes (Any Position)", "Yes (Specify Position)"].map(u => (
-                                    <Pill
-                                        key={u}
-                                        disabled={u === "Yes (Any Position)" || u === "Yes (Specify Position)"}
-                                        active={formData.ulMarking === u}
-                                        onClick={() => updateField("ulMarking", u)}
-                                    >
-                                        {u}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
-
-                            <ConfigRow label="Humidity Indicator Card">
-                                {["No", "Yes"].map(hic => (
-                                    <Pill
-                                        key={hic}
-                                        active={formData.humidity === hic}
-                                        onClick={() => updateField("humidity", hic)}
-                                    >
-                                        {hic}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
                         </div>
                     )}
                 </div>
