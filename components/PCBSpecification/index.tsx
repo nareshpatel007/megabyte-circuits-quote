@@ -487,7 +487,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [detectedInfo, setDetectedInfo] = useState<{ layers: string; width: string; height: string } | null>(null);
 
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
-    const [pricingConfig, setPricingConfig] = useState<{ fixedCosts: any; priceTiers: any; shippingOptions?: any[] } | null>(null);
+    const [pricingConfig, setPricingConfig] = useState<{ fixedCosts: any; priceTiers: any; shippingOptions?: any[]; gstPercentage?: number; minPartsOrderAmount?: number } | null>(null);
 
     // Read URL search params for prefilling parameters passed from main site
     React.useEffect(() => {

@@ -1049,6 +1049,35 @@ export default function QuoteForm({
                                     ))}
                                 </ConfigRow>
                             )}
+
+                            <div className="py-2.5">
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowRemarkTextarea(!showRemarkTextarea)}
+                                        className="flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-primary transition-colors cursor-pointer group select-none"
+                                    >
+                                        <span>PCB Remark</span>
+                                        <Pencil className="w-3.5 h-3.5 text-gray-400 group-hover:text-primary transition-colors" />
+                                    </button>
+                                </div>
+
+                                {(showRemarkTextarea || (formData.pcbRemark && formData.pcbRemark.trim() !== "")) && (
+                                    <div className="relative mt-2">
+                                        <textarea
+                                            rows={3}
+                                            maxLength={200}
+                                            value={formData.pcbRemark || ""}
+                                            onChange={(e) => updateField("pcbRemark", e.target.value)}
+                                            placeholder="Leave a remark for this PCB order if necessary.Other remarks about the PCBA or stencil, please fill in the corresponding areas."
+                                            className="w-full p-3 pr-14 border border-gray-200 rounded-lg text-xs focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-2xs transition-all bg-white text-gray-800 placeholder:text-gray-300 resize-none font-medium"
+                                        />
+                                        <div className="absolute bottom-2.5 right-3 text-[11px] font-medium text-gray-400 select-none">
+                                            {(formData.pcbRemark || "").length}/200
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
