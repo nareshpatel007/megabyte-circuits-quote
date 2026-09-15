@@ -1838,9 +1838,11 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                                 const activeShipping = shippingOptions.find((o: any) => o.key === shippingOptionKey) || shippingOptions[0];
                                                 const shippingCharge = Math.round(activeShipping.rate * chargedWeightKg);
-
                                                 const pcbPrice = selectedDayData ? parseFloat(selectedDayData.orderValue) : 0;
-                                                const mainTotal = pcbPrice > 0 ? pcbPrice + shippingCharge : 0;
+                                                const subtotal = pcbPrice > 0 ? pcbPrice + shippingCharge : 0;
+                                                const gstPercentage = pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18;
+                                                const gstAmount = subtotal > 0 ? (subtotal * gstPercentage) / 100 : 0;
+                                                const mainTotal = subtotal + gstAmount;
 
                                                 return (
                                                     <div className="bg-[#8DD3A5]/10 border border-[#41A96A]/30 rounded-xl p-3.5 shadow-2xs space-y-3">
@@ -1909,6 +1911,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                 <div className="flex justify-between items-center text-xs">
                                                                     <span className="text-slate-600 dark:text-slate-300 font-semibold">Shipping Charge:</span>
                                                                     <span className="font-bold text-slate-700 dark:text-slate-300">₹{shippingCharge.toLocaleString('en-IN')}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center text-xs">
+                                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">GST ({gstPercentage}%):</span>
+                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">₹{gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                                 </div>
                                                                 <div className="flex justify-between items-baseline pt-1 border-t border-dashed border-[#41A96A]/30">
                                                                     <span className="text-slate-800 dark:text-slate-200 text-xs font-black">Main Total:</span>
