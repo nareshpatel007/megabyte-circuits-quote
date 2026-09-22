@@ -834,24 +834,36 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     React.useEffect(() => {
         let active = true;
         async function runRender() {
-            if (clientLayers.length === 0) return;
-            setPreviewLoading(true);
             try {
-                const stack = await renderStack(clientLayers, renderOptions);
-                if (!active) return;
-                setTopSvg(stack.top?.svg || "");
-                setBottomSvg(stack.bottom?.svg || "");
+                if (clientLayers.length > 0) {
+                    setPreviewLoading(true);
+                    const stack = await renderStack(clientLayers, renderOptions);
+                    if (!active) return;
+                    if (stack?.top?.svg) setTopSvg(stack.top.svg);
+                    if (stack?.bottom?.svg) setBottomSvg(stack.bottom.svg);
+                } else if (uploadedFile) {
+                    setPreviewLoading(true);
+                    const layers = await loadLayers(uploadedFile);
+                    if (!active) return;
+                    if (layers && layers.length > 0) {
+                        setClientLayers(layers);
+                        const stack = await renderStack(layers, renderOptions);
+                        if (!active) return;
+                        if (stack?.top?.svg) setTopSvg(stack.top.svg);
+                        if (stack?.bottom?.svg) setBottomSvg(stack.bottom.svg);
+                    }
+                }
             } catch (err) {
                 console.error("Failed to render stackup:", err);
             } finally {
-                setPreviewLoading(false);
+                if (active) setPreviewLoading(false);
             }
         }
         runRender();
         return () => {
             active = false;
         };
-    }, [clientLayers, renderOptions]);
+    }, [clientLayers, renderOptions, uploadedFile]);
 
     // Sync generated preview SVG with backend gerber_files record
     React.useEffect(() => {
@@ -1050,6 +1062,15 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         const widthVal = res?.board_width ? Number(res.board_width).toFixed(2) : formData.width;
         const heightVal = res?.board_height ? Number(res.board_height).toFixed(2) : formData.height;
         const layerCountVal = res?.layer_count ? String(res.layer_count) : formData.layers;
+
+        try {
+            const layers = await loadLayers(file);
+            if (layers && layers.length > 0) {
+                setClientLayers(layers);
+            }
+        } catch (err) {
+            console.warn("Client layer parsing during upload success:", err);
+        }
 
         setDetectedInfo({
             layers: layerCountVal,
