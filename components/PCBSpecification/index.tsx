@@ -862,6 +862,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     gerber_file_id: uploadedGerberFileId,
+                    file_id: uploadedGerberFileId,
                     preview_data: previewSvg
                 })
             }).catch(err => console.error("Failed to sync gerber preview data:", err));
