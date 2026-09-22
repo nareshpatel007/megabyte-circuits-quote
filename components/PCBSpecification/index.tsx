@@ -831,55 +831,14 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         });
     }, [formData.pcbColor, formData.surfaceFinish]);
 
+    // Python Gerber processing service provides the source-of-truth 2D/3D preview images
+    // Client-side SVG stackup re-rendering and syncing is disabled to preserve exact Python images
     React.useEffect(() => {
-        let active = true;
-        async function runRender() {
-            try {
-                if (clientLayers.length > 0) {
-                    setPreviewLoading(true);
-                    const stack = await renderStack(clientLayers, renderOptions);
-                    if (!active) return;
-                    if (stack?.top?.svg) setTopSvg(stack.top.svg);
-                    if (stack?.bottom?.svg) setBottomSvg(stack.bottom.svg);
-                } else if (uploadedFile) {
-                    setPreviewLoading(true);
-                    const layers = await loadLayers(uploadedFile);
-                    if (!active) return;
-                    if (layers && layers.length > 0) {
-                        setClientLayers(layers);
-                        const stack = await renderStack(layers, renderOptions);
-                        if (!active) return;
-                        if (stack?.top?.svg) setTopSvg(stack.top.svg);
-                        if (stack?.bottom?.svg) setBottomSvg(stack.bottom.svg);
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to render stackup:", err);
-            } finally {
-                if (active) setPreviewLoading(false);
-            }
+        if (uploadedGerberFileId && !topSvg) {
+            setTopSvg(`/api/gerber/${uploadedGerberFileId}/preview/front`);
+            setBottomSvg(`/api/gerber/${uploadedGerberFileId}/preview/back`);
         }
-        runRender();
-        return () => {
-            active = false;
-        };
-    }, [clientLayers, renderOptions, uploadedFile]);
-
-    // Sync generated preview SVG with backend gerber_files record
-    React.useEffect(() => {
-        const previewSvg = topSvg || bottomSvg;
-        if (uploadedGerberFileId && previewSvg) {
-            fetch("/api/upload/preview", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    gerber_file_id: uploadedGerberFileId,
-                    file_id: uploadedGerberFileId,
-                    preview_data: previewSvg
-                })
-            }).catch(err => console.error("Failed to sync gerber preview data:", err));
-        }
-    }, [uploadedGerberFileId, topSvg, bottomSvg]);
+    }, [uploadedGerberFileId, topSvg]);
 
     // Dynamic lead time-based pricing calculation
     const getLeadTimePricing = () => {

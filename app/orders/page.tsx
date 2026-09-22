@@ -128,7 +128,7 @@ function OrdersContent() {
             const gerberFileName = ord.gerber_name || ord.meta?.gerber_file_name || boardName;
             const gerberFileId = ord.gerber_file_id || null;
             const gerberUrl = ord.gerber_url || ord.meta?.gerber_file_url || null;
-            const previewData = ord.gerber_preview_data || ord.meta?.preview_data || null;
+            const previewData = ord.gerber_preview_data || ord.meta?.preview_data || (gerberFileId ? `/api/gerber/${gerberFileId}/preview/front` : null);
 
             const reorderSpec = {
                 layers,

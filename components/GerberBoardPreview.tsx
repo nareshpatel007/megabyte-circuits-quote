@@ -42,12 +42,21 @@ export default function GerberBoardPreview({
         );
     }
 
-    if (previewData && (previewData.startsWith("http") || previewData.startsWith("data:"))) {
+    const isImageUrl = previewData && (
+        previewData.startsWith("http") ||
+        previewData.startsWith("data:") ||
+        previewData.startsWith("/") ||
+        previewData.startsWith("./") ||
+        previewData.includes("/preview/")
+    );
+
+    if (isImageUrl) {
         return (
             <img
                 src={previewData}
                 alt="Gerber Board Preview"
-                className={`object-contain rounded-xl ${className}`}
+                className={`w-full h-full object-contain rounded-xl ${className}`}
+                style={{ objectFit: 'contain' }}
             />
         );
     }

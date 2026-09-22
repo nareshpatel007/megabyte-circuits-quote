@@ -230,7 +230,7 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                 boardName: boardName,
                 gerberFileName: ord.gerber_name || ord.meta?.gerber_file_name || boardName,
                 gerber_file_id: ord.gerber_file_id || null,
-                gerberPreview: ord.gerber_preview_data || null,
+                gerberPreview: ord.gerber_preview_data || (ord.gerber_file_id ? `/api/gerber/${ord.gerber_file_id}/preview/front` : null),
                 layers: layers,
                 dimensions: dimensions,
                 pcbColor: pcbColor,
@@ -377,7 +377,7 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                                         {/* Gerber Preview Box */}
                                         <div className="w-32 h-32 bg-[#0b3818] rounded-2xl border border-gray-200 p-1.5 overflow-hidden shrink-0 shadow-sm mx-auto md:mx-0">
                                             <GerberBoardPreview
-                                                previewData={order.gerber_preview_data}
+                                                previewData={order.gerber_preview_data || (order.gerber_file_id ? `/api/gerber/${order.gerber_file_id}/preview/front` : undefined)}
                                                 boardName={order.meta?.board_name || order.gerber_name}
                                                 originalName={order.gerber_name}
                                                 pcbColor={order.meta?.pcb_color}

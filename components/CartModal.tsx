@@ -5,6 +5,7 @@ import Link from "next/link";
 import { X, ShoppingBag, Trash2, ArrowRight, ShoppingCart } from "lucide-react";
 import { useCurrency } from "../context/CurrencyContext";
 import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend } from "@/lib/cartSession";
+import GerberBoardPreview from "./GerberBoardPreview";
 
 interface CartItem {
     id: string;
@@ -174,16 +175,13 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                                     );
                                                 }}
                                             />
-                                        ) : item.gerberPreview && item.gerberPreview.startsWith("<svg") ? (
-                                            <div
-                                                className="w-full h-full flex items-center justify-center [&_svg]:w-full [&_svg]:h-full [&_svg]:object-contain"
-                                                dangerouslySetInnerHTML={{ __html: item.gerberPreview }}
-                                            />
                                         ) : (
-                                            <img
-                                                src={item.productType === "stencil" ? "/images/stencil-logo.png" : "/images/pcb-logo.png"}
-                                                alt={item.productType || "PCB"}
-                                                className="w-full h-full object-contain p-1"
+                                            <GerberBoardPreview
+                                                previewData={item.gerberPreview}
+                                                boardName={item.boardName}
+                                                pcbColor={item.pcbColor}
+                                                layers={item.layers}
+                                                dimensions={item.dimensions}
                                             />
                                         )}
                                     </div>
