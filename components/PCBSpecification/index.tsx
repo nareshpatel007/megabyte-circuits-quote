@@ -1376,9 +1376,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 boardId: generatedBoardId,
                 pcbColor: pcbColorName,
                 layers: `${formData.layers || '2'} Layer${(Number(formData.layers) || 2) > 1 ? 's' : ''}`,
-                dimensions: `${formData.width || 100}x${formData.height || 100}mm`,
+                dimensions: `${formData.width || 100}x${formData.height || 100}${formData.unit || 'mm'}`,
                 width: Number(formData.width) || 100,
                 height: Number(formData.height) || 100,
+                unit: formData.unit || "mm",
                 qty: Number(formData.qty) || 5,
                 buildTime: `${selectedDay || 3} days`,
                 price: itemTotalPrice,
@@ -1386,10 +1387,35 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 shippingOptionKey: activeShippingObj.key,
                 shippingCharge: calculatedShippingCharge,
                 material: formData.baseMaterial || "FR-4",
+                baseMaterial: formData.baseMaterial || "FR-4",
                 materialType: formData.materialType || (formData.baseMaterial === "Flex" ? "Polyimide (PI)" : formData.baseMaterial === "Rogers" ? "RO4350B(Dk=3.48,Df=0.0037)" : formData.baseMaterial === "PTFE Teflon" ? "ZYF300CA-P(Dk=3.0,Df=0.0016)" : "FR4-TG135"),
                 thickness: `${formData.thickness || (formData.baseMaterial === "Flex" ? '0.12mm' : '1.6mm')}`,
                 surfaceFinish: formData.surfaceFinish || (formData.baseMaterial === "Flex" ? "ENIG" : "HASL(Leaded)"),
                 copperWeight: formData.copperWeight || (formData.baseMaterial === "Flex" ? "0.5 oz" : "1 oz"),
+                silkscreen: formData.silkscreen || "White",
+                differentDesign: formData.differentDesign || "1",
+                deliveryFormat: formData.deliveryFormat || "Single PCB",
+                panelColumn: formData.panelColumn || "",
+                panelRow: formData.panelRow || "",
+                goldThickness: formData.goldThickness || "1 U\"",
+                viaCovering: formData.viaCovering || "Not Specified",
+                viaPlating: formData.viaPlating || "Not Specified",
+                minHole: formData.minHole || "0.3mm/(0.4/0.45mm)",
+                confirmFile: formData.confirmFile || "No",
+                markOnPcb: formData.markOnPcb || "Remove Mark",
+                elecTest: formData.elecTest || "Flying Probe Fully Test",
+                goldFingers: formData.goldFingers || "No",
+                castellated: formData.castellated || "No",
+                edgePlating: formData.edgePlating || "No",
+                blindSlots: formData.blindSlots || "No",
+                ulMarking: formData.ulMarking || "No",
+                humidity: formData.humidity || "No",
+                kelvinTest: formData.kelvinTest || "No",
+                paperBetween: formData.paperBetween || "No",
+                appearanceQuality: formData.appearanceQuality || "IPC Class 2 Standard",
+                silkscreenTech: formData.silkscreenTech || "Ink-jet Printing Silkscreen",
+                inspectionReport: formData.inspectionReport || "No",
+                pcbRemark: formData.pcbRemark || "",
                 ...(formData.substrateType ? { substrateType: formData.substrateType } : {}),
                 ...(formData.coverlayColor ? { coverlayColor: formData.coverlayColor } : {}),
                 ...(formData.coverlayThickness ? { coverlayThickness: formData.coverlayThickness } : {}),
@@ -1539,30 +1565,31 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                         const isSunday = date.getDay() === 0;
                                         const activeHoliday = publicHolidays.find(h => (typeof h.date === "string" ? h.date.split("T")[0] : "") === isoDateStr);
                                         const isHoliday = !!activeHoliday;
-                                        const isUnavailable = isSunday || isHoliday;
 
                                         let matchedOrderValue = defaultOrderValue;
                                         let matchedUnitPrice = parseFloat(defaultUnitPrice);
                                         let visible = false;
                                         let workingDayNum = 0;
 
-                                        if (!isUnavailable) {
+                                        if (!isSunday && !isHoliday) {
                                             workingDayCounter++;
                                             workingDayNum = workingDayCounter;
 
                                             if (layers > 2) {
-                                                const optAny = options.find(o => o.visible);
-                                                if (optAny) {
-                                                    matchedOrderValue = parseFloat(optAny.orderValue);
-                                                    matchedUnitPrice = parseFloat(optAny.unitPrice);
-                                                    visible = true;
-                                                }
-                                            } else if (layers >= 4 && layers <= 10) {
-                                                const opt20 = getOption(20);
-                                                if (opt20) {
-                                                    matchedOrderValue = parseFloat(opt20.orderValue);
-                                                    matchedUnitPrice = parseFloat(opt20.unitPrice);
-                                                    visible = true;
+                                                if (layers >= 4 && layers <= 10) {
+                                                    const opt20 = getOption(20);
+                                                    if (opt20) {
+                                                        matchedOrderValue = parseFloat(opt20.orderValue);
+                                                        matchedUnitPrice = parseFloat(opt20.unitPrice);
+                                                        visible = true;
+                                                    }
+                                                } else {
+                                                    const optAny = options.find(o => o.visible);
+                                                    if (optAny) {
+                                                        matchedOrderValue = parseFloat(optAny.orderValue);
+                                                        matchedUnitPrice = parseFloat(optAny.unitPrice);
+                                                        visible = true;
+                                                    }
                                                 }
                                             } else {
                                                 const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
@@ -1578,10 +1605,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                             unitPrice: u1 + (u2 - u1) * ratio,
                                                             visible: true
                                                         };
-                                                    } else if (o2) {
-                                                        return { orderValue: parseFloat(o2.orderValue), unitPrice: parseFloat(o2.unitPrice), visible: true };
-                                                    } else if (o1) {
-                                                        return { orderValue: parseFloat(o1.orderValue), unitPrice: parseFloat(o1.unitPrice), visible: true };
                                                     }
                                                     return null;
                                                 };
@@ -1621,6 +1644,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                 }
                                             }
                                         }
+
+                                        const isUnavailable = isSunday || isHoliday || !visible;
 
                                         return {
                                             day: daysAhead,
@@ -1721,6 +1746,26 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                     </span>
                                                                     <div className="flex flex-col items-center leading-none pb-0.5">
                                                                         <span className="text-[7.5px] sm:text-[8.5px] font-bold uppercase tracking-tight text-amber-800 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-900/60 px-1 py-0.5 rounded-xs">Holiday</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        if (item.isUnavailable) {
+                                                            return (
+                                                                <div
+                                                                    key={item.day}
+                                                                    aria-disabled="true"
+                                                                    title={`${item.formattedDate} - Unavailable for this order area`}
+                                                                    className={`relative flex flex-col items-center justify-between p-1.5 sm:p-2 rounded-md select-none aspect-square shadow-2xs opacity-60 bg-gray-100 dark:bg-slate-800/40 border border-gray-300 dark:border-slate-700 cursor-not-allowed ${rotation}`}
+                                                                >
+                                                                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
+                                                                        <div className="w-2.5 h-2.5 rounded-full bg-red-400 border border-white/80 shadow-2xs" />
+                                                                    </div>
+                                                                    <span className="text-[8.5px] sm:text-[9px] font-bold uppercase text-gray-400 leading-none mt-0.5">{item.weekday}</span>
+                                                                    <span className="text-xs sm:text-sm font-extrabold my-0.5 leading-tight text-gray-400 line-through">{item.dateNum}</span>
+                                                                    <div className="flex flex-col items-center leading-none pb-0.5">
+                                                                        <span className="text-[7.5px] sm:text-[8.5px] font-bold uppercase tracking-tight text-red-600 bg-red-100 dark:bg-red-900/40 px-1 py-0.5 rounded-xs">N/A</span>
                                                                     </div>
                                                                 </div>
                                                             );

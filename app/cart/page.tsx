@@ -42,6 +42,66 @@ interface CartItem {
     standardPricing?: any[];
 }
 
+const validatePcbItemLeadTime = (item: CartItem): CartItem & { areaExceeded?: boolean } => {
+    if (item.productType === "part") return item;
+
+    let w = Number(item.width);
+    let h = Number(item.height);
+    if ((!w || !h) && item.dimensions) {
+        const match = item.dimensions.match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i);
+        if (match) {
+            w = parseFloat(match[1]);
+            h = parseFloat(match[2]);
+        }
+    }
+    if (!w) w = 100;
+    if (!h) h = 100;
+
+    const layers = parseInt(String(item.layers).replace(/\D/g, ""), 10) || 2;
+    const qty = Math.max(item.qty || 5, 5);
+    const totalAreaInSqM = (w / 1000) * (h / 1000) * qty;
+
+    let areaExceeded = false;
+    let minAllowedDays = 1;
+
+    if (layers >= 4 && layers <= 10) {
+        minAllowedDays = 20;
+    } else if (layers === 2) {
+        if (totalAreaInSqM > 7) {
+            areaExceeded = true;
+        } else if (totalAreaInSqM > 2) {
+            minAllowedDays = 7;
+        } else if (totalAreaInSqM > 1.5) {
+            minAllowedDays = 5;
+        } else if (totalAreaInSqM > 1) {
+            minAllowedDays = 3;
+        }
+    } else if (layers === 1) {
+        if (totalAreaInSqM > 10) {
+            areaExceeded = true;
+        } else if (totalAreaInSqM > 5) {
+            minAllowedDays = 7;
+        } else if (totalAreaInSqM > 3) {
+            minAllowedDays = 5;
+        } else if (totalAreaInSqM > 2) {
+            minAllowedDays = 3;
+        }
+    }
+
+    const currentBuildDays = parseInt(String(item.buildTime).replace(/\D/g, ""), 10) || 1;
+    let updatedBuildTime = item.buildTime;
+
+    if (currentBuildDays < minAllowedDays) {
+        updatedBuildTime = `${minAllowedDays} days`;
+    }
+
+    return {
+        ...item,
+        buildTime: updatedBuildTime,
+        areaExceeded
+    };
+};
+
 export default function CartPage() {
     const router = useRouter();
     const { symbol, formatPrice } = useCurrency();
@@ -140,12 +200,12 @@ export default function CartPage() {
                         };
                     }
                     if (item.productType !== "part" && (!item.qty || item.qty < 5)) {
-                        return {
+                        return validatePcbItemLeadTime({
                             ...item,
                             qty: 5
-                        };
+                        });
                     }
-                    return item;
+                    return validatePcbItemLeadTime(item);
                 });
                 setCartItems(items);
                 const allIds = items.map((item) => String(item.id));
@@ -308,12 +368,12 @@ export default function CartPage() {
 
             const totalPriceWithShipping = newPcbPrice + newShippingCharge;
 
-            updatedItem = {
+            updatedItem = validatePcbItemLeadTime({
                 ...updatedItem,
                 price: totalPriceWithShipping,
                 unitPrice: pcbUnitPrice,
                 shippingCharge: newShippingCharge
-            };
+            });
         }
 
         const updated = cartItems.map((item) => (String(item.id) === strId ? updatedItem : item));
@@ -577,6 +637,11 @@ export default function CartPage() {
                                                                     {(item as any).stiffener && (item as any).stiffener !== "Without" ? `, Stiffener: ${(item as any).stiffener}` : ""}
                                                                 </p>
                                                             )}
+                                                            {(item as any).areaExceeded && (
+                                                                <p className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200 mt-1">
+                                                                    ⚠️ Total area exceeds online limit. Contact us: <a href="tel:9898842942" className="underline font-extrabold">9898842942</a> or <a href="tel:8160282840" className="underline font-extrabold">8160282840</a>
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 shrink-0">
@@ -703,12 +768,24 @@ export default function CartPage() {
                                     </div>
                                 )}
 
+                                {activeTab === "pcb" && effectiveSummaryItems.some(i => (i as any).areaExceeded) && (
+                                    <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 text-xs flex items-start gap-2">
+                                        <ShieldCheck className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="font-bold">Area Limit Exceeded</p>
+                                            <p className="text-[11px] text-red-700 mt-0.5">
+                                                One or more items exceed online order area limits. Please contact us at 9898842942 or 8160282840.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <button
                                     type="button"
                                     onClick={handleCheckoutClick}
-                                    disabled={selectedItemIds.length === 0 || (activeTab === "part" && selectedTotal < minPartsOrderAmount)}
+                                    disabled={selectedItemIds.length === 0 || (activeTab === "part" && selectedTotal < minPartsOrderAmount) || (activeTab === "pcb" && effectiveSummaryItems.some(i => (i as any).areaExceeded))}
                                     className={`w-full py-3 rounded-full text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs ${
-                                        selectedItemIds.length > 0 && !(activeTab === "part" && selectedTotal < minPartsOrderAmount)
+                                        selectedItemIds.length > 0 && !(activeTab === "part" && selectedTotal < minPartsOrderAmount) && !(activeTab === "pcb" && effectiveSummaryItems.some(i => (i as any).areaExceeded))
                                             ? "bg-primary hover:bg-secondary cursor-pointer active:scale-95"
                                             : "bg-gray-300 cursor-not-allowed opacity-75"
                                     }`}
