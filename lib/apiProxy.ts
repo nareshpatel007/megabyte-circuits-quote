@@ -95,14 +95,20 @@ export async function handleApiProxy(
         }
 
         const apiRes = await fetch(`${apiUrl}${path}`, fetchOptions);
-        const text = await apiRes.text();
+        const arrayBuffer = await apiRes.arrayBuffer();
 
-        return new NextResponse(text, {
+        const responseHeaders: Record<string, string> = {
+            "Content-Type": apiRes.headers.get("content-type") || "application/json",
+        };
+
+        const cacheControl = apiRes.headers.get("cache-control");
+        if (cacheControl) {
+            responseHeaders["Cache-Control"] = cacheControl;
+        }
+
+        return new NextResponse(arrayBuffer, {
             status: apiRes.status,
-            headers: {
-                "Content-Type":
-                    apiRes.headers.get("content-type") || "application/json",
-            },
+            headers: responseHeaders,
         });
     } catch (error) {
         console.error('API Proxy error:', error);

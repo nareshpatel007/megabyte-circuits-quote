@@ -1034,126 +1034,35 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
     const handleUploadSuccess = async (res: UploadResponse, file: File) => {
         setUploadedFile(file);
-        setPreviewLoading(true);
-        setTopSvg("");
-        setBottomSvg("");
-
+        setPreviewLoading(false);
 
         if (res?.gerber_file_id) {
             setUploadedGerberFileId(res.gerber_file_id);
         }
-        try {
-            let fileToExtract = file;
-            if (file.name.toLowerCase().endsWith('.rar') && res?.zip_url) {
-                console.log(`[GerberExtraction] Backend returned zip_url: ${res.zip_url}. Fetching converted ZIP archive...`);
-                try {
-                    let zipFetchUrl = res.zip_url;
-                    if (zipFetchUrl.includes('/storage/')) {
-                        const pathPart = zipFetchUrl.split('/storage/')[1];
-                        zipFetchUrl = `/storage/${pathPart}`;
-                    }
-                    const zipRes = await fetch(zipFetchUrl);
-                    if (zipRes.ok) {
-                        const zipBlob = await zipRes.blob();
-                        fileToExtract = new File([zipBlob], file.name.replace(/\.rar$/i, '.zip'), { type: 'application/zip' });
-                        console.log(`[GerberExtraction] Converted ZIP fetched successfully!`);
-                    } else {
-                        console.warn(`[GerberExtraction Warning] Converted ZIP fetch failed with HTTP ${zipRes.status} at ${zipFetchUrl}`);
-                    }
-                } catch (e) {
-                    console.warn("[GerberExtraction Warning] Exception fetching converted ZIP from backend:", e);
-                }
-            }
 
-            const gerberRendererResult = await renderWithGerbersRenderer(fileToExtract);
-            if (gerberRendererResult?.top?.svg || gerberRendererResult?.bottom?.svg) {
-                if (gerberRendererResult.top?.svg) setTopSvg(gerberRendererResult.top.svg);
-                if (gerberRendererResult.bottom?.svg) setBottomSvg(gerberRendererResult.bottom.svg);
-            }
+        const frontUrl = res?.preview_front || (res?.gerber_file_id ? `/api/gerber/${res.gerber_file_id}/preview/front` : "");
+        const backUrl = res?.preview_back || (res?.gerber_file_id ? `/api/gerber/${res.gerber_file_id}/preview/back` : "");
 
-            const layers = await loadLayers(fileToExtract);
-            setClientLayers(layers);
+        setTopSvg(frontUrl);
+        setBottomSvg(backUrl);
 
-            const copperLayers = layers.filter(l => l.type === 'copper');
-            const detectedLayersCount = copperLayers.length;
+        const widthVal = res?.board_width ? Number(res.board_width).toFixed(2) : formData.width;
+        const heightVal = res?.board_height ? Number(res.board_height).toFixed(2) : formData.height;
+        const layerCountVal = res?.layer_count ? String(res.layer_count) : formData.layers;
 
-            if (detectedLayersCount === 0) {
-                if (res?.gerber_file_id) {
-                    fetch("/api/upload/delete", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ gerber_file_id: res.gerber_file_id })
-                    }).catch(err => console.error("Failed to delete 0-layer Gerber file:", err));
-                    setUploadedGerberFileId(null);
-                }
-                setDetectedInfo({
-                    layers: "0",
-                    width: "0.00",
-                    height: "0.00"
-                });
-                return;
-            }
+        setDetectedInfo({
+            layers: layerCountVal,
+            width: widthVal,
+            height: heightVal
+        });
 
-            const stack = await renderStack(layers, renderOptions);
-
-            const topSide = stack.top || stack.bottom;
-            let widthVal = "";
-            let heightVal = "";
-            let unitVal: "mm" | "inches" = "mm";
-
-            if (topSide) {
-                let rawWidth = topSide.width;
-                let rawHeight = topSide.height;
-                const units = topSide.units;
-
-                if (units === 'in') {
-                    rawWidth = rawWidth * 25.4;
-                    rawHeight = rawHeight * 25.4;
-                }
-                widthVal = rawWidth.toFixed(2);
-                heightVal = rawHeight.toFixed(2);
-                unitVal = "mm";
-            }
-
-            let detectedLayersStr = "0";
-            if (detectedLayersCount === 1) {
-                detectedLayersStr = "1";
-            } else if (detectedLayersCount > 1) {
-                const evenCount = detectedLayersCount % 2 !== 0 ? detectedLayersCount + 1 : detectedLayersCount;
-                detectedLayersStr = Math.min(16, evenCount).toString();
-            }
-
-            setDetectedInfo({
-                layers: detectedLayersStr,
-                width: widthVal || formData.width,
-                height: heightVal || formData.height
-            });
-
-            setFormData(prev => ({
-                ...prev,
-                layers: detectedLayersStr,
-                width: widthVal || prev.width,
-                height: heightVal || prev.height,
-                unit: unitVal || prev.unit
-            }));
-        } catch (err) {
-            console.error("Failed to extract layers:", err);
-            if (res?.gerber_file_id) {
-                fetch("/api/upload/delete", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ gerber_file_id: res.gerber_file_id })
-                }).catch(err => console.error("Failed to delete invalid Gerber file:", err));
-                setUploadedGerberFileId(null);
-            }
-            setDetectedInfo({
-                layers: "0",
-                width: "0.00",
-                height: "0.00"
-            });
-        } finally {
-            setPreviewLoading(false);
-        }
+        setFormData(prev => ({
+            ...prev,
+            layers: layerCountVal,
+            width: widthVal,
+            height: heightVal,
+            unit: "mm"
+        }));
     };
 
     const handleReset = () => {
@@ -1525,7 +1434,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <div className="bg-[#f0f4f8] rounded-2xl p-6 sm:p-8 flex items-center justify-center border border-gray-100">
+                                    <div className="bg-[#f0f4f8] rounded-2xl p-4 sm:p-6 flex items-center justify-center border border-gray-100">
                                         <GerberStackupPreview
                                             topSvg={topSvg}
                                             bottomSvg={bottomSvg}

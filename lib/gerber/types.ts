@@ -119,14 +119,22 @@ export interface QuoteFormData {
 
 export interface UploadResponse {
     success: boolean;
+    status?: string;
     gerber_file_id?: number;
+    python_project_id?: string;
+    board_width?: number | string;
+    board_height?: number | string;
+    layer_count?: number;
+    preview_front?: string;
+    preview_back?: string;
+    previewFront?: string;
+    previewBack?: string;
     folder?: string;
     files?: { name: string; type: string }[];
     info?: any;
     parsedGerberFiles?: ParsedGerberFile[];
     tracespaceFiles?: any[];
-    previewFront?: string;
-    previewBack?: string;
     zip_url?: string;
+    analysis?: any;
     error?: string;
 }

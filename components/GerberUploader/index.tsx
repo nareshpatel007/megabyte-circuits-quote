@@ -165,8 +165,15 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
 
                     {loadingState === "uploading" && (
                         <div className="bg-primary/5 rounded-xl p-10 sm:p-14 flex flex-col items-center justify-center space-y-6">
-                            <p className="text-gray-700 font-medium text-sm sm:text-base tracking-wide">
-                                Uploading your files....
+                            <p className="text-gray-700 font-medium text-sm sm:text-base tracking-wide flex items-center gap-2">
+                                <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+                                {progress < 30
+                                    ? "Uploading Gerber archive..."
+                                    : progress < 60
+                                        ? "Analyzing PCB layers & outline..."
+                                        : progress < 90
+                                            ? "Generating front & back PCB previews..."
+                                            : "Finalizing PCB analysis..."}
                             </p>
                             <div className="w-full max-w-xl flex items-center gap-4">
                                 <div className="flex-1 bg-gray-200/70 h-4 sm:h-5 rounded-full overflow-hidden">
