@@ -1465,20 +1465,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                 {(() => {
                                     const layers = parseInt(formData.layers, 10) || 1;
 
-                                    const { options, showContact, totalAreaInSqM = 0 } = getLeadTimePricing();
-
-                                    if (showContact) {
-                                        return (
-                                            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-center shadow-sm">
-                                                <p className="text-xs font-bold text-red-800">
-                                                    For larger orders, please contact us at:
-                                                </p>
-                                                <p className="text-sm font-extrabold text-red-900 mt-2">
-                                                    <a href="tel:9898842942" className="hover:underline">9898842942</a> or <a href="tel:8160282840" className="hover:underline">8160282840</a>
-                                                </p>
-                                            </div>
-                                        );
-                                    }
+                                    const { options, totalAreaInSqM = 0 } = getLeadTimePricing();
 
                                     const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
                                     const length = (parseFloat(formData.width) || 0) * unitMultiplier;

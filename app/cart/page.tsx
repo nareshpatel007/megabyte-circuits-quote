@@ -67,9 +67,7 @@ const validatePcbItemLeadTime = (item: CartItem): CartItem & { areaExceeded?: bo
     if (layers >= 4 && layers <= 10) {
         minAllowedDays = 20;
     } else if (layers === 2) {
-        if (totalAreaInSqM > 7) {
-            areaExceeded = true;
-        } else if (totalAreaInSqM > 2) {
+        if (totalAreaInSqM > 2) {
             minAllowedDays = 7;
         } else if (totalAreaInSqM > 1.5) {
             minAllowedDays = 5;
@@ -77,9 +75,7 @@ const validatePcbItemLeadTime = (item: CartItem): CartItem & { areaExceeded?: bo
             minAllowedDays = 3;
         }
     } else if (layers === 1) {
-        if (totalAreaInSqM > 10) {
-            areaExceeded = true;
-        } else if (totalAreaInSqM > 5) {
+        if (totalAreaInSqM > 5) {
             minAllowedDays = 7;
         } else if (totalAreaInSqM > 3) {
             minAllowedDays = 5;
@@ -635,12 +631,6 @@ export default function CartPage() {
                                                                     {(item as any).copperType ? `, Copper: ${(item as any).copperType}` : ""}
                                                                     {(item as any).coverlayColor ? `, Coverlay: ${(item as any).coverlayColor}` : ""}
                                                                     {(item as any).stiffener && (item as any).stiffener !== "Without" ? `, Stiffener: ${(item as any).stiffener}` : ""}
-                                                                </p>
-                                                            )}
-                                                            {(item as any).areaExceeded && (
-                                                                <p className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200 mt-1">
-                                                                    ⚠️ Total area exceeds online limit. Contact us: <a href="tel:9898842942" className="underline font-extrabold">9898842942</a> or <a href="tel:8160282840" className="underline font-extrabold">8160282840</a>
-                                                                </p>
                                                             )}
                                                         </div>
                                                     </div>
@@ -768,24 +758,12 @@ export default function CartPage() {
                                     </div>
                                 )}
 
-                                {activeTab === "pcb" && effectiveSummaryItems.some(i => (i as any).areaExceeded) && (
-                                    <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 text-xs flex items-start gap-2">
-                                        <ShieldCheck className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="font-bold">Area Limit Exceeded</p>
-                                            <p className="text-[11px] text-red-700 mt-0.5">
-                                                One or more items exceed online order area limits. Please contact us at 9898842942 or 8160282840.
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-
                                 <button
                                     type="button"
                                     onClick={handleCheckoutClick}
-                                    disabled={selectedItemIds.length === 0 || (activeTab === "part" && selectedTotal < minPartsOrderAmount) || (activeTab === "pcb" && effectiveSummaryItems.some(i => (i as any).areaExceeded))}
+                                    disabled={selectedItemIds.length === 0 || (activeTab === "part" && selectedTotal < minPartsOrderAmount)}
                                     className={`w-full py-3 rounded-full text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs ${
-                                        selectedItemIds.length > 0 && !(activeTab === "part" && selectedTotal < minPartsOrderAmount) && !(activeTab === "pcb" && effectiveSummaryItems.some(i => (i as any).areaExceeded))
+                                        selectedItemIds.length > 0 && !(activeTab === "part" && selectedTotal < minPartsOrderAmount)
                                             ? "bg-primary hover:bg-secondary cursor-pointer active:scale-95"
                                             : "bg-gray-300 cursor-not-allowed opacity-75"
                                     }`}
