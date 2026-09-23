@@ -43,7 +43,7 @@ export default function GerberBoardPreview({
         const svgContent = svgStart !== -1 ? effectivePreviewData.substring(svgStart) : effectivePreviewData;
         return (
             <div
-                className={`w-full h-full flex items-center justify-center overflow-hidden [&_svg]:w-full [&_svg]:h-full [&_svg]:object-contain ${className}`}
+                className={`w-full h-full flex items-center justify-center overflow-hidden [&_svg]:max-w-full [&_svg]:max-h-full [&_svg]:w-auto [&_svg]:h-auto [&_svg]:object-contain ${className}`}
                 dangerouslySetInnerHTML={{ __html: svgContent }}
             />
         );
@@ -62,7 +62,7 @@ export default function GerberBoardPreview({
             <img
                 src={effectivePreviewData}
                 alt="Gerber Board Preview"
-                className={`w-full h-full object-contain rounded-xl ${className}`}
+                className={`max-w-full max-h-full w-auto h-auto object-contain rounded-xl mx-auto ${className}`}
                 style={{ objectFit: 'contain' }}
             />
         );

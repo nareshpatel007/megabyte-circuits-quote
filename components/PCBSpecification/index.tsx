@@ -1429,7 +1429,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <div className="bg-[#f0f4f8] rounded-2xl p-4 sm:p-6 flex items-center justify-center border border-gray-100">
+                                    <div className="bg-[#f0f4f8] rounded-2xl p-4 sm:p-6 flex items-center justify-center border border-gray-100 min-h-[260px] sm:min-h-[340px] max-h-[380px] overflow-hidden">
                                         <GerberStackupPreview
                                             topSvg={topSvg}
                                             bottomSvg={bottomSvg}

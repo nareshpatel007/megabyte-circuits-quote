@@ -38,7 +38,7 @@ function RenderPreviewContent({ content, alt }: { content?: string; alt: string 
         return (
             <div
                 dangerouslySetInnerHTML={{ __html: content }}
-                className="w-full h-auto flex items-center justify-center [&>svg]:w-full [&>svg]:h-auto [&>svg]:mx-auto [&>svg]:object-contain"
+                className="w-full h-full max-h-[260px] sm:max-h-[320px] flex items-center justify-center [&>svg]:max-w-full [&>svg]:max-h-[260px] [&>svg]:sm:max-h-[320px] [&>svg]:w-auto [&>svg]:h-auto [&>svg]:mx-auto [&>svg]:object-contain"
             />
         );
     }
@@ -48,7 +48,7 @@ function RenderPreviewContent({ content, alt }: { content?: string; alt: string 
         <img
             src={content}
             alt={alt}
-            className="w-full h-auto object-contain mx-auto transition-transform hover:scale-[1.005]"
+            className="max-h-[260px] sm:max-h-[320px] max-w-full w-auto h-auto object-contain mx-auto transition-transform hover:scale-[1.005]"
         />
     );
 }
@@ -80,15 +80,15 @@ export default function GerberStackupPreview({ topSvg, bottomSvg, loading }: Ger
     }
 
     return (
-        <div className="w-full">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center justify-center">
+        <div className="w-full flex items-center justify-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 items-center justify-center w-full max-h-[340px] sm:max-h-[380px]">
                 {/* Front View */}
-                <div className="flex flex-col items-center justify-center w-full relative">
+                <div className="flex flex-col items-center justify-center w-full h-[260px] sm:h-[320px] relative overflow-hidden p-1">
                     <RenderPreviewContent content={topSvg} alt="PCB Front Preview" />
                 </div>
 
                 {/* Back View */}
-                <div className="flex flex-col items-center justify-center w-full relative">
+                <div className="flex flex-col items-center justify-center w-full h-[260px] sm:h-[320px] relative overflow-hidden p-1">
                     <RenderPreviewContent content={bottomSvg} alt="PCB Back Preview" />
                 </div>
             </div>
