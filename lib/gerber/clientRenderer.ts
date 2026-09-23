@@ -157,7 +157,15 @@ export function mapLayerType(name: string): GerberProps {
     return { type, side };
 }
 
-export async function renderStack(layers: InputLayer[], options: RenderOptions): Promise<any> {
+export async function renderStack(layers: InputLayer[], options: RenderOptions, file?: File): Promise<any> {
+    if (!lastProcessedProject && file) {
+        try {
+            lastProcessedProject = await processGerberFiles(file);
+        } catch (err) {
+            console.warn("[CustomGerberEngine] Failed to process file in renderStack:", err);
+        }
+    }
+
     if (!lastProcessedProject) {
         return { top: null, bottom: null, layers };
     }
