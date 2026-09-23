@@ -631,6 +631,7 @@ export default function CartPage() {
                                                                     {(item as any).copperType ? `, Copper: ${(item as any).copperType}` : ""}
                                                                     {(item as any).coverlayColor ? `, Coverlay: ${(item as any).coverlayColor}` : ""}
                                                                     {(item as any).stiffener && (item as any).stiffener !== "Without" ? `, Stiffener: ${(item as any).stiffener}` : ""}
+                                                                </p>
                                                             )}
                                                         </div>
                                                     </div>
