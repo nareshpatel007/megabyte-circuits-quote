@@ -126,6 +126,12 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
         }, 1500);
     };
 
+    const getDirectUploadUrl = () => {
+        const apiBase = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/$/, "");
+        if (!apiBase) return "/api/upload";
+        return apiBase.endsWith("/api") ? `${apiBase}/upload` : `${apiBase}/api/upload`;
+    };
+
     const uploadFile = (file: File) => {
         setLoadingState("uploading");
         setProgress(15);
@@ -138,11 +144,19 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
         const formData = new FormData();
         formData.append("file", file);
 
-        fetch("/api/upload", {
+        const uploadUrl = getDirectUploadUrl();
+
+        fetch(uploadUrl, {
             method: "POST",
             body: formData,
         })
-            .then(res => res.json())
+            .then(async (res) => {
+                if (res.status === 413) {
+                    throw new Error("File size exceeds server upload limit (413 Payload Too Large).");
+                }
+                const data: UploadResponse = await res.json();
+                return data;
+            })
             .then((data: UploadResponse) => {
                 if (data.success && data.gerber_file_id) {
                     setProgress(25);
@@ -162,9 +176,9 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
                     setLoadingState("error");
                 }
             })
-            .catch((err) => {
+            .catch((err: any) => {
                 console.error("Upload fetch error:", err);
-                setErrorMessage("Network or server connection failed.");
+                setErrorMessage(err.message || "Network or server connection failed.");
                 setLoadingState("error");
             });
     };
