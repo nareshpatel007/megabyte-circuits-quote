@@ -208,6 +208,39 @@ export interface BoardShape {
   rect?: { x: number; y: number; w: number; h: number };
 }
 
+export function isOutlinePathValid(pathD: string, bounds?: BoundingBox): boolean {
+  if (!pathD) return false;
+
+  // Count commands in pathD
+  const commands = pathD.match(/[MLA]\s*[-+]?\d+/gi);
+  if (!commands || commands.length <= 3) {
+    return false; // Under 4 vertices -> incomplete shape or diagonal cutout triangle
+  }
+
+  if (bounds && bounds.width > 0 && bounds.height > 0) {
+    const numbers = pathD.match(/[-+]?\d*\.?\d+/g);
+    if (!numbers || numbers.length < 4) return false;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < numbers.length - 1; i += 2) {
+      const x = parseFloat(numbers[i]);
+      const y = parseFloat(numbers[i + 1]);
+      if (!isNaN(x) && !isNaN(y)) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    const w = maxX - minX;
+    const h = maxY - minY;
+    if (w < bounds.width * 0.4 || h < bounds.height * 0.4) {
+      return false; // Outline path bounding box is too small compared to board
+    }
+  }
+
+  return true;
+}
+
 export function detectBoardShape(outlineLayer?: ParsedLayerData, bounds?: BoundingBox): BoardShape {
   if (!bounds) {
     return { type: "rect", rect: { x: 0, y: 0, w: 100, h: 100 } };
@@ -219,8 +252,15 @@ export function detectBoardShape(outlineLayer?: ParsedLayerData, bounds?: Boundi
   const h = bounds.height;
   const r = Math.min(w, h) / 2;
 
+  // 1. Circular Board (1:1 Aspect ratio with arc/circle geometry or circular filename)
+  const aspectDiff = Math.abs(w - h) / Math.max(w, h);
+  const hasArcs = outlineLayer?.geometry?.some((g) => g.type === "arc" || g.type === "circle");
+  if (aspectDiff < 0.08 && (hasArcs || outlineLayer?.filename?.toLowerCase().includes("circle"))) {
+    return { type: "circle", circle: { cx, cy, r } };
+  }
+
   if (outlineLayer && outlineLayer.geometry) {
-    // 1. Closed Region Mode (G36/G37)
+    // 2. Closed Region Mode (G36/G37)
     const regionGeoms = outlineLayer.geometry.filter(
       (g): g is RegionGeometry => g.type === "region" && Array.isArray((g as RegionGeometry).contours) && (g as RegionGeometry).contours.length > 0
     );
@@ -232,13 +272,6 @@ export function detectBoardShape(outlineLayer?: ParsedLayerData, bounds?: Boundi
       if (regionD) {
         return { type: "region", regionD };
       }
-    }
-
-    // 2. Circular Board (1:1 Aspect ratio with arc/circle geometry or circular filename)
-    const aspectDiff = Math.abs(w - h) / Math.max(w, h);
-    const hasArcs = outlineLayer.geometry.some((g) => g.type === "arc" || g.type === "circle");
-    if (aspectDiff < 0.1 && (hasArcs || outlineLayer.filename.toLowerCase().includes("circle"))) {
-      return { type: "circle", circle: { cx, cy, r } };
     }
   }
 
@@ -426,15 +459,15 @@ export function generatePCBSvgMarkup(
   let substrateSvg = "";
   let maskBgSvg = "";
 
-  if (outlineStitchedD) {
-    clipShapeSvg = `<path d="${outlineStitchedD}" fill-rule="evenodd" />`;
-    substrateSvg = `<path d="${outlineStitchedD}" fill-rule="evenodd" fill="${substrateBg}" stroke="${substrateBorder}" stroke-width="0.5" />`;
-    maskBgSvg = `<path d="${outlineStitchedD}" fill-rule="evenodd" fill="#ffffff" />`;
-  } else if (shape.type === "circle" && shape.circle) {
+  if (shape.type === "circle" && shape.circle) {
     const { cx, cy, r } = shape.circle;
     clipShapeSvg = `<circle cx="${cx}" cy="${cy}" r="${r}" />`;
     substrateSvg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${substrateBg}" stroke="${substrateBorder}" stroke-width="0.5" />`;
     maskBgSvg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffffff" />`;
+  } else if (outlineStitchedD && isOutlinePathValid(outlineStitchedD, activeBounds)) {
+    clipShapeSvg = `<path d="${outlineStitchedD}" fill-rule="evenodd" />`;
+    substrateSvg = `<path d="${outlineStitchedD}" fill-rule="evenodd" fill="${substrateBg}" stroke="${substrateBorder}" stroke-width="0.5" />`;
+    maskBgSvg = `<path d="${outlineStitchedD}" fill-rule="evenodd" fill="#ffffff" />`;
   } else if (shape.type === "region" && shape.regionD) {
     clipShapeSvg = `<path d="${shape.regionD}" fill-rule="evenodd" />`;
     substrateSvg = `<path d="${shape.regionD}" fill="${substrateBg}" stroke="${substrateBorder}" stroke-width="0.5" />`;

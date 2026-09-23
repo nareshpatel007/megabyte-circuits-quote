@@ -956,6 +956,7 @@ function CheckoutContent() {
                                                     ) : (
                                                         <GerberBoardPreview
                                                             previewData={item.gerberPreview}
+                                                            gerberFileId={(item as any).gerber_file_id || (item as any).uploadedGerberFileId}
                                                             boardName={item.gerberFileName || item.boardName}
                                                             pcbColor={item.pcbColor}
                                                             layers={item.layers}

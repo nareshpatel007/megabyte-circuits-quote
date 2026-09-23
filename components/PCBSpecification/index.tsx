@@ -1303,7 +1303,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const gerberName = uploadedFile
                 ? (typeof uploadedFile === 'string' ? uploadedFile : (uploadedFile.name || (uploadedFile as any).filename || "Gerber_Board.zip"))
                 : (formData.boardName || "Gerber_Board.zip");
-            const previewSvg = topSvg || bottomSvg || "";
+            const previewSvg = topSvg || (uploadedGerberFileId ? `/api/gerber/${uploadedGerberFileId}/preview/front` : bottomSvg || "");
             const generatedBoardId = "Y2-" + Math.floor(10000000 + Math.random() * 90000000);
 
             const defaultShippingOptions = [

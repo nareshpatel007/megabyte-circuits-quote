@@ -4,6 +4,7 @@ import React from "react";
 
 interface GerberBoardPreviewProps {
     previewData?: string;
+    gerberFileId?: number | string;
     boardName?: string;
     originalName?: string;
     pcbColor?: string;
@@ -24,6 +25,7 @@ const COLOR_MAP: Record<string, { bg: string; border: string; silk: string }> = 
 
 export default function GerberBoardPreview({
     previewData,
+    gerberFileId,
     boardName,
     originalName,
     pcbColor = "Green",
@@ -31,9 +33,14 @@ export default function GerberBoardPreview({
     dimensions,
     className = "w-full h-full"
 }: GerberBoardPreviewProps) {
-    if (previewData && (previewData.includes("<svg") || previewData.trim().startsWith("<svg"))) {
-        const svgStart = previewData.indexOf("<svg");
-        const svgContent = svgStart !== -1 ? previewData.substring(svgStart) : previewData;
+    let effectivePreviewData = previewData;
+    if (!effectivePreviewData && gerberFileId) {
+        effectivePreviewData = `/api/gerber/${gerberFileId}/preview/front`;
+    }
+
+    if (effectivePreviewData && (effectivePreviewData.includes("<svg") || effectivePreviewData.trim().startsWith("<svg"))) {
+        const svgStart = effectivePreviewData.indexOf("<svg");
+        const svgContent = svgStart !== -1 ? effectivePreviewData.substring(svgStart) : effectivePreviewData;
         return (
             <div
                 className={`w-full h-full flex items-center justify-center overflow-hidden [&_svg]:w-full [&_svg]:h-full [&_svg]:object-contain ${className}`}
@@ -42,18 +49,18 @@ export default function GerberBoardPreview({
         );
     }
 
-    const isImageUrl = previewData && (
-        previewData.startsWith("http") ||
-        previewData.startsWith("data:") ||
-        previewData.startsWith("/") ||
-        previewData.startsWith("./") ||
-        previewData.includes("/preview/")
+    const isImageUrl = effectivePreviewData && (
+        effectivePreviewData.startsWith("http") ||
+        effectivePreviewData.startsWith("data:") ||
+        effectivePreviewData.startsWith("/") ||
+        effectivePreviewData.startsWith("./") ||
+        effectivePreviewData.includes("/preview/")
     );
 
-    if (isImageUrl) {
+    if (isImageUrl && effectivePreviewData) {
         return (
             <img
-                src={previewData}
+                src={effectivePreviewData}
                 alt="Gerber Board Preview"
                 className={`w-full h-full object-contain rounded-xl ${className}`}
                 style={{ objectFit: 'contain' }}

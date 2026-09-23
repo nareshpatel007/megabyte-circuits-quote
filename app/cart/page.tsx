@@ -616,7 +616,7 @@ export default function CartPage() {
                                                                     }}
                                                                 />
                                                             ) : (
-                                                                <GerberBoardPreview previewData={item.gerberPreview} boardName={item.boardName} pcbColor={item.pcbColor} layers={item.layers} dimensions={item.dimensions} />
+                                                                <GerberBoardPreview previewData={item.gerberPreview} gerberFileId={(item as any).gerber_file_id || (item as any).uploadedGerberFileId} boardName={item.boardName} pcbColor={item.pcbColor} layers={item.layers} dimensions={item.dimensions} />
                                                             )}
                                                         </div>
                                                         <div className="space-y-1 min-w-0 flex-1">
