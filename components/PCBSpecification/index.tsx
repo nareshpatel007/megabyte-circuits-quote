@@ -811,6 +811,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     ]);
 
     // Sync Gerber preview soldermask color and surface finish with form selections
+
     React.useEffect(() => {
         const hexToMask: Record<string, RenderOptions["sm"]> = {
             "#52c41a": "green",
@@ -830,54 +831,14 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         });
     }, [formData.pcbColor, formData.surfaceFinish]);
 
-    // Re-render Gerber previews dynamically whenever renderOptions, clientLayers, or uploadedFile changes
+    // Python Gerber processing service provides the source-of-truth 2D/3D preview images
+    // Client-side SVG stackup re-rendering and syncing is disabled to preserve exact Python images
     React.useEffect(() => {
-        let active = true;
-
-        async function updatePreviews() {
-            if ((!clientLayers || clientLayers.length === 0) && uploadedFile) {
-                try {
-                    const layers = await loadLayers(uploadedFile);
-                    if (active && layers && layers.length > 0) {
-                        setClientLayers(layers);
-                        const res = await renderStack(layers, renderOptions, uploadedFile);
-                        if (active && res && res.top?.svg && res.bottom?.svg) {
-                            setTopSvg(res.top.svg);
-                            setBottomSvg(res.bottom.svg);
-                            return;
-                        }
-                    }
-                } catch (err) {
-                    console.warn("Failed to auto-parse layers on color change:", err);
-                }
-            }
-
-            if (clientLayers && clientLayers.length > 0) {
-                try {
-                    const res = await renderStack(clientLayers, renderOptions, uploadedFile || undefined);
-                    if (active && res && res.top?.svg && res.bottom?.svg) {
-                        setTopSvg(res.top.svg);
-                        setBottomSvg(res.bottom.svg);
-                        return;
-                    }
-                } catch (err) {
-                    console.warn("Error re-rendering Gerber preview for new color:", err);
-                }
-            }
-
-            if (uploadedGerberFileId) {
-                const colorParam = renderOptions.sm || "green";
-                setTopSvg(`/api/gerber/${uploadedGerberFileId}/preview/front?color=${colorParam}`);
-                setBottomSvg(`/api/gerber/${uploadedGerberFileId}/preview/back?color=${colorParam}`);
-            }
+        if (uploadedGerberFileId && !topSvg) {
+            setTopSvg(`/api/gerber/${uploadedGerberFileId}/preview/front`);
+            setBottomSvg(`/api/gerber/${uploadedGerberFileId}/preview/back`);
         }
-
-        if (uploadedFile || (clientLayers && clientLayers.length > 0) || uploadedGerberFileId) {
-            updatePreviews();
-        }
-
-        return () => { active = false; };
-    }, [renderOptions, clientLayers, uploadedFile, uploadedGerberFileId]);
+    }, [uploadedGerberFileId, topSvg]);
 
     // Dynamic lead time-based pricing calculation
     const getLeadTimePricing = () => {
@@ -1053,11 +1014,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const layers = await loadLayers(file);
             if (layers && layers.length > 0) {
                 setClientLayers(layers);
-                const stackRes = await renderStack(layers, renderOptions, file);
-                if (stackRes && stackRes.top?.svg && stackRes.bottom?.svg) {
-                    setTopSvg(stackRes.top.svg);
-                    setBottomSvg(stackRes.bottom.svg);
-                }
             }
         } catch (err) {
             console.warn("Client layer parsing during upload success:", err);

@@ -17,8 +17,7 @@ export interface RenderOptions {
 }
 
 
-export function getPCBColorPalette(maskColor: string = "green", silkColor?: string) {
-  const maskLower = maskColor.toLowerCase();
+export function getPCBColorPalette(maskColor: string = "green", silkColor: string = "white") {
   const maskColors: Record<string, { bg: string; border: string; mask: string }> = {
     green: { bg: "#124b27", border: "#1a6837", mask: "rgba(18, 75, 39, 0.85)" },
     blue: { bg: "#104e8b", border: "#1c6ea4", mask: "rgba(16, 78, 139, 0.85)" },
@@ -31,11 +30,10 @@ export function getPCBColorPalette(maskColor: string = "green", silkColor?: stri
 
   const copperColor = "#e5a93c"; // Bright Metallic Gold Finish
 
-  const defaultSilk = (maskLower === "white" || maskLower === "yellow") ? "#000000" : "#ffffff";
-  const silkHex = silkColor ? (silkColor === "black" ? "#000000" : silkColor === "yellow" ? "#ffff00" : silkColor === "white" ? "#ffffff" : silkColor) : defaultSilk;
+  const silkHex = silkColor === "black" ? "#000000" : silkColor === "yellow" ? "#ffff00" : "#ffffff";
 
   return {
-    palette: maskColors[maskLower] || maskColors.green,
+    palette: maskColors[maskColor.toLowerCase()] || maskColors.green,
     copperColor,
     silkscreenColor: silkHex
   };
