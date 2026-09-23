@@ -17,6 +17,15 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
     const [loadingState, setLoadingState] = useState<"idle" | "uploading" | "extracting" | "parsing" | "success" | "error">("idle");
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    React.useEffect(() => {
+        return () => {
+            if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+            }
+        };
+    }, []);
 
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
@@ -51,50 +60,6 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
         uploadFile(selectedFile);
     };
 
-    const uploadFile = (file: File) => {
-        setLoadingState("uploading");
-        setProgress(0);
-
-        // Simulate progress bar before POSTing to Next API
-        const interval = setInterval(() => {
-            setProgress(prev => {
-                if (prev >= 90) {
-                    clearInterval(interval);
-                    return 90;
-                }
-                return prev + 15;
-            });
-        }, 150);
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-        })
-            .then(res => res.json())
-            .then((data: UploadResponse) => {
-                clearInterval(interval);
-                setProgress(100);
-
-                if (data.success) {
-                    setLoadingState("success");
-                    setTimeout(() => {
-                        onUploadSuccess(data, file);
-                    }, 800);
-                } else {
-                    setErrorMessage(data.error || "Gerber parsing failed.");
-                    setLoadingState("error");
-                }
-            })
-            .catch(() => {
-                clearInterval(interval);
-                setErrorMessage("Network or server connection failed.");
-                setLoadingState("error");
-            });
-    };
-
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -111,7 +76,104 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
         }
     };
 
+    const startPolling = (gerberFileId: number, file: File, initialData: UploadResponse) => {
+        let attempts = 0;
+        const maxAttempts = 90; // 90 * 1.5s = 135s limit
+
+        if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+        }
+
+        pollIntervalRef.current = setInterval(async () => {
+            attempts++;
+
+            // Smoothly advance progress bar up to 92%
+            setProgress(prev => {
+                if (prev >= 92) return 92;
+                return prev + Math.floor(Math.random() * 4) + 3;
+            });
+
+            try {
+                const res = await fetch(`/api/gerber/${gerberFileId}/status`);
+                if (res.ok) {
+                    const statusData: UploadResponse = await res.json();
+
+                    if (statusData.status === "completed") {
+                        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                        setProgress(100);
+                        setLoadingState("success");
+                        const mergedData = { ...initialData, ...statusData };
+                        setTimeout(() => {
+                            onUploadSuccess(mergedData, file);
+                        }, 500);
+                        return;
+                    } else if (statusData.status === "failed") {
+                        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                        setErrorMessage(statusData.error || "PCB Gerber analysis failed.");
+                        setLoadingState("error");
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn("Gerber status polling check error:", err);
+            }
+
+            if (attempts >= maxAttempts) {
+                if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                setErrorMessage("Analysis timed out. Please try uploading again.");
+                setLoadingState("error");
+            }
+        }, 1500);
+    };
+
+    const uploadFile = (file: File) => {
+        setLoadingState("uploading");
+        setProgress(15);
+
+        if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+        })
+            .then(res => res.json())
+            .then((data: UploadResponse) => {
+                if (data.success && data.gerber_file_id) {
+                    setProgress(25);
+
+                    if (data.status === "completed") {
+                        setProgress(100);
+                        setLoadingState("success");
+                        setTimeout(() => {
+                            onUploadSuccess(data, file);
+                        }, 500);
+                    } else {
+                        // Start status polling for realtime updates
+                        startPolling(data.gerber_file_id, file, data);
+                    }
+                } else {
+                    setErrorMessage(data.error || "Gerber upload failed.");
+                    setLoadingState("error");
+                }
+            })
+            .catch((err) => {
+                console.error("Upload fetch error:", err);
+                setErrorMessage("Network or server connection failed.");
+                setLoadingState("error");
+            });
+    };
+
     const resetUploader = () => {
+        if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+        }
         setFile(null);
         setProgress(0);
         setLoadingState("idle");

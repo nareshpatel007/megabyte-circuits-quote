@@ -918,10 +918,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         else if (totalAreaInSqM <= 1) tierKey = "0.51 to 1";
         else if (totalAreaInSqM <= 2) tierKey = "1.01 to 2";
         else if (totalAreaInSqM <= 3) tierKey = "2.01 to 3";
-        else if (totalAreaInSqM <= 9.99) tierKey = "3.01 to 9.99";
-        else {
-            return { options: [], showContact: true, totalAreaInSqM };
-        }
+        else tierKey = "3.01 to 9.99";
 
         const applicablePrices = priceTiers[layers.toString()]?.[tierKey];
         if (!applicablePrices) {
@@ -954,54 +951,45 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             };
         });
 
-        // Apply visibility overrides
-        let showContact = false;
+        // Apply visibility overrides based on lead times (always keep calculations enabled)
         if (layers >= 4 && layers <= 10) {
             options.forEach(opt => {
                 if (opt.day !== 20) opt.visible = false;
             });
         } else if (layers === 1 || layers === 2) {
-            if (layers === 2 && totalAreaInSqM > 7) {
-                options.forEach(opt => opt.visible = false);
-                showContact = true;
-            } else if (layers === 1 && totalAreaInSqM > 10) {
-                options.forEach(opt => opt.visible = false);
-                showContact = true;
-            } else {
-                // Area limits
-                if (layers === 2) {
-                    if (totalAreaInSqM > 2) {
-                        options.forEach(opt => {
-                            if ([1, 3, 5].includes(opt.day)) opt.visible = false;
-                        });
-                    } else if (totalAreaInSqM > 1.5) {
-                        options.forEach(opt => {
-                            if ([1, 3].includes(opt.day)) opt.visible = false;
-                        });
-                    } else if (totalAreaInSqM > 1) {
-                        options.forEach(opt => {
-                            if (opt.day === 1) opt.visible = false;
-                        });
-                    }
-                } else if (layers === 1) {
-                    if (totalAreaInSqM > 5) {
-                        options.forEach(opt => {
-                            if ([1, 3, 5].includes(opt.day)) opt.visible = false;
-                        });
-                    } else if (totalAreaInSqM > 3) {
-                        options.forEach(opt => {
-                            if ([1, 3].includes(opt.day)) opt.visible = false;
-                        });
-                    } else if (totalAreaInSqM > 2) {
-                        options.forEach(opt => {
-                            if (opt.day === 1) opt.visible = false;
-                        });
-                    }
+            // Lead time availability based on area
+            if (layers === 2) {
+                if (totalAreaInSqM > 2) {
+                    options.forEach(opt => {
+                        if ([1, 3, 5].includes(opt.day)) opt.visible = false;
+                    });
+                } else if (totalAreaInSqM > 1.5) {
+                    options.forEach(opt => {
+                        if ([1, 3].includes(opt.day)) opt.visible = false;
+                    });
+                } else if (totalAreaInSqM > 1) {
+                    options.forEach(opt => {
+                        if (opt.day === 1) opt.visible = false;
+                    });
+                }
+            } else if (layers === 1) {
+                if (totalAreaInSqM > 5) {
+                    options.forEach(opt => {
+                        if ([1, 3, 5].includes(opt.day)) opt.visible = false;
+                    });
+                } else if (totalAreaInSqM > 3) {
+                    options.forEach(opt => {
+                        if ([1, 3].includes(opt.day)) opt.visible = false;
+                    });
+                } else if (totalAreaInSqM > 2) {
+                    options.forEach(opt => {
+                        if (opt.day === 1) opt.visible = false;
+                    });
                 }
             }
         }
 
-        return { options, showContact, totalAreaInSqM };
+        return { options, showContact: false, totalAreaInSqM };
     };
 
     const handleUploadSuccess = async (res: UploadResponse, file: File) => {
