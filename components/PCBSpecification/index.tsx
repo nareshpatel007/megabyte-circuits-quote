@@ -1886,7 +1886,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                             {/* Shipping Options & Total Calculation */}
                                             {(() => {
-                                                const isJLCPCB = layers > 2;
+                                                const isJLCPCB = layers > 2 || !!jlcpcbQuote;
                                                 // Estimate PCB weight in KG (standard 1.6mm FR4 PCB ~ 3.8kg per sq meter)
                                                 const thicknessMm = parseFloat((formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "")) || 1.6;
                                                 const weightPerSqM = 3.8 * (thicknessMm / 1.6);
@@ -1932,7 +1932,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                         <div className="flex justify-between items-center text-xs">
                                                             <span className="text-slate-600 dark:text-slate-300 font-semibold">Total Area:</span>
                                                             <span className="font-extrabold text-[#0F7438] dark:text-[#8DD3A5]">
-                                                                {totalAreaInSqM.toFixed(2)} m² <span className="text-[10px] font-normal text-slate-500">({estimatedWeightKg} kg est.{estimatedWeightKg < 1 ? ' → 1 kg min' : ''})</span>
+                                                                {totalAreaInSqM.toFixed(2)} m²{!isJLCPCB && (
+                                                                    <span className="text-[10px] font-normal text-slate-500"> ({estimatedWeightKg} kg est.{estimatedWeightKg < 1 ? ' → 1 kg min' : ''})</span>
+                                                                )}
                                                             </span>
                                                         </div>
 
