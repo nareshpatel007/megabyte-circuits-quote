@@ -1761,9 +1761,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                     </div>
                                                                     <span className="text-[8.5px] sm:text-[9px] font-bold uppercase text-gray-400 leading-none mt-0.5">{item.weekday}</span>
                                                                     <span className="text-xs sm:text-sm font-extrabold my-0.5 leading-tight text-gray-400 line-through">{item.dateNum}</span>
-                                                                    <div className="flex flex-col items-center leading-none pb-0.5">
-                                                                        <span className="text-[7.5px] sm:text-[8.5px] font-bold uppercase tracking-tight text-red-600 bg-red-100 dark:bg-red-900/40 px-1 py-0.5 rounded-xs">N/A</span>
-                                                                    </div>
+                                                                    <div className="flex flex-col items-center leading-none pb-0.5"></div>
                                                                 </div>
                                                             );
                                                         }

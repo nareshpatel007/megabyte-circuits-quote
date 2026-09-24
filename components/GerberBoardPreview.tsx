@@ -40,24 +40,44 @@ export default function GerberBoardPreview({
         "#fadb14": "yellow",
         "#1677ff": "blue",
         "#ffffff": "white",
-        "#000000": "black"
+        "#000000": "black",
+        "green": "green",
+        "purple": "purple",
+        "red": "red",
+        "yellow": "yellow",
+        "blue": "blue",
+        "white": "white",
+        "black": "black"
     };
 
-    const rawColor = (pcbColor || "green").toLowerCase().trim();
+    let rawColor = "green";
+    if (pcbColor) {
+        try {
+            rawColor = decodeURIComponent(pcbColor).toLowerCase().trim();
+        } catch {
+            rawColor = pcbColor.toLowerCase().trim();
+        }
+    }
+
     const colorSlug = colorMapHex[rawColor] || rawColor;
     const validColors = ["green", "purple", "red", "yellow", "blue", "white", "black"];
     const effectiveColor = validColors.includes(colorSlug) ? colorSlug : "green";
 
     let effectivePreviewData = previewData;
     if (gerberFileId) {
-        if (!effectivePreviewData || effectivePreviewData.includes("/preview/front")) {
+        if (!effectivePreviewData || effectivePreviewData.includes("/preview/")) {
             effectivePreviewData = `/api/gerber/${gerberFileId}/preview/front?color=${effectiveColor}`;
         }
-    } else if (effectivePreviewData && effectivePreviewData.includes("/preview/front")) {
-        if (effectivePreviewData.includes("?color=")) {
-            effectivePreviewData = effectivePreviewData.replace(/\?color=[a-z]+/, `?color=${effectiveColor}`);
-        } else {
-            effectivePreviewData = `${effectivePreviewData}?color=${effectiveColor}`;
+    }
+
+    if (effectivePreviewData && typeof effectivePreviewData === "string") {
+        if (effectivePreviewData.includes("/preview/") || effectivePreviewData.includes("/gerber/")) {
+            if (/([?&])color=[^&]*/i.test(effectivePreviewData)) {
+                effectivePreviewData = effectivePreviewData.replace(/([?&])color=[^&]*/i, `$1color=${effectiveColor}`);
+            } else {
+                const separator = effectivePreviewData.includes("?") ? "&" : "?";
+                effectivePreviewData = `${effectivePreviewData}${separator}color=${effectiveColor}`;
+            }
         }
     }
 
