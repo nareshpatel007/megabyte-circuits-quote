@@ -25,3 +25,28 @@ export async function fetchPublicHolidays(startDate?: string, endDate?: string):
         return [];
     }
 }
+
+/**
+ * Calculate dynamic JLCPCB quotation date (Today + 12 days, skipping Sundays and public holidays)
+ */
+export function getJlcpcbQuotationDate(startDate: Date = new Date(), holidays: PublicHoliday[] = []): Date {
+    const target = new Date(startDate.getTime());
+    target.setDate(target.getDate() + 12);
+
+    const holidayIsoList = (holidays || []).map(h => (typeof h?.date === "string" ? h.date.split("T")[0] : ""));
+
+    const isNonWorking = (d: Date) => {
+        if (d.getDay() === 0) return true; // Sunday
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        const iso = `${yyyy}-${mm}-${dd}`;
+        return holidayIsoList.includes(iso);
+    };
+
+    while (isNonWorking(target)) {
+        target.setDate(target.getDate() + 1);
+    }
+
+    return target;
+}

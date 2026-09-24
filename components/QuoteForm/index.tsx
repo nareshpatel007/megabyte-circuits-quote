@@ -209,6 +209,12 @@ export default function QuoteForm({
                     if (next.coverlayColor === "Transparent") next.coverlayColor = "Yellow";
                 }
             }
+
+            if (field === "layers" && parseInt(value, 10) >= 6) {
+                if (["HASL(Leaded)", "HASL(with lead)", "HASL"].includes(next.surfaceFinish)) {
+                    next.surfaceFinish = "ENIG";
+                }
+            }
             return next;
         });
     };
@@ -758,12 +764,20 @@ export default function QuoteForm({
                                             { val: "HASL(with lead)", disabled: true },
                                             { val: "LeadFree HASL", disabled: true }
                                           ]
-                                        : [
-                                            { val: "OSP", disabled: false },
-                                            { val: "HASL(with lead)", disabled: false },
-                                            { val: "LeadFree HASL", disabled: false },
-                                            { val: "ENIG", disabled: false }
-                                          ]
+                                        : parseInt(formData.layers, 10) >= 6
+                                            ? [
+                                                { val: "ENIG", disabled: false },
+                                                { val: "LeadFree HASL", disabled: false },
+                                                { val: "OSP", disabled: false },
+                                                { val: "HASL(Leaded)", disabled: true },
+                                                { val: "HASL(with lead)", disabled: true }
+                                              ]
+                                            : [
+                                                { val: "HASL(Leaded)", disabled: false },
+                                                { val: "LeadFree HASL", disabled: false },
+                                                { val: "ENIG", disabled: false },
+                                                { val: "OSP", disabled: false }
+                                              ]
                                 ).map(item => (
                                     <Pill
                                         key={item.val}

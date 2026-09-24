@@ -12,7 +12,7 @@ import { GerberFile, QuoteFormData, UploadResponse } from "../../lib/gerber/type
 import { loadLayers, renderStack, renderWithGerbersRenderer, type RenderOptions, type InputLayer, COLORS, FINISHES } from "../../lib/gerber/clientRenderer";
 
 import { submitOrder, OrderFormData } from "../../lib/api/orderService";
-import { fetchPublicHolidays, PublicHoliday } from "../../lib/api/deliveryService";
+import { fetchPublicHolidays, PublicHoliday, getJlcpcbQuotationDate } from "../../lib/api/deliveryService";
 import Toast, { ToastType } from "../Toast";
 import { saveCartToBackend } from "@/lib/cartSession";
 import { useCurrency } from "../../context/CurrencyContext";
@@ -682,10 +682,11 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [jlcpcbQuote, setJlcpcbQuote] = useState<any>(null);
     const [isJlcpcbLoading, setIsJlcpcbLoading] = useState<boolean>(false);
     const [jlcpcbError, setJlcpcbError] = useState<string | null>(null);
+    const [quoteTrigger, setQuoteTrigger] = useState<number>(0);
+    const quoteReqVersion = React.useRef(0);
 
     // Fetch JLCPCB live quotation whenever layers > 2
     React.useEffect(() => {
-        let active = true;
         const layersCount = parseInt(formData.layers, 10) || 1;
 
         if (layersCount <= 2) {
@@ -695,10 +696,12 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             return;
         }
 
+        const currentReqId = ++quoteReqVersion.current;
+        setIsJlcpcbLoading(true);
+        setJlcpcbError(null);
+
         const timer = setTimeout(async () => {
-            if (!active) return;
-            setIsJlcpcbLoading(true);
-            setJlcpcbError(null);
+            if (currentReqId !== quoteReqVersion.current) return;
 
             const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
             const width = Math.max(1, Math.round((parseFloat(formData.width) || 100) * unitMultiplier));
@@ -717,11 +720,18 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
             const finishMap: Record<string, number> = {
                 "HASL(with lead)": 0,
+                "HASL(Leaded)": 0,
+                "HASL": 0,
                 "LeadFree HASL": 1,
                 "LeadFree HASL (RoHS)": 1,
                 "ENIG": 2,
-                "OSP": 0
+                "OSP": 3
             };
+
+            let surfaceFinishVal = finishMap[formData.surfaceFinish] ?? 0;
+            if (layersCount >= 6 && surfaceFinishVal === 0) {
+                surfaceFinishVal = 2; // ENIG (HASL is not available for 6-layer PCBs)
+            }
 
             const rawThickness = parseFloat((formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "")) || 1.6;
 
@@ -738,7 +748,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     qty: qty,
                     thickness: rawThickness,
                     pcbColor: colorMap[formData.pcbColor] ?? 0,
-                    surfaceFinish: finishMap[formData.surfaceFinish] ?? 0,
+                    surfaceFinish: surfaceFinishVal,
                     copperWeight: formData.copperWeight?.includes("2") ? 2 : 1,
                     insideCuprumThickness: "0.5",
                     goldFinger: formData.goldFingers === "Yes" ? 1 : 0,
@@ -768,48 +778,41 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     body: JSON.stringify(payload)
                 });
                 const json = await res.json();
-                if (active) {
+                if (currentReqId !== quoteReqVersion.current) return;
                     if (json.success && json.code === 200) {
                         setJlcpcbQuote(json);
                         if (json.fileKey && !jlcpcbFileKey) {
                             setJlcpcbFileKey(json.fileKey);
                         }
-                        // Auto-select checked or first available date option if dates exist
-                        if (json.dates && Array.isArray(json.dates) && json.dates.length > 0) {
-                            const defaultDateObj = json.dates.find((d: any) => d.checked && d.enabled) || json.dates.find((d: any) => d.enabled) || json.dates[0];
-                            if (defaultDateObj && defaultDateObj.date) {
-                                const targetDate = new Date(defaultDateObj.date);
-                                const todayDate = new Date();
-                                todayDate.setHours(0, 0, 0, 0);
-                                targetDate.setHours(0, 0, 0, 0);
-                                const diffDays = Math.max(1, Math.round((targetDate.getTime() - todayDate.getTime()) / (1000 * 3600 * 24)));
-                                setSelectedDay(diffDays);
-                            }
-                        }
+                        // Auto-calculate single target JLCPCB delivery date (Today + 12 days, Sunday adjusted)
+                        const targetDate = getJlcpcbQuotationDate(new Date(), publicHolidays);
+                        const todayDate = new Date();
+                        todayDate.setHours(0, 0, 0, 0);
+                        const diffDays = Math.max(1, Math.round((targetDate.getTime() - todayDate.getTime()) / (1000 * 3600 * 24)));
+                        setSelectedDay(diffDays);
                     } else {
                         console.warn("JLCPCB Quote API response error:", json);
                         setJlcpcbQuote(null);
                         setJlcpcbError(json.message || "Unable to calculate JLCPCB quotation. Please try again.");
                     }
-                }
             } catch (err) {
                 console.error("Error calling JLCPCB quotation API:", err);
-                if (active) {
+                if (currentReqId === quoteReqVersion.current) {
                     setJlcpcbQuote(null);
-                    setJlcpcbError("Error connecting to JLCPCB quotation API. Please try again.");
+                    setJlcpcbError("Unable to calculate PCB price. Please try again.");
                 }
             } finally {
-                if (active) {
+                if (currentReqId === quoteReqVersion.current) {
                     setIsJlcpcbLoading(false);
                 }
             }
         }, 400);
 
         return () => {
-            active = false;
             clearTimeout(timer);
         };
     }, [
+        quoteTrigger,
         formData.layers,
         formData.width,
         formData.height,
@@ -1552,43 +1555,75 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                         return `${formattedMonth} ${d.getFullYear()}`;
                                     };
 
-                                    const next20Days = Array.from({ length: 20 }, (_, i) => {
-                                        const daysAhead = i + 1;
-                                        const date = new Date();
-                                        date.setDate(date.getDate() + daysAhead);
+                                    let next20Days: any[] = [];
 
-                                        const year = date.getFullYear();
-                                        const month = String(date.getMonth() + 1).padStart(2, "0");
-                                        const dayOfMonth = String(date.getDate()).padStart(2, "0");
-                                        const isoDateStr = `${year}-${month}-${dayOfMonth}`;
+                                    if (layers > 2) {
+                                        const jlcDate = getJlcpcbQuotationDate(new Date(), publicHolidays);
+                                        const yyyy = jlcDate.getFullYear();
+                                        const mm = String(jlcDate.getMonth() + 1).padStart(2, "0");
+                                        const dd = String(jlcDate.getDate()).padStart(2, "0");
+                                        const jlcIsoDateStr = `${yyyy}-${mm}-${dd}`;
 
-                                        const isSunday = date.getDay() === 0;
-                                        const activeHoliday = publicHolidays.find(h => (typeof h.date === "string" ? h.date.split("T")[0] : "") === isoDateStr);
-                                        const isHoliday = !!activeHoliday;
-
-                                        let matchedOrderValue = defaultOrderValue;
-                                        let matchedUnitPrice = parseFloat(defaultUnitPrice);
-                                        let visible = false;
-                                        let workingDayNum = 0;
-
-                                        if (!isSunday && !isHoliday) {
-                                            workingDayCounter++;
-                                            workingDayNum = workingDayCounter;
-
-                                            if (layers > 2) {
-                                                if (jlcpcbQuote && jlcpcbQuote.dates && Array.isArray(jlcpcbQuote.dates)) {
-                                                    const matchedJlcDate = jlcpcbQuote.dates.find((d: any) => d.date === isoDateStr && d.enabled);
-                                                    if (matchedJlcDate) {
-                                                        matchedOrderValue = matchedJlcDate.pcb_price_inr;
-                                                        matchedUnitPrice = matchedJlcDate.pcb_price_inr / quantity;
-                                                        visible = true;
-                                                    } else {
-                                                        visible = false;
-                                                    }
-                                                } else {
-                                                    visible = false;
-                                                }
+                                        let matchedVal = 0;
+                                        if (jlcpcbQuote) {
+                                            if (jlcpcbQuote.base_inr) {
+                                                matchedVal = Math.round(jlcpcbQuote.base_inr);
                                             } else {
+                                                const usdVal = parseFloat(jlcpcbQuote?.pcbCostInfo?.totalFee || jlcpcbQuote?.priceWithoutFreight || 0);
+                                                matchedVal = Math.round(usdVal * (jlcpcbQuote?.exchange_rate || 88.5));
+                                            }
+                                        }
+
+                                        const todayDate = new Date();
+                                        todayDate.setHours(0, 0, 0, 0);
+                                        const targetDateZero = new Date(jlcDate.getTime());
+                                        targetDateZero.setHours(0, 0, 0, 0);
+                                        const diffDays = Math.max(1, Math.round((targetDateZero.getTime() - todayDate.getTime()) / (1000 * 3600 * 24)));
+
+                                        const singleItem = {
+                                            day: diffDays,
+                                            dateObj: jlcDate,
+                                            isoDateStr: jlcIsoDateStr,
+                                            dateNum: jlcDate.getDate(),
+                                            monthStr: jlcDate.toLocaleDateString("en-IN", { month: "short" }),
+                                            fullMonthYear: jlcDate.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+                                            shortMonthYear: getShortMonthYear(jlcDate),
+                                            weekday: jlcDate.toLocaleDateString("en-IN", { weekday: "short" }).toUpperCase(),
+                                            formattedDate: jlcDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                                            orderValue: matchedVal.toFixed(2),
+                                            unitPrice: (matchedVal / quantity).toFixed(2),
+                                            visible: true,
+                                            isSunday: false,
+                                            isHoliday: false,
+                                            holidayName: null,
+                                            isUnavailable: false,
+                                            workingDayNum: diffDays
+                                        };
+
+                                        next20Days = [singleItem];
+                                    } else {
+                                        next20Days = Array.from({ length: 20 }, (_, i) => {
+                                            const daysAhead = i + 1;
+                                            const date = new Date();
+                                            date.setDate(date.getDate() + daysAhead);
+
+                                            const year = date.getFullYear();
+                                            const month = String(date.getMonth() + 1).padStart(2, "0");
+                                            const dayOfMonth = String(date.getDate()).padStart(2, "0");
+                                            const isoDateStr = `${year}-${month}-${dayOfMonth}`;
+
+                                            const isSunday = date.getDay() === 0;
+                                            const activeHoliday = publicHolidays.find(h => (typeof h.date === "string" ? h.date.split("T")[0] : "") === isoDateStr);
+                                            const isHoliday = !!activeHoliday;
+
+                                            let matchedOrderValue = defaultOrderValue;
+                                            let matchedUnitPrice = parseFloat(defaultUnitPrice);
+                                            let visible = false;
+                                            let workingDayNum = 0;
+
+                                            if (!isSunday && !isHoliday) {
+                                                workingDayCounter++;
+                                                workingDayNum = workingDayCounter;
                                                 const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
                                                     const o1 = getOption(d1);
                                                     const o2 = getOption(d2);
@@ -1640,31 +1675,30 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                     if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
                                                 }
                                             }
-                                        }
 
-                                        const isUnavailable = isSunday || isHoliday || !visible;
+                                            const isUnavailable = isSunday || isHoliday || !visible;
 
-                                        return {
-                                            day: daysAhead,
-                                            dateObj: date,
-                                            isoDateStr,
-                                            dateNum: date.getDate(),
-                                            monthStr: date.toLocaleDateString("en-IN", { month: "short" }),
-                                            fullMonthYear: date.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
-                                            shortMonthYear: getShortMonthYear(date),
-                                            weekday: date.toLocaleDateString("en-IN", { weekday: "short" }),
-                                            formattedDate: date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-                                            orderValue: isUnavailable ? "0.00" : matchedOrderValue.toFixed(2),
-                                            unitPrice: isUnavailable ? "0.00" : matchedUnitPrice.toFixed(2),
-                                            visible,
-                                            isSunday,
-                                            isHoliday,
-                                            holidayName: activeHoliday?.name || null,
-                                            isUnavailable,
-                                            workingDayNum
-                                        };
-                                    });
-
+                                            return {
+                                                day: daysAhead,
+                                                dateObj: date,
+                                                isoDateStr,
+                                                dateNum: date.getDate(),
+                                                monthStr: date.toLocaleDateString("en-IN", { month: "short" }),
+                                                fullMonthYear: date.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+                                                shortMonthYear: getShortMonthYear(date),
+                                                weekday: date.toLocaleDateString("en-IN", { weekday: "short" }),
+                                                formattedDate: date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                                                orderValue: isUnavailable ? "0.00" : matchedOrderValue.toFixed(2),
+                                                unitPrice: isUnavailable ? "0.00" : matchedUnitPrice.toFixed(2),
+                                                visible,
+                                                isSunday,
+                                                isHoliday,
+                                                holidayName: activeHoliday?.name || null,
+                                                isUnavailable,
+                                                workingDayNum
+                                            };
+                                        });
+                                    }
                                     const uniqueMonths = Array.from(new Set(next20Days.map(item => item.shortMonthYear)));
                                     const calendarHeaderTitle = uniqueMonths.length > 1
                                         ? `${uniqueMonths[0]} - ${uniqueMonths[uniqueMonths.length - 1]}`
@@ -1673,6 +1707,46 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                     // Ensure selectedDay is valid available date
                                     const selectedDayData = next20Days.find(item => item.day === selectedDay && !item.isUnavailable) || next20Days.find(item => !item.isUnavailable);
                                     const hasValidGerber = !!uploadedFile && detectedInfo?.layers !== "0" && (!!topSvg || !!bottomSvg || previewLoading);
+
+                                    if (layers > 2 && isJlcpcbLoading) {
+                                        return (
+                                            <div className="space-y-4 animate-pulse">
+                                                <div className="bg-[#8DD3A5]/15 dark:bg-[#0F7438]/20 p-5 rounded-2xl border border-[#41A96A]/30 space-y-3">
+                                                    <div className="flex justify-between items-center pb-2 border-b border-[#41A96A]/20">
+                                                        <div className="h-4 w-36 bg-slate-300 dark:bg-slate-700 rounded" />
+                                                        <div className="h-5 w-24 bg-slate-300 dark:bg-slate-700 rounded-md" />
+                                                    </div>
+                                                    <div className="flex justify-center py-2">
+                                                        <div className="w-36 h-28 bg-slate-300 dark:bg-slate-700 rounded-xl" />
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-[#8DD3A5]/10 border border-[#41A96A]/30 rounded-xl p-4 space-y-3">
+                                                    <div className="h-4 w-full bg-slate-300 dark:bg-slate-700 rounded" />
+                                                    <div className="h-4 w-3/4 bg-slate-300 dark:bg-slate-700 rounded" />
+                                                    <div className="h-4 w-1/2 bg-slate-300 dark:bg-slate-700 rounded" />
+                                                    <div className="h-8 w-full bg-slate-300 dark:bg-slate-700 rounded-lg" />
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    if (layers > 2 && jlcpcbError) {
+                                        return (
+                                            <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-2xl text-center space-y-3">
+                                                <p className="text-xs font-bold text-red-600 dark:text-red-400">
+                                                    {jlcpcbError || "Unable to calculate PCB price."}
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setQuoteTrigger(prev => prev + 1)}
+                                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-extrabold transition-all shadow-xs cursor-pointer"
+                                                >
+                                                    Try Again
+                                                </button>
+                                            </div>
+                                        );
+                                    }
 
                                     return (
                                         <div className="space-y-4">
@@ -1692,7 +1766,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                     </div>
                                                 </div>
 
-                                                <div className="grid grid-cols-5 gap-2.5 sm:gap-3.5 relative z-10">
+                                                <div className={layers > 2 ? "flex justify-center max-w-[180px] mx-auto relative z-10" : "grid grid-cols-5 gap-2.5 sm:gap-3.5 relative z-10"}>
                                                     {next20Days.map((item, idx) => {
                                                         const isSelected = selectedDayData?.day === item.day;
                                                         const stickyColors = [
@@ -1924,7 +1998,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                     const hasSelectedDelivery = selectedDay !== null && selectedDay !== undefined;
                                     const hasRequiredSpecs = Boolean(formData.layers && formData.thickness && formData.surfaceFinish && formData.copperWeight);
 
-                                    const isCanSaveToCart = hasValidGerber && hasValidDimensions && hasSelectedDelivery && hasRequiredSpecs;
+                                    const layersCount = parseInt(formData.layers, 10) || 1;
+                                    const isJlcValid = layersCount <= 2 || (!isJlcpcbLoading && !jlcpcbError && !!jlcpcbQuote);
+                                    const isCanSaveToCart = hasValidGerber && hasValidDimensions && hasSelectedDelivery && hasRequiredSpecs && isJlcValid;
 
                                     let validationMessage = "";
                                     if (!hasValidGerber) {
