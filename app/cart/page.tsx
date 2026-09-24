@@ -37,10 +37,24 @@ interface CartItem {
     width?: number | string;
     height?: number | string;
     date: string;
+    deliveryDate?: string;
+    delivery_date?: string;
     customerNote?: string;
     baseUnitPrice?: number;
     standardPricing?: any[];
 }
+
+const calculateCartDeliveryDate = (targetWorkingDays: number): string => {
+    const d = new Date();
+    let workingDaysAdded = 0;
+    while (workingDaysAdded < targetWorkingDays) {
+        d.setDate(d.getDate() + 1);
+        if (d.getDay() !== 0) { // Skip Sunday
+            workingDaysAdded++;
+        }
+    }
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+};
 
 const validatePcbItemLeadTime = (item: CartItem): CartItem & { areaExceeded?: boolean } => {
     if (item.productType === "part") return item;
@@ -85,15 +99,16 @@ const validatePcbItemLeadTime = (item: CartItem): CartItem & { areaExceeded?: bo
     }
 
     const currentBuildDays = parseInt(String(item.buildTime).replace(/\D/g, ""), 10) || 1;
-    let updatedBuildTime = item.buildTime;
-
-    if (currentBuildDays < minAllowedDays) {
-        updatedBuildTime = `${minAllowedDays} days`;
-    }
+    const finalDays = Math.max(currentBuildDays, minAllowedDays);
+    const updatedBuildTime = `${finalDays} days`;
+    const updatedDate = calculateCartDeliveryDate(finalDays);
 
     return {
         ...item,
         buildTime: updatedBuildTime,
+        date: updatedDate,
+        deliveryDate: updatedDate,
+        delivery_date: updatedDate,
         areaExceeded
     };
 };

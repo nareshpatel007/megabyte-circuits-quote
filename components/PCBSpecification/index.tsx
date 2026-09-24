@@ -479,6 +479,18 @@ function getPriceTiers(mask: string, weight: string, thickness: number, customTi
     return tiers[mask]?.[weight]?.[thicknessKey] ?? tiers[mask]?.[weight]?.['other'] ?? tiers['Other']?.[weight]?.['other'] ?? null;
 }
 
+const calculateCartDeliveryDate = (targetWorkingDays: number): string => {
+    const d = new Date();
+    let workingDaysAdded = 0;
+    while (workingDaysAdded < targetWorkingDays) {
+        d.setDate(d.getDate() + 1);
+        if (d.getDay() !== 0) { // Skip Sunday
+            workingDaysAdded++;
+        }
+    }
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+};
+
 export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn = false }: { selectedProduct?: "pcb" | "stencil"; isLoggedIn?: boolean }) {
     const { formatPrice } = useCurrency();
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -1379,6 +1391,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const pcbBasePrice = Number(calculatedPrice) || 100;
             const itemTotalPrice = pcbBasePrice + calculatedShippingCharge;
 
+            const targetFormattedDate = calculateCartDeliveryDate(selectedDay || 3);
+
             const newItem = {
                 id: 'cart_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
                 productType: selectedProduct || "pcb",
@@ -1398,6 +1412,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 unit: formData.unit || "mm",
                 qty: Number(formData.qty) || 5,
                 buildTime: `${selectedDay || 3} days`,
+                date: targetFormattedDate,
+                deliveryDate: targetFormattedDate,
+                delivery_date: targetFormattedDate,
                 price: itemTotalPrice,
                 shippingOption: (!activeShippingObj.method || activeShippingObj.location === activeShippingObj.method) ? (activeShippingObj.location || activeShippingObj.method) : `${activeShippingObj.location} - ${activeShippingObj.method}`,
                 shippingOptionKey: activeShippingObj.key,
@@ -1440,8 +1457,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 ...(formData.emiShielding ? { emiShielding: formData.emiShielding } : {}),
                 ...(formData.cuttingMethod ? { cuttingMethod: formData.cuttingMethod } : {}),
                 ...(formData.edaSoftware ? { edaSoftware: formData.edaSoftware } : {}),
-                ...(formData.silkscreenOnStiffener ? { silkscreenOnStiffener: formData.silkscreenOnStiffener } : {}),
-                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                ...(formData.silkscreenOnStiffener ? { silkscreenOnStiffener: formData.silkscreenOnStiffener } : {})
             };
             const updatedCart = [...existingCart, newItem];
             await saveCartToBackend(updatedCart);
