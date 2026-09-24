@@ -95,6 +95,20 @@ export async function handleApiProxy(
         }
 
         const apiRes = await fetch(`${apiUrl}${path}`, fetchOptions);
+
+        const contentType = apiRes.headers.get("content-type") || "";
+        if (contentType.includes("text/event-stream")) {
+            return new NextResponse(apiRes.body, {
+                status: apiRes.status,
+                headers: {
+                    "Content-Type": "text/event-stream",
+                    "Cache-Control": "no-cache, no-transform",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
+            });
+        }
+
         const arrayBuffer = await apiRes.arrayBuffer();
 
         const responseHeaders: Record<string, string> = {
