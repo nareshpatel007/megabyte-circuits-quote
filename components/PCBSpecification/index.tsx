@@ -865,39 +865,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         const newTopUrl = `/api/gerber/${uploadedGerberFileId}/preview/front?color=${colorSlug}`;
         const newBottomUrl = `/api/gerber/${uploadedGerberFileId}/preview/back?color=${colorSlug}`;
 
-        // If already loaded into frontend memory cache, switch instantly
-        if (colorCache.current[colorSlug]) {
-            setTopSvg(colorCache.current[colorSlug].top);
-            setBottomSvg(colorCache.current[colorSlug].bottom);
-            return;
-        }
-
-        // Preload image objects to avoid flicker on realtime color change
-        let canceled = false;
-        const imgTop = new Image();
-        const imgBottom = new Image();
-
-        let loadedCount = 0;
-        const onFinish = () => {
-            loadedCount++;
-            if (loadedCount >= 2 && !canceled) {
-                colorCache.current[colorSlug] = { top: newTopUrl, bottom: newBottomUrl };
-                setTopSvg(newTopUrl);
-                setBottomSvg(newBottomUrl);
-            }
-        };
-
-        imgTop.onload = onFinish;
-        imgTop.onerror = onFinish;
-        imgBottom.onload = onFinish;
-        imgBottom.onerror = onFinish;
-
-        imgTop.src = newTopUrl;
-        imgBottom.src = newBottomUrl;
-
-        return () => {
-            canceled = true;
-        };
+        setTopSvg(newTopUrl);
+        setBottomSvg(newBottomUrl);
+        colorCache.current[colorSlug] = { top: newTopUrl, bottom: newBottomUrl };
     }, [uploadedGerberFileId, formData.pcbColor]);
 
     // Dynamic lead time-based pricing calculation
@@ -1352,11 +1322,12 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 "#000000": "Black"
             };
 
-            const pcbColorName = hexToColorName[formData.pcbColor] || "Green";
+            const pcbColorName = hexToColorName[formData.pcbColor] || formData.pcbColor || "Green";
+            const colorSlug = pcbColorName.toLowerCase();
             const gerberName = uploadedFile
                 ? (typeof uploadedFile === 'string' ? uploadedFile : (uploadedFile.name || (uploadedFile as any).filename || "Gerber_Board.zip"))
                 : (formData.boardName || "Gerber_Board.zip");
-            const previewSvg = topSvg || (uploadedGerberFileId ? `/api/gerber/${uploadedGerberFileId}/preview/front` : bottomSvg || "");
+            const previewSvg = (uploadedGerberFileId ? `/api/gerber/${uploadedGerberFileId}/preview/front?color=${colorSlug}` : (topSvg || bottomSvg || ""));
             const generatedBoardId = "Y2-" + Math.floor(10000000 + Math.random() * 90000000);
 
             const defaultShippingOptions = [

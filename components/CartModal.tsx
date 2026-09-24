@@ -178,6 +178,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                                         ) : (
                                             <GerberBoardPreview
                                                 previewData={item.gerberPreview}
+                                                gerberFileId={(item as any).gerber_file_id || (item as any).uploadedGerberFileId}
                                                 boardName={item.boardName}
                                                 pcbColor={item.pcbColor}
                                                 layers={item.layers}

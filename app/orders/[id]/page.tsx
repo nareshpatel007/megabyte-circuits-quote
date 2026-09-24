@@ -375,9 +375,10 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
 
                                     <div className="flex flex-col md:flex-row gap-6 items-start">
                                         {/* Gerber Preview Box */}
-                                        <div className="w-32 h-32 bg-[#0b3818] rounded-2xl border border-gray-200 p-1.5 overflow-hidden shrink-0 shadow-sm mx-auto md:mx-0">
+                                        <div className="w-32 h-32 bg-slate-900 rounded-2xl border border-gray-200 p-1.5 overflow-hidden shrink-0 shadow-sm mx-auto md:mx-0">
                                             <GerberBoardPreview
                                                 previewData={order.gerber_preview_data || (order.gerber_file_id ? `/api/gerber/${order.gerber_file_id}/preview/front` : undefined)}
+                                                gerberFileId={order.gerber_file_id}
                                                 boardName={order.meta?.board_name || order.gerber_name}
                                                 originalName={order.gerber_name}
                                                 pcbColor={order.meta?.pcb_color}

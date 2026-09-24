@@ -146,8 +146,8 @@ function GerberFilesContent() {
                                 {gerberFiles.map((file) => (
                                     <div key={file.id} className="p-4 rounded-xl border border-gray-200/80 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/40 flex items-start justify-between gap-3 group hover:border-gray-300 dark:hover:border-zinc-700 transition-all">
                                         <div className="flex items-start gap-3 min-w-0">
-                                            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#0b3818] rounded-xl border border-gray-200/90 dark:border-zinc-700 flex items-center justify-center p-1 overflow-hidden shrink-0 relative shadow-sm">
-                                                <GerberBoardPreview previewData={file.preview_data} originalName={file.original_name} boardName={file.board_name} />
+                                            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-slate-900 rounded-xl border border-gray-200/90 dark:border-zinc-700 flex items-center justify-center p-1 overflow-hidden shrink-0 relative shadow-sm">
+                                                <GerberBoardPreview previewData={file.preview_data} gerberFileId={file.id} originalName={file.original_name} boardName={file.board_name} pcbColor={(file as any).pcb_color} />
                                             </div>
 
                                             <div className="min-w-0 space-y-1">

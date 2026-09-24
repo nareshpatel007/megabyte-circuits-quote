@@ -91,8 +91,7 @@ export default function GerberBoardPreview({
         );
     }
 
-    const colorKey = (pcbColor || "green").toLowerCase();
-    const theme = COLOR_MAP[colorKey] || COLOR_MAP.green;
+    const theme = COLOR_MAP[effectiveColor] || COLOR_MAP.green;
     const nameToDisplay = originalName || boardName || "PCB BOARD";
 
     return (
