@@ -78,7 +78,7 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
 
     const startPolling = (gerberFileId: number, file: File, initialData: UploadResponse) => {
         let attempts = 0;
-        const maxAttempts = 150; // 150 * 2s = 300s (5 minutes limit)
+        const maxAttempts = 90; // 90 * 2s = 180s (3 minutes limit)
 
         if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
@@ -87,7 +87,7 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
         pollIntervalRef.current = setInterval(async () => {
             attempts++;
 
-            // Convert percentage based on 5-minute (150 attempts) polling duration (up to 95%)
+            // Convert percentage based on 3-minute (90 attempts) polling duration (up to 95%)
             const currentProgress = Math.min(95, Math.floor(10 + (attempts / maxAttempts) * 85));
             setProgress(currentProgress);
 
