@@ -1383,16 +1383,25 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const activeShippingObj = currentShippingOpts.find((o: any) => o.key === shippingOptionKey) || currentShippingOpts[0];
 
             const totalAreaInSqM = ((Number(formData.width) || 100) / 1000) * ((Number(formData.height) || 100) / 1000) * (Number(formData.qty) || 5);
-            const weightPerSqM = formData.baseMaterial === "Flex" ? 0.3 : 3.8;
-            const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
-            const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
             const isJlcpcbCart = (Number(formData.layers) || 2) > 2 || !!jlcpcbQuote;
-            const calculatedShippingCharge = isJlcpcbCart && jlcpcbQuote
-                ? (jlcpcbQuote.shipping_charge !== undefined ? parseFloat(jlcpcbQuote.shipping_charge) : (jlcpcbQuote.dates?.[0]?.shipping_charge ? parseFloat(jlcpcbQuote.dates[0].shipping_charge) : 0))
-                : Math.round((activeShippingObj?.rate || 0) * chargedWeightKg);
+            let jlcCartWeightKg: number | null = null;
+            if (isJlcpcbCart && jlcpcbQuote) {
+                if (jlcpcbQuote.weight_kg !== undefined && jlcpcbQuote.weight_kg !== null && parseFloat(jlcpcbQuote.weight_kg) > 0) {
+                    jlcCartWeightKg = parseFloat(jlcpcbQuote.weight_kg);
+                } else if (jlcpcbQuote.pcbCostInfo?.weight !== undefined && parseFloat(jlcpcbQuote.pcbCostInfo.weight) > 0) {
+                    jlcCartWeightKg = parseFloat(jlcpcbQuote.pcbCostInfo.weight);
+                } else if (jlcpcbQuote.orderTotalWeight !== undefined && parseFloat(jlcpcbQuote.orderTotalWeight) > 0) {
+                    const w = parseFloat(jlcpcbQuote.orderTotalWeight);
+                    jlcCartWeightKg = w > 10 ? w / 1000.0 : w;
+                }
+            }
+            const estimatedWeightKg = (jlcCartWeightKg !== null && jlcCartWeightKg > 0) ? jlcCartWeightKg : Math.max(0.1, parseFloat((totalAreaInSqM * (formData.baseMaterial === "Flex" ? 0.3 : 3.8)).toFixed(2)));
+            const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
+
+            const calculatedShippingCharge = Math.round((activeShippingObj?.rate || 0) * chargedWeightKg);
 
             const pcbBasePrice = isJlcpcbCart && jlcpcbQuote
-                ? (jlcpcbQuote.pcb_price !== undefined ? parseFloat(jlcpcbQuote.pcb_price) : (jlcpcbQuote.dates?.[0]?.pcb_price ? parseFloat(jlcpcbQuote.dates[0].pcb_price) : Number(calculatedPrice) || 100))
+                ? parseFloat(jlcpcbQuote.subtotal ?? jlcpcbQuote.selling_price_before_gst ?? (jlcpcbQuote.pcb_price || 0))
                 : (Number(calculatedPrice) || 100);
 
             const itemTotalPrice = pcbBasePrice + calculatedShippingCharge;
@@ -1905,10 +1914,27 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                             {/* Shipping Options & Total Calculation */}
                                             {(() => {
                                                 const isJLCPCB = layers > 2 || !!jlcpcbQuote;
-                                                // Estimate PCB weight in KG (standard 1.6mm FR4 PCB ~ 3.8kg per sq meter)
+                                                let jlcWeightKg: number | null = null;
+                                                if (isJLCPCB && jlcpcbQuote) {
+                                                    if (jlcpcbQuote.weight_kg !== undefined && jlcpcbQuote.weight_kg !== null && parseFloat(jlcpcbQuote.weight_kg) > 0) {
+                                                        jlcWeightKg = parseFloat(jlcpcbQuote.weight_kg);
+                                                    } else if (jlcpcbQuote.pcbCostInfo?.weight !== undefined && parseFloat(jlcpcbQuote.pcbCostInfo.weight) > 0) {
+                                                        jlcWeightKg = parseFloat(jlcpcbQuote.pcbCostInfo.weight);
+                                                    } else if (jlcpcbQuote.orderTotalWeight !== undefined && parseFloat(jlcpcbQuote.orderTotalWeight) > 0) {
+                                                        const w = parseFloat(jlcpcbQuote.orderTotalWeight);
+                                                        jlcWeightKg = w > 10 ? w / 1000.0 : w;
+                                                    } else if (jlcpcbQuote.weight !== undefined && parseFloat(jlcpcbQuote.weight) > 0) {
+                                                        const w = parseFloat(jlcpcbQuote.weight);
+                                                        jlcWeightKg = w > 10 ? w / 1000.0 : w;
+                                                    }
+                                                }
+
+                                                // Estimate PCB weight in KG or use actual JLCPCB weight from API
                                                 const thicknessMm = parseFloat((formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "")) || 1.6;
-                                                const weightPerSqM = 3.8 * (thicknessMm / 1.6);
-                                                const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
+                                                const weightPerSqM = formData.baseMaterial === "Flex" ? 0.3 : 3.8 * (thicknessMm / 1.6);
+                                                const calculatedEstWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
+
+                                                const estimatedWeightKg = (jlcWeightKg !== null && jlcWeightKg > 0) ? parseFloat(jlcWeightKg.toFixed(2)) : calculatedEstWeightKg;
                                                 const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
 
                                                 const defaultShippingOptions = [
@@ -1924,25 +1950,24 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                                 const shippingCharge = Math.round(activeShipping.rate * chargedWeightKg);
 
-                                                let basePrice = 0;
+                                                let pcbPrice = 0;
                                                 let gstPercentage = 18;
 
                                                 if (isJLCPCB && jlcpcbQuote) {
                                                     if (selectedDayData) {
-                                                        basePrice = selectedDayData.subtotal !== undefined ? parseFloat(selectedDayData.subtotal) : (jlcpcbQuote.subtotal || jlcpcbQuote.selling_price_before_gst || 0);
+                                                        pcbPrice = selectedDayData.subtotal !== undefined ? parseFloat(selectedDayData.subtotal) : (jlcpcbQuote.subtotal || jlcpcbQuote.selling_price_before_gst || 0);
                                                     } else {
-                                                        basePrice = jlcpcbQuote.subtotal !== undefined ? jlcpcbQuote.subtotal : (jlcpcbQuote.selling_price_before_gst || 0);
+                                                        pcbPrice = jlcpcbQuote.subtotal !== undefined ? jlcpcbQuote.subtotal : (jlcpcbQuote.selling_price_before_gst || 0);
                                                     }
                                                     gstPercentage = jlcpcbQuote.gst_percentage !== undefined ? Number(jlcpcbQuote.gst_percentage) : (pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18);
                                                 } else {
-                                                    basePrice = selectedDayData ? parseFloat(selectedDayData.orderValue) : 0;
+                                                    pcbPrice = selectedDayData ? parseFloat(selectedDayData.orderValue) : 0;
                                                     gstPercentage = pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18;
                                                 }
 
-                                                const subtotal = basePrice > 0 ? basePrice + shippingCharge : 0;
-                                                const pcbPrice = subtotal;
-                                                const gstAmount = subtotal > 0 ? (subtotal * gstPercentage) / 100 : 0;
-                                                const mainTotal = subtotal + gstAmount;
+                                                const taxableTotal = pcbPrice > 0 ? pcbPrice + shippingCharge : 0;
+                                                const gstAmount = taxableTotal > 0 ? (taxableTotal * gstPercentage) / 100 : 0;
+                                                const mainTotal = taxableTotal + gstAmount;
 
                                                 return (
                                                     <div className="bg-[#8DD3A5]/10 border border-[#41A96A]/30 rounded-xl p-3.5 shadow-2xs space-y-3">
@@ -2009,8 +2034,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                     <span className="font-bold text-slate-700 dark:text-slate-300">{formatPrice(pcbPrice)}</span>
                                                                 </div>
                                                                 <div className="flex justify-between items-center text-xs">
-                                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">Subtotal:</span>
-                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">Delivery Charges:</span>
+                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">₹{shippingCharge.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                                                                 </div>
                                                                 <div className="flex justify-between items-center text-xs">
                                                                     <span className="text-slate-600 dark:text-slate-300 font-semibold">GST ({gstPercentage}%):</span>
@@ -2026,7 +2051,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                         ) : (
                                                             <div className="pt-2 border-t border-[#41A96A]/20 space-y-2">
                                                                 <div className="flex justify-between items-center text-xs">
-                                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">Shipping Charge:</span>
+                                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">Delivery Charges:</span>
                                                                     <span className="font-bold text-slate-700 dark:text-slate-300">₹{shippingCharge.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                                                                 </div>
                                                                 <div className="text-center pt-1 text-xs font-semibold text-slate-500 italic border-t border-[#41A96A]/10">
