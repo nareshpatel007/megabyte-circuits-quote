@@ -201,8 +201,6 @@ export default function Header() {
         loadCartFromBackend().then(() => updateCartCount());
     }, [pathname]);
 
-    const unreadCount = sampleNotifications.filter((n) => n.unread).length;
-
     return (
         <>
             <header className="bg-white dark:bg-zinc-900 border-b border-gray-200/90 dark:border-zinc-800 sticky top-0 z-50 shadow-xs h-14 transition-colors">

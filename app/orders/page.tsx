@@ -105,10 +105,6 @@ function OrdersContent() {
 
     const [repeatLoadingId, setRepeatLoadingId] = useState<number | null>(null);
 
-    const handleReorderClick = (ord: OrderItem) => {
-        setReorderConfirmOrder(ord);
-    };
-
     const executeReorder = (ord: OrderItem) => {
         setReorderConfirmOrder(null);
         executeRepeatOrder(ord.id, router, setRepeatLoadingId);
