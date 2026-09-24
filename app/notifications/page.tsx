@@ -22,6 +22,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import { getAuthUser } from "@/lib/auth";
+import { showBrowserNotification } from "@/lib/browser-notifications";
+import { toast } from "@/hooks/use-toast";
 
 interface NotificationItem {
     id: number;
@@ -153,15 +155,42 @@ export default function NotificationsPage() {
                             </p>
                         </div>
 
-                        {unreadCount > 0 && (
+                        <div className="flex flex-wrap items-center gap-2">
                             <button
-                                onClick={handleMarkAllAsRead}
-                                className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                                onClick={async () => {
+                                    const success = await showBrowserNotification({
+                                        title: "Test User Notification",
+                                        message: "This is a test notification from Megabyte Circuits Notification Center.",
+                                        action_url: "/notifications"
+                                    });
+                                    if (success) {
+                                        toast({
+                                            title: "Browser Notification Sent",
+                                            description: "Native browser notification popped up successfully."
+                                        });
+                                    } else {
+                                        toast({
+                                            title: "Browser Notification Requested",
+                                            description: "Permission was requested or is currently blocked by your browser settings."
+                                        });
+                                    }
+                                }}
+                                className="px-3.5 py-2 rounded-full bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-800 dark:text-zinc-200 font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer border border-gray-200 dark:border-zinc-700"
                             >
-                                <Check className="w-4 h-4" />
-                                <span>Mark All as Read ({unreadCount})</span>
+                                <Bell className="w-3.5 h-3.5 text-emerald-500" />
+                                <span>Enable / Test Desktop Alerts</span>
                             </button>
-                        )}
+
+                            {unreadCount > 0 && (
+                                <button
+                                    onClick={handleMarkAllAsRead}
+                                    className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    <Check className="w-4 h-4" />
+                                    <span>Mark All as Read ({unreadCount})</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Filter & Search Bar */}

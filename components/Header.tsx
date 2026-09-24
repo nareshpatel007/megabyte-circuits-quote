@@ -8,6 +8,8 @@ import { useCurrency } from "../context/CurrencyContext";
 import CartModal from "./CartModal";
 import { loadCartFromBackend } from "@/lib/cartSession";
 import { getAuthUser, clearAuthSession } from "@/lib/auth";
+import { toast } from "@/hooks/use-toast";
+import { showBrowserNotification } from "@/lib/browser-notifications";
 
 import GlobalSearch from "./GlobalSearch";
 
@@ -48,6 +50,7 @@ export default function Header() {
     const accountRef = useRef<HTMLDivElement>(null);
     const bellRef = useRef<HTMLDivElement>(null);
     const cartRef = useRef<HTMLDivElement>(null);
+    const seenIdsRef = useRef<Set<number>>(new Set());
 
     const [notifications, setNotifications] = useState<any[]>([]);
     const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -61,6 +64,10 @@ export default function Header() {
             if (data.status && Array.isArray(data.data)) {
                 setNotifications(data.data);
                 setUnreadCount(data.unread_count || 0);
+
+                if (seenIdsRef.current.size === 0) {
+                    data.data.forEach((n: any) => seenIdsRef.current.add(n.id));
+                }
             }
         } catch (e) {
             // Background fetch error
@@ -106,6 +113,20 @@ export default function Header() {
                     const data = JSON.parse(event.data);
                     if (data.notifications && data.notifications.length > 0) {
                         fetchNotifications();
+                        data.notifications.forEach((n: any) => {
+                            if (!seenIdsRef.current.has(n.id)) {
+                                seenIdsRef.current.add(n.id);
+                                toast({
+                                    title: n.title,
+                                    description: n.message,
+                                });
+                                showBrowserNotification({
+                                    title: n.title,
+                                    message: n.message,
+                                    action_url: n.action_url
+                                });
+                            }
+                        });
                     }
                 } catch (e) {}
             };
