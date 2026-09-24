@@ -78,7 +78,7 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
 
     const startPolling = (gerberFileId: number, file: File, initialData: UploadResponse) => {
         let attempts = 0;
-        const maxAttempts = 90; // 90 * 1.5s = 135s limit
+        const maxAttempts = 150; // 150 * 2s = 300s (5 minutes limit)
 
         if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
@@ -87,11 +87,9 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
         pollIntervalRef.current = setInterval(async () => {
             attempts++;
 
-            // Smoothly advance progress bar up to 92%
-            setProgress(prev => {
-                if (prev >= 92) return 92;
-                return prev + Math.floor(Math.random() * 4) + 3;
-            });
+            // Convert percentage based on 5-minute (150 attempts) polling duration (up to 95%)
+            const currentProgress = Math.min(95, Math.floor(10 + (attempts / maxAttempts) * 85));
+            setProgress(currentProgress);
 
             try {
                 const res = await fetch(`/api/gerber/${gerberFileId}/status`);
@@ -123,7 +121,7 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
                 setErrorMessage("Analysis timed out. Please try uploading again.");
                 setLoadingState("error");
             }
-        }, 1500);
+        }, 2000);
     };
 
     const getDirectUploadUrl = () => {
@@ -134,7 +132,7 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
 
     const uploadFile = (file: File) => {
         setLoadingState("uploading");
-        setProgress(15);
+        setProgress(10);
 
         if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
@@ -159,7 +157,7 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
             })
             .then((data: UploadResponse) => {
                 if (data.success && data.gerber_file_id) {
-                    setProgress(25);
+                    setProgress(15);
 
                     if (data.status === "completed") {
                         setProgress(100);
@@ -243,13 +241,7 @@ export default function GerberUploader({ onUploadSuccess, onReset, extraActions 
                         <div className="bg-primary/5 rounded-xl p-10 sm:p-14 flex flex-col items-center justify-center space-y-6">
                             <p className="text-gray-700 font-medium text-sm sm:text-base tracking-wide flex items-center gap-2">
                                 <RefreshCw className="w-4 h-4 animate-spin text-primary" />
-                                {progress < 30
-                                    ? "Uploading Gerber archive..."
-                                    : progress < 60
-                                        ? "Analyzing PCB layers & outline..."
-                                        : progress < 90
-                                            ? "Generating front & back PCB previews..."
-                                            : "Finalizing PCB analysis..."}
+                                Uploading gerber files...
                             </p>
                             <div className="w-full max-w-xl flex items-center gap-4">
                                 <div className="flex-1 bg-gray-200/70 h-4 sm:h-5 rounded-full overflow-hidden">
