@@ -483,6 +483,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const { formatPrice } = useCurrency();
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [uploadedGerberFileId, setUploadedGerberFileId] = useState<number | null>(null);
+    const [jlcpcbFileKey, setJlcpcbFileKey] = useState<string | null>(null);
     const [clientLayers, setClientLayers] = useState<InputLayer[]>([]);
     const [detectedInfo, setDetectedInfo] = useState<{ layers: string; width: string; height: string } | null>(null);
 
@@ -728,7 +729,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 orderType: 1,
                 achieveDate: 48,
                 country: "IN",
-                fileKey: uploadedGerberFileId ? String(uploadedGerberFileId) : "",
+                gerber_id: uploadedGerberFileId || undefined,
+                fileKey: jlcpcbFileKey || "",
                 pcbParam: {
                     layer: layersCount,
                     width: width,
@@ -768,8 +770,11 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 });
                 const json = await res.json();
                 if (active) {
-                    if (json.success && json.data) {
-                        setJlcpcbQuote(json.data);
+                    if (json.success) {
+                        setJlcpcbQuote(json.quotation || json.data || null);
+                        if (json.fileKey && !jlcpcbFileKey) {
+                            setJlcpcbFileKey(json.fileKey);
+                        }
                     } else {
                         console.warn("JLCPCB Quote API response:", json);
                         setJlcpcbQuote(json.data || null);
@@ -807,7 +812,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         formData.elecTest,
         formData.castellated,
         formData.viaCovering,
-        formData.edgePlating
+        formData.edgePlating,
+        uploadedGerberFileId,
+        jlcpcbFileKey
     ]);
 
     // Sync Gerber preview soldermask color and surface finish with form selections
@@ -1053,6 +1060,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             setUploadedGerberFileId(res.gerber_file_id);
         }
 
+        if ((res as any)?.jlcpcb_file_key) {
+            setJlcpcbFileKey((res as any).jlcpcb_file_key);
+        }
+
         const frontUrl = res?.preview_front || (res?.gerber_file_id ? `/api/gerber/${res.gerber_file_id}/preview/front` : "");
         const backUrl = res?.preview_back || (res?.gerber_file_id ? `/api/gerber/${res.gerber_file_id}/preview/back` : "");
 
@@ -1090,6 +1101,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const handleReset = () => {
         setUploadedFile(null);
         setUploadedGerberFileId(null);
+        setJlcpcbFileKey(null);
         setClientLayers([]);
         setDetectedInfo(null);
         setFormData(INITIAL_FORM_DATA);
@@ -1372,6 +1384,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 boardName: formData.boardName || gerberName,
                 gerberFileName: gerberName,
                 gerber_file_id: uploadedGerberFileId || undefined,
+                jlcpcb_file_key: jlcpcbFileKey || undefined,
+                quotation_source: (Number(formData.layers) || 2) > 2 ? "jlcpcb" : "internal",
+                jlcpcb_price: (Number(formData.layers) || 2) > 2 ? (jlcpcbQuote?.price || itemTotalPrice) : undefined,
                 gerberPreview: previewSvg,
                 boardId: generatedBoardId,
                 pcbColor: pcbColorName,
