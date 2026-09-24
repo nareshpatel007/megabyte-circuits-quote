@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
-import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus } from "lucide-react";
+import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus, Loader2 } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend, setCartSessionId, getMinCartQuantity, safeSetStorage } from "@/lib/cartSession";
 
@@ -42,6 +42,12 @@ interface CartItem {
     customerNote?: string;
     baseUnitPrice?: number;
     standardPricing?: any[];
+    jlcpcb_price?: number;
+    jlcpcb_file_key?: string;
+    jlcpcb_quote?: any;
+    jlcpcb_quotation_snapshot?: any;
+    quotation_source?: string;
+    order_type?: string;
 }
 
 const calculateCartDeliveryDate = (targetWorkingDays: number): string => {
@@ -123,8 +129,10 @@ export default function CartPage() {
     const [isLoaded, setIsLoaded] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [minPartsOrderAmount, setMinPartsOrderAmount] = useState<number>(3000);
+    const [calculatingItemIds, setCalculatingItemIds] = useState<Record<string, boolean>>({});
 
     const saveBackendTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const jlcpcbDebounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
     useEffect(() => {
         const fetchPricingConfig = async () => {
@@ -280,6 +288,140 @@ export default function CartPage() {
         setSelectedItemIds([]);
     };
 
+    const recalculateJlcpcbQuote = async (item: CartItem, newQty: number): Promise<CartItem> => {
+        try {
+            const layersCount = parseInt(String(item.layers || "").replace(/\D/g, ""), 10) || 4;
+            let width = Number(item.width);
+            let height = Number(item.height);
+            if ((!width || !height) && item.dimensions) {
+                const match = item.dimensions.match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i);
+                if (match) {
+                    width = parseFloat(match[1]);
+                    height = parseFloat(match[2]);
+                }
+            }
+            if (!width) width = 100;
+            if (!height) height = 100;
+
+            const rawThickness = parseFloat(String(item.thickness || "1.6").replace(/[^0-9.]/g, "")) || 1.6;
+
+            const colorMap: Record<string, number> = {
+                "Green": 0, "Red": 1, "Yellow": 2, "Blue": 3,
+                "White": 4, "Black": 5, "Purple": 6, "Matte Black": 7, "Matte Green": 8
+            };
+
+            const sf = (item.surfaceFinish || "").toLowerCase();
+            let surfaceFinishVal = 0;
+            if (sf.includes("enig")) surfaceFinishVal = 2;
+            else if (sf.includes("lead-free") || sf.includes("hasl(lead-free)")) surfaceFinishVal = 1;
+            else if (sf.includes("osp")) surfaceFinishVal = 3;
+
+            const fileKey = (item as any).jlcpcb_file_key || (item as any).jlcpcbFileKey || (item as any).fileKey || "";
+            const gerberId = (item as any).gerber_file_id || (item as any).uploadedGerberFileId || undefined;
+
+            const payload = {
+                orderType: 1,
+                achieveDate: 48,
+                country: "IN",
+                gerber_id: gerberId,
+                fileKey: fileKey,
+                pcbParam: {
+                    layer: layersCount,
+                    width: width,
+                    length: height,
+                    qty: newQty,
+                    thickness: rawThickness,
+                    pcbColor: colorMap[item.pcbColor || "Green"] ?? 0,
+                    surfaceFinish: surfaceFinishVal,
+                    copperWeight: (item.copperWeight || "").includes("2") ? 2 : 1,
+                    insideCuprumThickness: "0.5",
+                    goldFinger: (item as any).goldFingers === "Yes" || (item as any).gold_fingers === "Yes" ? 1 : 0,
+                    materialDetails: 0,
+                    panelFlag: 0,
+                    differentDesign: parseInt((item as any).differentDesign || "1", 10) || 1,
+                    flyingProbeTest: (item as any).elecTest === "Flying Probe Fully Test" || (item as any).elec_test === "Flying Probe Fully Test" ? 2 : 1,
+                    castellatedHoles: (item as any).castellated === "Yes" ? 1 : 0,
+                    orderDetailsRemark: "Cart Quantity Update",
+                    cascadeStructure: 0,
+                    impedanceFlag: "no",
+                    isAddCustomerCode: "nocode",
+                    plateType: 1,
+                    autoConfirmProductionFile: true,
+                    markOnPcb: 1,
+                    viaCovering: (item as any).viaCovering === "Untented" || (item as any).via_covering === "Untented" ? 2 : 1,
+                    needTechnics: 0,
+                    edgeRounding: (item as any).edgePlating === "Yes",
+                    serviceConfigVos: []
+                }
+            };
+
+            const res = await fetch("/api/jlcpcb/calculate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const json = await res.json();
+            if (json.success && json.code === 200) {
+                const jlcBasePrice = parseFloat(json.subtotal ?? json.selling_price_before_gst ?? (json.pcb_price || 0));
+
+                let weightKg = 0;
+                if (json.weight_kg !== undefined && json.weight_kg !== null && parseFloat(json.weight_kg) > 0) {
+                    weightKg = parseFloat(json.weight_kg);
+                } else if (json.pcbCostInfo?.weight !== undefined && parseFloat(json.pcbCostInfo.weight) > 0) {
+                    weightKg = parseFloat(json.pcbCostInfo.weight);
+                }
+
+                let newShippingCharge = item.shippingCharge || 0;
+                if (item.shippingOption) {
+                    const defaultShippingOptions = [
+                        { key: "standard", location: "Standard", method: "Standard", rate: 0 },
+                        { key: "plus", location: "Plus", method: "Plus", rate: 150 },
+                        { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
+                    ];
+                    const foundOpt = defaultShippingOptions.find(o =>
+                        `${o.location} - ${o.method}` === item.shippingOption ||
+                        o.location === item.shippingOption ||
+                        o.key === item.shippingOptionKey
+                    ) || defaultShippingOptions[0];
+
+                    const totalAreaInSqM = (width / 1000) * (height / 1000) * newQty;
+                    const estimatedWeightKg = weightKg > 0 ? weightKg : Math.max(0.1, parseFloat((totalAreaInSqM * 3.8).toFixed(2)));
+                    const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
+                    newShippingCharge = Math.round(foundOpt.rate * chargedWeightKg);
+                }
+
+                const totalPrice = jlcBasePrice + newShippingCharge;
+                const unitPrice = newQty > 0 ? Math.round((jlcBasePrice / newQty) * 100) / 100 : jlcBasePrice;
+
+                return validatePcbItemLeadTime({
+                    ...item,
+                    qty: newQty,
+                    price: totalPrice,
+                    unitPrice: unitPrice,
+                    jlcpcb_price: jlcBasePrice,
+                    shippingCharge: newShippingCharge,
+                    jlcpcb_quote: json,
+                    jlcpcb_quotation_snapshot: json,
+                    jlcpcb_file_key: json.fileKey || fileKey
+                });
+            }
+        } catch (err) {
+            console.error("Error recalculating JLCPCB quote:", err);
+        }
+
+        const prevShippingCharge = item.shippingCharge || 0;
+        const prevPcbPrice = Math.max(item.price - prevShippingCharge, 0);
+        const pcbUnitPrice = item.unitPrice || (item.qty > 0 ? prevPcbPrice / item.qty : prevPcbPrice);
+        const newPcbPrice = Math.max(Math.round(pcbUnitPrice * newQty), 10);
+
+        return validatePcbItemLeadTime({
+            ...item,
+            qty: newQty,
+            price: newPcbPrice + prevShippingCharge,
+            unitPrice: pcbUnitPrice
+        });
+    };
+
     const handleQuantityChange = async (id: any, newQty: number) => {
         const strId = String(id);
         const targetItem = cartItems.find((i) => String(i.id) === strId);
@@ -287,6 +429,41 @@ export default function CartPage() {
 
         const minQty = targetItem.productType === "part" ? getMinCartQuantity() : 5;
         const validQty = Math.max(minQty, isNaN(newQty) ? minQty : newQty);
+
+        const isJlcpcb = (targetItem as any).quotation_source === "jlcpcb" ||
+            (targetItem as any).order_type === "jlcpcb" ||
+            (parseInt(String(targetItem.layers || "").replace(/\D/g, ""), 10) || 2) > 2 ||
+            !!(targetItem as any).jlcpcb_file_key;
+
+        if (isJlcpcb) {
+            // Instantly reflect quantity update in local state for fast UI feedback
+            const updatedLocalItem = { ...targetItem, qty: validQty };
+            const localCart = cartItems.map((item) => (String(item.id) === strId ? updatedLocalItem : item));
+            setCartItems(localCart);
+
+            if (jlcpcbDebounceTimersRef.current[strId]) {
+                clearTimeout(jlcpcbDebounceTimersRef.current[strId]);
+            }
+
+            setCalculatingItemIds((prev) => ({ ...prev, [strId]: true }));
+
+            jlcpcbDebounceTimersRef.current[strId] = setTimeout(async () => {
+                delete jlcpcbDebounceTimersRef.current[strId];
+                const recalculatedItem = await recalculateJlcpcbQuote(targetItem, validQty);
+                setCartItems((prevItems) => {
+                    const updatedList = prevItems.map((it) => (String(it.id) === strId ? recalculatedItem : it));
+                    saveCart(updatedList, true);
+                    return updatedList;
+                });
+                setCalculatingItemIds((prev) => {
+                    const copy = { ...prev };
+                    delete copy[strId];
+                    return copy;
+                });
+            }, 500);
+
+            return;
+        }
 
         let updatedItem = { ...targetItem, qty: validQty };
 
@@ -725,7 +902,14 @@ export default function CartPage() {
                                                                 </div>
                                                             </>
                                                         )}
-                                                        <div className="text-sm font-extrabold text-primary w-24 text-right flex justify-end items-center">{formatPrice(item.price)}</div>
+                                                        <div className="text-sm font-extrabold text-primary w-24 text-right flex justify-end items-center gap-1.5">
+                                                            {calculatingItemIds[String(item.id)] && (
+                                                                <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-600 shrink-0" />
+                                                            )}
+                                                            <span className={calculatingItemIds[String(item.id)] ? "opacity-60 transition-opacity" : ""}>
+                                                                {formatPrice(item.price)}
+                                                            </span>
+                                                        </div>
                                                         <div className="w-8 flex justify-center items-center">
                                                             <button type="button" onClick={() => handleRemoveItem(item.id)} className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer" title="Remove item"><Trash2 className="w-4 h-4" /></button>
                                                         </div>
