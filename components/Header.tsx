@@ -49,11 +49,75 @@ export default function Header() {
     const bellRef = useRef<HTMLDivElement>(null);
     const cartRef = useRef<HTMLDivElement>(null);
 
-    const sampleNotifications = [
-        { id: 1, text: "Your PCB order #ORD-851528 build is in progress", time: "10m ago", unread: true },
-        { id: 2, text: "Gerber file analysis completed successfully", time: "1h ago", unread: true },
-        { id: 3, text: "Payment received for quote #Q-2026-004", time: "2h ago", unread: false }
-    ];
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const [unreadCount, setUnreadCount] = useState<number>(0);
+
+    const fetchNotifications = async () => {
+        try {
+            const currentUser = getAuthUser();
+            if (!currentUser?.id) return;
+            const res = await fetch(`/api/notifications?user_id=${currentUser.id}&per_page=5`);
+            const data = await res.json();
+            if (data.status && Array.isArray(data.data)) {
+                setNotifications(data.data);
+                setUnreadCount(data.unread_count || 0);
+            }
+        } catch (e) {
+            // Background fetch error
+        }
+    };
+
+    const handleMarkAsRead = async (id: number, actionUrl?: string) => {
+        try {
+            const currentUser = getAuthUser();
+            await fetch(`/api/notifications/${id}/read`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: currentUser?.id })
+            });
+            fetchNotifications();
+            if (actionUrl) {
+                window.location.href = actionUrl;
+            }
+        } catch (e) {}
+    };
+
+    const handleMarkAllAsRead = async () => {
+        try {
+            const currentUser = getAuthUser();
+            await fetch(`/api/notifications/read-all`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: currentUser?.id })
+            });
+            fetchNotifications();
+        } catch (e) {}
+    };
+
+    useEffect(() => {
+        const currentUser = getAuthUser();
+        if (currentUser?.id) {
+            fetchNotifications();
+
+            // Real-time EventSource Stream for notifications
+            const es = new EventSource(`/api/notifications/stream?user_id=${currentUser.id}`);
+            es.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.notifications && data.notifications.length > 0) {
+                        fetchNotifications();
+                    }
+                } catch (e) {}
+            };
+
+            const pollInterval = setInterval(fetchNotifications, 15000);
+
+            return () => {
+                es.close();
+                clearInterval(pollInterval);
+            };
+        }
+    }, [user]);
 
     const updateCartCount = () => {
         try {
@@ -207,16 +271,20 @@ export default function Header() {
                                                 <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">{unreadCount} new</span>
                                             </div>
                                             <div className="divide-y divide-gray-100 dark:divide-zinc-800">
-                                                {sampleNotifications.map((n) => (
+                                                {notifications.map((n) => (
                                                     <div
                                                         key={n.id}
-                                                        className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer ${n.unread ? "bg-emerald-50/50 dark:bg-emerald-950/20" : ""}`}
+                                                        onClick={() => {
+                                                            handleMarkAsRead(n.id, n.action_url);
+                                                            setIsBellOpen(false);
+                                                        }}
+                                                        className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer ${!n.is_read ? "bg-emerald-50/50 dark:bg-emerald-950/20" : ""}`}
                                                     >
                                                         <div className="flex items-start gap-2.5">
                                                             {n.unread && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />}
                                                             <div className={!n.unread ? "ml-4" : ""}>
-                                                                <p className="text-xs font-semibold text-gray-800 dark:text-zinc-200 leading-relaxed">{n.text}</p>
-                                                                <p className="text-[10px] text-gray-400 dark:text-zinc-500 font-medium mt-0.5">{n.time}</p>
+                                                                <p className="text-xs font-bold text-gray-900 dark:text-zinc-100 leading-snug">{n.title}</p>
+                                                                <p className="text-[11px] font-medium text-gray-600 dark:text-zinc-400 leading-relaxed mt-0.5">{n.message}</p>
                                                             </div>
                                                         </div>
                                                     </div>

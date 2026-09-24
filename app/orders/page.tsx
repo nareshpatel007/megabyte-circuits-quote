@@ -10,6 +10,7 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
 import { useCurrency } from "@/context/CurrencyContext";
 import { calculateCurrentPcbPrice } from "@/lib/pcbPricing";
+import { executeRepeatOrder } from "@/lib/reorderHelper";
 
 interface OrderItem {
     id: number;
@@ -102,75 +103,15 @@ function OrdersContent() {
         setReorderConfirmOrder(ord);
     };
 
+    const [repeatLoadingId, setRepeatLoadingId] = useState<number | null>(null);
+
+    const handleReorderClick = (ord: OrderItem) => {
+        setReorderConfirmOrder(ord);
+    };
+
     const executeReorder = (ord: OrderItem) => {
-        try {
-            const boardName = ord.gerber_name || ord.meta?.board_name || "Standard PCB Order";
-            const layers = ord.meta?.layers || "2";
-            const dimensions = ord.meta?.dimensions || "100x100mm";
-
-            let width = ord.meta?.width || "100";
-            let height = ord.meta?.height || "100";
-            if (dimensions && (!ord.meta?.width || !ord.meta?.height)) {
-                const clean = dimensions.replace(/mm|inch|in/gi, "").trim();
-                const parts = clean.split(/x|\*/i);
-                if (parts.length >= 2) {
-                    width = parts[0].trim();
-                    height = parts[1].trim();
-                }
-            }
-
-            const qty = ord.meta?.quantity || ord.meta?.qty || "5";
-            const thickness = ord.meta?.thickness || "1.6mm";
-            const pcbColor = ord.meta?.pcb_color || "Green";
-            const surfaceFinish = ord.meta?.surface_finish || "HASL(Leaded)";
-            const copperWeight = ord.meta?.copper_weight || "1 oz";
-            const baseMaterial = ord.meta?.base_material || "FR-4";
-            const gerberFileName = ord.gerber_name || ord.meta?.gerber_file_name || boardName;
-            const gerberFileId = ord.gerber_file_id || null;
-            const gerberUrl = ord.gerber_url || ord.meta?.gerber_file_url || null;
-            const previewData = ord.gerber_preview_data || ord.meta?.preview_data || (gerberFileId ? `/api/gerber/${gerberFileId}/preview/front` : null);
-
-            const reorderSpec = {
-                layers,
-                width,
-                height,
-                qty,
-                thickness,
-                pcbColor,
-                surfaceFinish,
-                copperWeight,
-                baseMaterial,
-                boardName,
-                gerber_file_id: gerberFileId,
-                gerber_name: gerberFileName,
-                gerber_url: gerberUrl,
-                gerber_preview_data: previewData,
-                parent_order_number: ord.order_number
-            };
-
-            // Store specification for Instant Quote page loading
-            sessionStorage.setItem("megabyte_reorder_spec", JSON.stringify(reorderSpec));
-            localStorage.setItem("megabyte_reorder_spec", JSON.stringify(reorderSpec));
-
-            setReorderConfirmOrder(null);
-
-            const queryParams = new URLSearchParams({
-                reorder: ord.order_number,
-                layers,
-                width,
-                height,
-                qty,
-                thickness,
-                pcbColor: encodeURIComponent(pcbColor),
-                surfaceFinish: encodeURIComponent(surfaceFinish),
-                copperWeight: encodeURIComponent(copperWeight),
-                baseMaterial: encodeURIComponent(baseMaterial)
-            });
-
-            router.push(`/quote?${queryParams.toString()}`);
-        } catch (e) {
-            console.error("Reorder error:", e);
-        }
+        setReorderConfirmOrder(null);
+        executeRepeatOrder(ord.id, router, setRepeatLoadingId);
     };
 
     const getStatusBadge = (statusName?: string) => {

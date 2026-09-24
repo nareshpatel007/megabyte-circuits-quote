@@ -23,6 +23,7 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
 import { useCurrency } from "@/context/CurrencyContext";
 import { calculateCurrentPcbPrice } from "@/lib/pcbPricing";
+import { executeRepeatOrder } from "@/lib/reorderHelper";
 
 interface OrderLog {
     id?: number;
@@ -180,6 +181,7 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
 
     const [order, setOrder] = useState<OrderDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const [repeating, setRepeating] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
 
     useEffect(() => {
@@ -213,47 +215,9 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
         fetchOrder();
     }, [orderId, router]);
 
-    const handleRepeatOrder = (ord: OrderDetail) => {
-        try {
-            const boardName = ord.gerber_name || ord.meta?.board_name || "Standard PCB";
-            const layers = parseInt(ord.meta?.layers || "2", 10);
-            const qty = parseInt(ord.meta?.quantity || "1", 10);
-            const dimensions = ord.meta?.dimensions || "100x100mm";
-            const pcbColor = ord.meta?.pcb_color || "Green";
-            const thickness = ord.meta?.thickness || "1.6mm";
-
-            const currentPrice = calculateCurrentPcbPrice(layers, dimensions, qty, thickness, pcbColor, ord.order_value);
-
-            const repeatItem = {
-                id: Date.now(),
-                productType: ord.meta?.product_type || "pcb",
-                boardName: boardName,
-                gerberFileName: ord.gerber_name || ord.meta?.gerber_file_name || boardName,
-                gerber_file_id: ord.gerber_file_id || null,
-                gerberPreview: ord.gerber_preview_data || (ord.gerber_file_id ? `/api/gerber/${ord.gerber_file_id}/preview/front` : null),
-                layers: layers,
-                dimensions: dimensions,
-                pcbColor: pcbColor,
-                thickness: thickness,
-                surfaceFinish: ord.meta?.surface_finish || "HASL(Leaded)",
-                qty: qty,
-                buildTime: ord.meta?.build_time || "3-4 days",
-                price: currentPrice,
-                unitPrice: qty > 0 ? Math.round(currentPrice / qty) : currentPrice
-            };
-
-            const savedCart = localStorage.getItem("megabyte_cart");
-            let cartItems = savedCart ? JSON.parse(savedCart) : [];
-            cartItems.push(repeatItem);
-            localStorage.setItem("megabyte_cart", JSON.stringify(cartItems));
-
-            localStorage.setItem("selectedCartItemIds", JSON.stringify([repeatItem.id]));
-            window.dispatchEvent(new Event("megabyte_cart_updated"));
-
-            router.push("/cart");
-        } catch (e) {
-            console.error("Repeat order error:", e);
-        }
+    const handleRepeatOrder = async (ord: OrderDetail) => {
+        setRepeating(true);
+        await executeRepeatOrder(ord.id, router, () => setRepeating(false));
     };
 
     const activeStatusName = order?.status || order?.status_name || "";
@@ -292,11 +256,21 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                             {isCompleted && order && (
                                 <button
                                     type="button"
+                                    disabled={repeating}
                                     onClick={() => handleRepeatOrder(order)}
-                                    className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                    className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                                 >
-                                    <RotateCw className="w-4 h-4" />
-                                    <span>Repeat Order</span>
+                                    {repeating ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span>Adding...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <RotateCw className="w-4 h-4" />
+                                            <span>Repeat Order</span>
+                                        </>
+                                    )}
                                 </button>
                             )}
 

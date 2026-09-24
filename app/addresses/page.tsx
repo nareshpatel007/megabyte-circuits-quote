@@ -256,7 +256,7 @@ function AddressesContent() {
                                 className="px-4 py-2.5 rounded-full bg-primary hover:bg-secondary text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1 cursor-pointer"
                             >
                                 <Plus className="w-4 h-4" />
-                                <span>+ Add Shipping</span>
+                                <span>Add Shipping</span>
                             </button>
 
                             <button
@@ -265,7 +265,7 @@ function AddressesContent() {
                                 className="px-4 py-2.5 rounded-full bg-gray-800 hover:bg-black text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1 cursor-pointer"
                             >
                                 <Plus className="w-4 h-4" />
-                                <span>+ Add Billing</span>
+                                <span>Add Billing</span>
                             </button>
                         </div>
                     </div>

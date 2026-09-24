@@ -10,6 +10,7 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
 import { useCurrency } from "@/context/CurrencyContext";
 import { calculateCurrentPcbPrice } from "@/lib/pcbPricing";
+import { executeRepeatOrder } from "@/lib/reorderHelper";
 
 interface OrderItem {
     id: number;
@@ -88,76 +89,10 @@ function DashboardContent() {
     const [recentOrders, setRecentOrders] = useState<OrderItem[]>([]);
     const [recentPayments, setRecentPayments] = useState<any[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
+    const [repeatLoadingId, setRepeatLoadingId] = useState<number | null>(null);
 
     const handleRepeatOrder = (ord: OrderItem) => {
-        try {
-            const confirmAction = window.confirm(`Reorder Confirmation: Are you sure you want to reorder Order #${ord.order_number}? This will load all specifications and Gerber file into the Instant Quote calculator with updated pricing.`);
-            if (!confirmAction) return;
-
-            const boardName = ord.gerber_name || ord.meta?.board_name || "Standard PCB Order";
-            const layers = ord.meta?.layers || "2";
-            const dimensions = ord.meta?.dimensions || "100x100mm";
-
-            let width = ord.meta?.width || "100";
-            let height = ord.meta?.height || "100";
-            if (dimensions && (!ord.meta?.width || !ord.meta?.height)) {
-                const clean = dimensions.replace(/mm|inch|in/gi, "").trim();
-                const parts = clean.split(/x|\*/i);
-                if (parts.length >= 2) {
-                    width = parts[0].trim();
-                    height = parts[1].trim();
-                }
-            }
-
-            const qty = ord.meta?.quantity || ord.meta?.qty || "5";
-            const thickness = ord.meta?.thickness || "1.6mm";
-            const pcbColor = ord.meta?.pcb_color || "Green";
-            const surfaceFinish = ord.meta?.surface_finish || "HASL(Leaded)";
-            const copperWeight = ord.meta?.copper_weight || "1 oz";
-            const baseMaterial = ord.meta?.base_material || "FR-4";
-            const gerberFileName = ord.gerber_name || ord.meta?.gerber_file_name || boardName;
-            const gerberFileId = ord.gerber_file_id || null;
-            const gerberUrl = ord.gerber_url || ord.meta?.gerber_file_url || null;
-            const previewData = ord.gerber_preview_data || ord.meta?.preview_data || (gerberFileId ? `/api/gerber/${gerberFileId}/preview/front` : null);
-
-            const reorderSpec = {
-                layers,
-                width,
-                height,
-                qty,
-                thickness,
-                pcbColor,
-                surfaceFinish,
-                copperWeight,
-                baseMaterial,
-                boardName,
-                gerber_file_id: gerberFileId,
-                gerber_name: gerberFileName,
-                gerber_url: gerberUrl,
-                gerber_preview_data: previewData,
-                parent_order_number: ord.order_number
-            };
-
-            sessionStorage.setItem("megabyte_reorder_spec", JSON.stringify(reorderSpec));
-            localStorage.setItem("megabyte_reorder_spec", JSON.stringify(reorderSpec));
-
-            const queryParams = new URLSearchParams({
-                reorder: ord.order_number,
-                layers,
-                width,
-                height,
-                qty,
-                thickness,
-                pcbColor: encodeURIComponent(pcbColor),
-                surfaceFinish: encodeURIComponent(surfaceFinish),
-                copperWeight: encodeURIComponent(copperWeight),
-                baseMaterial: encodeURIComponent(baseMaterial)
-            });
-
-            router.push(`/quote?${queryParams.toString()}`);
-        } catch (e) {
-            console.error("Repeat order error:", e);
-        }
+        executeRepeatOrder(ord.id, router, setRepeatLoadingId);
     };
 
     useEffect(() => {
@@ -338,11 +273,21 @@ function DashboardContent() {
                                                     {(((ord.status || ord.status_name)?.toLowerCase() === "completed") || ((ord.status || ord.status_name)?.toLowerCase() === "ready to ship")) && (
                                                         <button
                                                             type="button"
+                                                            disabled={repeatLoadingId === ord.id}
                                                             onClick={() => handleRepeatOrder(ord)}
-                                                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] transition-all inline-flex items-center gap-1 cursor-pointer shadow-xs"
+                                                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-[11px] transition-all inline-flex items-center gap-1 cursor-pointer shadow-xs"
                                                         >
-                                                            <RotateCw className="w-3 h-3" />
-                                                            <span>Repeat</span>
+                                                            {repeatLoadingId === ord.id ? (
+                                                                <>
+                                                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                                                    <span>Adding...</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <RotateCw className="w-3 h-3" />
+                                                                    <span>Repeat</span>
+                                                                </>
+                                                            )}
                                                         </button>
                                                     )}
                                                     <Link
