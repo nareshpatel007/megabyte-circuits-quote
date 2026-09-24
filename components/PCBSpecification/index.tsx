@@ -1882,8 +1882,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                     ? pricingConfig.shippingOptions
                                                     : defaultShippingOptions;
 
-                                                const activeShipping = isJLCPCB ? { key: "none", rate: 0 } : (shippingOptions.find((o: any) => o.key === shippingOptionKey) || shippingOptions[0]);
-                                                const shippingCharge = isJLCPCB ? 0 : Math.round(activeShipping.rate * chargedWeightKg);
+                                                const activeShipping = shippingOptions.find((o: any) => o.key === shippingOptionKey) || shippingOptions[0];
+                                                const shippingCharge = Math.round(activeShipping.rate * chargedWeightKg);
                                                 const pcbPrice = selectedDayData ? parseFloat(selectedDayData.orderValue) : 0;
                                                 const subtotal = pcbPrice > 0 ? pcbPrice + shippingCharge : 0;
                                                 const gstPercentage = pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18;
@@ -1899,50 +1899,48 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                             </span>
                                                         </div>
 
-                                                        {/* Shipping Option Selection - Hidden for JLCPCB > 2 layers */}
-                                                        {!isJLCPCB && (
-                                                            <div className="pt-2 border-t border-[#41A96A]/20 space-y-2">
-                                                                <div className="flex justify-between items-center text-xs font-bold text-[#0F7438] dark:text-[#8DD3A5]">
-                                                                    <span>Shipping Method</span>
-                                                                    <span className="text-[10px] font-medium text-slate-500">Select delivery method</span>
-                                                                </div>
-
-                                                                <div className="bg-[#8DD3A5]/15 dark:bg-slate-800/80 p-2.5 rounded-2xl border border-[#41A96A]/25 grid grid-cols-3 gap-2">
-                                                                    {shippingOptions.map(opt => {
-                                                                        const charge = Math.round(opt.rate * chargedWeightKg);
-                                                                        const isSelected = shippingOptionKey === opt.key;
-                                                                        const title = (!opt.method || opt.location === opt.method) ? (opt.location || opt.method) : `${opt.location} - ${opt.method}`;
-
-                                                                        return (
-                                                                            <label
-                                                                                key={opt.key}
-                                                                                onClick={() => setShippingOptionKey(opt.key)}
-                                                                                className={`flex items-start gap-2 p-2 rounded-xl transition-all cursor-pointer select-none ${isSelected
-                                                                                    ? "bg-white/90 dark:bg-slate-700/80 shadow-2xs border border-[#238E4E]"
-                                                                                    : "bg-white/40 dark:bg-slate-800/40 border border-transparent hover:bg-white/60"
-                                                                                    }`}
-                                                                            >
-                                                                                <input
-                                                                                    type="radio"
-                                                                                    name="shippingOption"
-                                                                                    checked={isSelected}
-                                                                                    onChange={() => setShippingOptionKey(opt.key)}
-                                                                                    className="w-4 h-4 mt-0.5 text-[#238E4E] focus:ring-[#238E4E] accent-[#238E4E] cursor-pointer shrink-0"
-                                                                                />
-                                                                                <div className="flex flex-col min-w-0">
-                                                                                    <span className={`text-xs font-bold leading-tight ${isSelected ? "text-[#0F7438] dark:text-[#8DD3A5]" : "text-slate-800 dark:text-slate-200"}`}>
-                                                                                        {title}
-                                                                                    </span>
-                                                                                    <span className={`text-[10px] font-semibold mt-0.5 ${isSelected ? "text-[#0F7438]" : "text-slate-600 dark:text-slate-300"}`}>
-                                                                                        +₹{charge} <span className="font-normal text-slate-400 text-[9px]">(₹{opt.rate}/kg)</span>
-                                                                                    </span>
-                                                                                </div>
-                                                                            </label>
-                                                                        );
-                                                                    })}
-                                                                </div>
+                                                        {/* Shipping Option Selection */}
+                                                        <div className="pt-2 border-t border-[#41A96A]/20 space-y-2">
+                                                            <div className="flex justify-between items-center text-xs font-bold text-[#0F7438] dark:text-[#8DD3A5]">
+                                                                <span>Shipping Method</span>
+                                                                <span className="text-[10px] font-medium text-slate-500">Select delivery method</span>
                                                             </div>
-                                                        )}
+
+                                                            <div className="bg-[#8DD3A5]/15 dark:bg-slate-800/80 p-2.5 rounded-2xl border border-[#41A96A]/25 grid grid-cols-3 gap-2">
+                                                                {shippingOptions.map(opt => {
+                                                                    const charge = Math.round(opt.rate * chargedWeightKg);
+                                                                    const isSelected = shippingOptionKey === opt.key;
+                                                                    const title = (!opt.method || opt.location === opt.method) ? (opt.location || opt.method) : `${opt.location} - ${opt.method}`;
+
+                                                                    return (
+                                                                        <label
+                                                                            key={opt.key}
+                                                                            onClick={() => setShippingOptionKey(opt.key)}
+                                                                            className={`flex items-start gap-2 p-2 rounded-xl transition-all cursor-pointer select-none ${isSelected
+                                                                                ? "bg-white/90 dark:bg-slate-700/80 shadow-2xs border border-[#238E4E]"
+                                                                                : "bg-white/40 dark:bg-slate-800/40 border border-transparent hover:bg-white/60"
+                                                                                }`}
+                                                                        >
+                                                                            <input
+                                                                                type="radio"
+                                                                                name="shippingOption"
+                                                                                checked={isSelected}
+                                                                                onChange={() => setShippingOptionKey(opt.key)}
+                                                                                className="w-4 h-4 mt-0.5 text-[#238E4E] focus:ring-[#238E4E] accent-[#238E4E] cursor-pointer shrink-0"
+                                                                            />
+                                                                            <div className="flex flex-col min-w-0">
+                                                                                <span className={`text-xs font-bold leading-tight ${isSelected ? "text-[#0F7438] dark:text-[#8DD3A5]" : "text-slate-800 dark:text-slate-200"}`}>
+                                                                                    {title}
+                                                                                </span>
+                                                                                <span className={`text-[10px] font-semibold mt-0.5 ${isSelected ? "text-[#0F7438]" : "text-slate-600 dark:text-slate-300"}`}>
+                                                                                    +₹{charge} <span className="font-normal text-slate-400 text-[9px]">(₹{opt.rate}/kg)</span>
+                                                                                </span>
+                                                                            </div>
+                                                                        </label>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
 
                                                         {/* Total Calculation */}
                                                         {selectedDayData ? (
@@ -1955,12 +1953,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                     <span className="text-slate-600 dark:text-slate-300 font-semibold">PCB Price:</span>
                                                                     <span className="font-bold text-slate-700 dark:text-slate-300">{formatPrice(selectedDayData.orderValue)}</span>
                                                                 </div>
-                                                                {!isJLCPCB && (
-                                                                    <div className="flex justify-between items-center text-xs">
-                                                                        <span className="text-slate-600 dark:text-slate-300 font-semibold">Shipping Charge:</span>
-                                                                        <span className="font-bold text-slate-700 dark:text-slate-300">₹{shippingCharge.toLocaleString('en-IN')}</span>
-                                                                    </div>
-                                                                )}
+                                                                <div className="flex justify-between items-center text-xs">
+                                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">Shipping Charge:</span>
+                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">₹{shippingCharge.toLocaleString('en-IN')}</span>
+                                                                </div>
                                                                 <div className="flex justify-between items-center text-xs">
                                                                     <span className="text-slate-600 dark:text-slate-300 font-semibold">GST ({gstPercentage}%):</span>
                                                                     <span className="font-bold text-slate-700 dark:text-slate-300">₹{gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -1974,12 +1970,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                             </div>
                                                         ) : (
                                                             <div className="pt-2 border-t border-[#41A96A]/20 space-y-2">
-                                                                {!isJLCPCB && (
-                                                                    <div className="flex justify-between items-center text-xs">
-                                                                        <span className="text-slate-600 dark:text-slate-300 font-semibold">Shipping Charge:</span>
-                                                                        <span className="font-bold text-slate-700 dark:text-slate-300">₹{shippingCharge.toLocaleString('en-IN')}</span>
-                                                                    </div>
-                                                                )}
+                                                                <div className="flex justify-between items-center text-xs">
+                                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">Shipping Charge:</span>
+                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">₹{shippingCharge.toLocaleString('en-IN')}</span>
+                                                                </div>
                                                                 <div className="text-center pt-1 text-xs font-semibold text-slate-500 italic border-t border-[#41A96A]/10">
                                                                     Tap on any sticky note above to pick a delivery date.
                                                                 </div>
