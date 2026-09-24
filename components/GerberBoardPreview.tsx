@@ -33,9 +33,32 @@ export default function GerberBoardPreview({
     dimensions,
     className = "w-full h-full"
 }: GerberBoardPreviewProps) {
+    const colorMapHex: Record<string, string> = {
+        "#52c41a": "green",
+        "#722ed1": "purple",
+        "#f5222d": "red",
+        "#fadb14": "yellow",
+        "#1677ff": "blue",
+        "#ffffff": "white",
+        "#000000": "black"
+    };
+
+    const rawColor = (pcbColor || "green").toLowerCase().trim();
+    const colorSlug = colorMapHex[rawColor] || rawColor;
+    const validColors = ["green", "purple", "red", "yellow", "blue", "white", "black"];
+    const effectiveColor = validColors.includes(colorSlug) ? colorSlug : "green";
+
     let effectivePreviewData = previewData;
-    if (!effectivePreviewData && gerberFileId) {
-        effectivePreviewData = `/api/gerber/${gerberFileId}/preview/front`;
+    if (gerberFileId) {
+        if (!effectivePreviewData || effectivePreviewData.includes("/preview/front")) {
+            effectivePreviewData = `/api/gerber/${gerberFileId}/preview/front?color=${effectiveColor}`;
+        }
+    } else if (effectivePreviewData && effectivePreviewData.includes("/preview/front")) {
+        if (effectivePreviewData.includes("?color=")) {
+            effectivePreviewData = effectivePreviewData.replace(/\?color=[a-z]+/, `?color=${effectiveColor}`);
+        } else {
+            effectivePreviewData = `${effectivePreviewData}?color=${effectiveColor}`;
+        }
     }
 
     if (effectivePreviewData && (effectivePreviewData.includes("<svg") || effectivePreviewData.trim().startsWith("<svg"))) {

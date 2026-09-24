@@ -831,14 +831,67 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         });
     }, [formData.pcbColor, formData.surfaceFinish]);
 
-    // Python Gerber processing service provides the source-of-truth 2D/3D preview images
-    // Client-side SVG stackup re-rendering and syncing is disabled to preserve exact Python images
+    const colorCache = React.useRef<Record<string, { top: string; bottom: string }>>({});
+
+    // Python Gerber processing service provides the source-of-truth 2D preview images.
+    // Realtime preview update when PCB color selection or uploaded file changes.
     React.useEffect(() => {
-        if (uploadedGerberFileId && !topSvg) {
-            setTopSvg(`/api/gerber/${uploadedGerberFileId}/preview/front`);
-            setBottomSvg(`/api/gerber/${uploadedGerberFileId}/preview/back`);
+        if (!uploadedGerberFileId) return;
+
+        const hexToSlug: Record<string, string> = {
+            "#52c41a": "green",
+            "#722ed1": "purple",
+            "#f5222d": "red",
+            "#fadb14": "yellow",
+            "#1677ff": "blue",
+            "#ffffff": "white",
+            "#000000": "black"
+        };
+
+        const rawColor = (formData.pcbColor || "green").toLowerCase().trim();
+        const colorSlug = hexToSlug[rawColor] || (
+            ["green", "purple", "red", "yellow", "blue", "white", "black"].includes(rawColor)
+                ? rawColor
+                : "green"
+        );
+
+        const newTopUrl = `/api/gerber/${uploadedGerberFileId}/preview/front?color=${colorSlug}`;
+        const newBottomUrl = `/api/gerber/${uploadedGerberFileId}/preview/back?color=${colorSlug}`;
+
+        // If already loaded into frontend memory cache, switch instantly
+        if (colorCache.current[colorSlug]) {
+            setTopSvg(colorCache.current[colorSlug].top);
+            setBottomSvg(colorCache.current[colorSlug].bottom);
+            return;
         }
-    }, [uploadedGerberFileId, topSvg]);
+
+        // Preload image objects to avoid flicker on realtime color change
+        let canceled = false;
+        const imgTop = new Image();
+        const imgBottom = new Image();
+
+        let loadedCount = 0;
+        const onFinish = () => {
+            loadedCount++;
+            if (loadedCount >= 2 && !canceled) {
+                colorCache.current[colorSlug] = { top: newTopUrl, bottom: newBottomUrl };
+                setTopSvg(newTopUrl);
+                setBottomSvg(newBottomUrl);
+            }
+        };
+
+        imgTop.onload = onFinish;
+        imgTop.onerror = onFinish;
+        imgBottom.onload = onFinish;
+        imgBottom.onerror = onFinish;
+
+        imgTop.src = newTopUrl;
+        imgBottom.src = newBottomUrl;
+
+        return () => {
+            canceled = true;
+        };
+    }, [uploadedGerberFileId, formData.pcbColor]);
 
     // Dynamic lead time-based pricing calculation
     const getLeadTimePricing = () => {
