@@ -1386,9 +1386,15 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const weightPerSqM = formData.baseMaterial === "Flex" ? 0.3 : 3.8;
             const estimatedWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
             const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
-            const calculatedShippingCharge = Math.round((activeShippingObj?.rate || 0) * chargedWeightKg);
+            const isJlcpcbCart = (Number(formData.layers) || 2) > 2 || !!jlcpcbQuote;
+            const calculatedShippingCharge = isJlcpcbCart && jlcpcbQuote
+                ? (jlcpcbQuote.shipping_charge !== undefined ? parseFloat(jlcpcbQuote.shipping_charge) : (jlcpcbQuote.dates?.[0]?.shipping_charge ? parseFloat(jlcpcbQuote.dates[0].shipping_charge) : 0))
+                : Math.round((activeShippingObj?.rate || 0) * chargedWeightKg);
 
-            const pcbBasePrice = Number(calculatedPrice) || 100;
+            const pcbBasePrice = isJlcpcbCart && jlcpcbQuote
+                ? (jlcpcbQuote.pcb_price !== undefined ? parseFloat(jlcpcbQuote.pcb_price) : (jlcpcbQuote.dates?.[0]?.pcb_price ? parseFloat(jlcpcbQuote.dates[0].pcb_price) : Number(calculatedPrice) || 100))
+                : (Number(calculatedPrice) || 100);
+
             const itemTotalPrice = pcbBasePrice + calculatedShippingCharge;
 
             const targetFormattedDate = calculateCartDeliveryDate(selectedDay || 3);
@@ -1400,8 +1406,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 gerberFileName: gerberName,
                 gerber_file_id: uploadedGerberFileId || undefined,
                 jlcpcb_file_key: jlcpcbFileKey || undefined,
-                quotation_source: (Number(formData.layers) || 2) > 2 ? "jlcpcb" : "internal",
-                jlcpcb_price: (Number(formData.layers) || 2) > 2 ? (jlcpcbQuote?.price || itemTotalPrice) : undefined,
+                quotation_source: isJlcpcbCart ? "jlcpcb" : "internal",
+                jlcpcb_price: isJlcpcbCart ? pcbBasePrice : undefined,
                 gerberPreview: previewSvg,
                 boardId: generatedBoardId,
                 pcbColor: pcbColorName,
@@ -1581,17 +1587,24 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                         const jlcIsoDateStr = `${yyyy}-${mm}-${dd}`;
 
                                         let matchedVal = 0;
+                                        let pcbPriceVal = 0;
+                                        let shippingChargeVal = 0;
+                                        let subtotalVal = 0;
+                                        let gstAmountVal = 0;
+                                        let finalTotalVal = 0;
+
                                         if (jlcpcbQuote) {
-                                            if (jlcpcbQuote.pcb_price !== undefined) {
-                                                matchedVal = Math.round(jlcpcbQuote.pcb_price);
-                                            } else if (jlcpcbQuote.quotation?.pcb_price !== undefined) {
-                                                matchedVal = Math.round(jlcpcbQuote.quotation.pcb_price);
-                                            } else if (jlcpcbQuote.base_inr) {
-                                                matchedVal = Math.round(jlcpcbQuote.base_inr);
+                                            if (jlcpcbQuote.dates && Array.isArray(jlcpcbQuote.dates) && jlcpcbQuote.dates.length > 0) {
+                                                const firstDate = jlcpcbQuote.dates[0];
+                                                subtotalVal = parseFloat(firstDate.subtotal ?? jlcpcbQuote.subtotal ?? jlcpcbQuote.selling_price_before_gst ?? 0);
+                                                gstAmountVal = parseFloat(firstDate.gst_amount ?? jlcpcbQuote.gst_amount ?? (subtotalVal * 0.18));
+                                                finalTotalVal = parseFloat(firstDate.final_total ?? jlcpcbQuote.final_total ?? (subtotalVal + gstAmountVal));
                                             } else {
-                                                const usdVal = parseFloat(jlcpcbQuote?.pcbCostInfo?.totalFee || jlcpcbQuote?.priceWithoutFreight || 0);
-                                                matchedVal = Math.round(usdVal * (jlcpcbQuote?.exchange_rate || 88.5));
+                                                subtotalVal = parseFloat(jlcpcbQuote.subtotal ?? jlcpcbQuote.selling_price_before_gst ?? jlcpcbQuote.without_gst ?? 0);
+                                                gstAmountVal = parseFloat(jlcpcbQuote.gst_amount ?? jlcpcbQuote.sales_gst_amount ?? (subtotalVal * 0.18));
+                                                finalTotalVal = parseFloat(jlcpcbQuote.final_total ?? jlcpcbQuote.with_gst ?? (subtotalVal + gstAmountVal));
                                             }
+                                            matchedVal = subtotalVal;
                                         }
 
                                         const todayDate = new Date();
@@ -1611,6 +1624,11 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                             weekday: jlcDate.toLocaleDateString("en-IN", { weekday: "short" }).toUpperCase(),
                                             formattedDate: jlcDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
                                             orderValue: matchedVal.toFixed(2),
+                                            pcb_price: pcbPriceVal,
+                                            shipping_charge: shippingChargeVal,
+                                            subtotal: subtotalVal,
+                                            gst_amount: gstAmountVal,
+                                            final_total: finalTotalVal,
                                             unitPrice: (matchedVal / quantity).toFixed(2),
                                             visible: true,
                                             isSunday: false,
@@ -1904,93 +1922,80 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                                 const activeShipping = shippingOptions.find((o: any) => o.key === shippingOptionKey) || shippingOptions[0];
 
-                                                let pcbPrice = 0;
-                                                let shippingCharge = 0;
-                                                let subtotal = 0;
+                                                const shippingCharge = Math.round(activeShipping.rate * chargedWeightKg);
+
+                                                let basePrice = 0;
                                                 let gstPercentage = 18;
-                                                let gstAmount = 0;
-                                                let mainTotal = 0;
 
                                                 if (isJLCPCB && jlcpcbQuote) {
                                                     if (selectedDayData) {
-                                                        pcbPrice = selectedDayData.pcb_price !== undefined ? parseFloat(selectedDayData.pcb_price) : (jlcpcbQuote.pcb_price || 0);
-                                                        shippingCharge = selectedDayData.shipping_charge !== undefined ? parseFloat(selectedDayData.shipping_charge) : (jlcpcbQuote.shipping_charge || 0);
-                                                        subtotal = selectedDayData.subtotal !== undefined ? parseFloat(selectedDayData.subtotal) : (pcbPrice + shippingCharge);
-                                                        gstPercentage = jlcpcbQuote.gst_percentage !== undefined ? Number(jlcpcbQuote.gst_percentage) : (pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18);
-                                                        gstAmount = selectedDayData.gst_amount !== undefined ? parseFloat(selectedDayData.gst_amount) : (subtotal * gstPercentage / 100);
-                                                        mainTotal = selectedDayData.final_total !== undefined ? parseFloat(selectedDayData.final_total) : (subtotal + gstAmount);
+                                                        basePrice = selectedDayData.subtotal !== undefined ? parseFloat(selectedDayData.subtotal) : (jlcpcbQuote.subtotal || jlcpcbQuote.selling_price_before_gst || 0);
                                                     } else {
-                                                        pcbPrice = jlcpcbQuote.pcb_price || 0;
-                                                        shippingCharge = jlcpcbQuote.shipping_charge !== undefined ? jlcpcbQuote.shipping_charge : 0;
-                                                        subtotal = jlcpcbQuote.subtotal !== undefined ? jlcpcbQuote.subtotal : (pcbPrice + shippingCharge);
-                                                        gstPercentage = jlcpcbQuote.gst_percentage !== undefined ? Number(jlcpcbQuote.gst_percentage) : (pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18);
-                                                        gstAmount = jlcpcbQuote.gst_amount !== undefined ? jlcpcbQuote.gst_amount : (subtotal * gstPercentage / 100);
-                                                        mainTotal = jlcpcbQuote.final_total !== undefined ? jlcpcbQuote.final_total : (subtotal + gstAmount);
+                                                        basePrice = jlcpcbQuote.subtotal !== undefined ? jlcpcbQuote.subtotal : (jlcpcbQuote.selling_price_before_gst || 0);
                                                     }
+                                                    gstPercentage = jlcpcbQuote.gst_percentage !== undefined ? Number(jlcpcbQuote.gst_percentage) : (pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18);
                                                 } else {
-                                                    shippingCharge = Math.round(activeShipping.rate * chargedWeightKg);
-                                                    pcbPrice = selectedDayData ? parseFloat(selectedDayData.orderValue) : 0;
-                                                    subtotal = pcbPrice > 0 ? pcbPrice + shippingCharge : 0;
+                                                    basePrice = selectedDayData ? parseFloat(selectedDayData.orderValue) : 0;
                                                     gstPercentage = pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18;
-                                                    gstAmount = subtotal > 0 ? (subtotal * gstPercentage) / 100 : 0;
-                                                    mainTotal = subtotal + gstAmount;
                                                 }
+
+                                                const subtotal = basePrice > 0 ? basePrice + shippingCharge : 0;
+                                                const pcbPrice = subtotal;
+                                                const gstAmount = subtotal > 0 ? (subtotal * gstPercentage) / 100 : 0;
+                                                const mainTotal = subtotal + gstAmount;
 
                                                 return (
                                                     <div className="bg-[#8DD3A5]/10 border border-[#41A96A]/30 rounded-xl p-3.5 shadow-2xs space-y-3">
                                                         <div className="flex justify-between items-center text-xs">
                                                             <span className="text-slate-600 dark:text-slate-300 font-semibold">Total Area:</span>
                                                             <span className="font-extrabold text-[#0F7438] dark:text-[#8DD3A5]">
-                                                                {totalAreaInSqM.toFixed(2)} m²{!isJLCPCB && (
-                                                                    <span className="text-[10px] font-normal text-slate-500"> ({estimatedWeightKg} kg est.{estimatedWeightKg < 1 ? ' → 1 kg min' : ''})</span>
-                                                                )}
+                                                                {totalAreaInSqM.toFixed(2)} m²
+                                                                <span className="text-[10px] font-normal text-slate-500"> ({estimatedWeightKg} kg est.{estimatedWeightKg < 1 ? ' → 1 kg min' : ''})</span>
                                                             </span>
                                                         </div>
 
-                                                        {/* Shipping Option Selection - Only show for internal calculation, hide for JLCPCB */}
-                                                        {!isJLCPCB && (
-                                                            <div className="pt-2 border-t border-[#41A96A]/20 space-y-2">
-                                                                <div className="flex justify-between items-center text-xs font-bold text-[#0F7438] dark:text-[#8DD3A5]">
-                                                                    <span>Shipping Method</span>
-                                                                    <span className="text-[10px] font-medium text-slate-500">Select delivery method</span>
-                                                                </div>
-
-                                                                <div className="bg-[#8DD3A5]/15 dark:bg-slate-800/80 p-2.5 rounded-2xl border border-[#41A96A]/25 grid grid-cols-3 gap-2">
-                                                                    {shippingOptions.map((opt: any) => {
-                                                                        const charge = Math.round(opt.rate * chargedWeightKg);
-                                                                        const isSelected = shippingOptionKey === opt.key;
-                                                                        const title = (!opt.method || opt.location === opt.method) ? (opt.location || opt.method) : `${opt.location} - ${opt.method}`;
-
-                                                                        return (
-                                                                            <label
-                                                                                key={opt.key}
-                                                                                onClick={() => setShippingOptionKey(opt.key)}
-                                                                                className={`flex items-start gap-2 p-2 rounded-xl transition-all cursor-pointer select-none ${isSelected
-                                                                                    ? "bg-white/90 dark:bg-slate-700/80 shadow-2xs border border-[#238E4E]"
-                                                                                    : "bg-white/40 dark:bg-slate-800/40 border border-transparent hover:bg-white/60"
-                                                                                    }`}
-                                                                            >
-                                                                                <input
-                                                                                    type="radio"
-                                                                                    name="shippingOption"
-                                                                                    checked={isSelected}
-                                                                                    onChange={() => setShippingOptionKey(opt.key)}
-                                                                                    className="w-4 h-4 mt-0.5 text-[#238E4E] focus:ring-[#238E4E] accent-[#238E4E] cursor-pointer shrink-0"
-                                                                                />
-                                                                                <div className="flex flex-col min-w-0">
-                                                                                    <span className={`text-xs font-bold leading-tight ${isSelected ? "text-[#0F7438] dark:text-[#8DD3A5]" : "text-slate-800 dark:text-slate-200"}`}>
-                                                                                        {title}
-                                                                                    </span>
-                                                                                    <span className={`text-[10px] font-semibold mt-0.5 ${isSelected ? "text-[#0F7438]" : "text-slate-600 dark:text-slate-300"}`}>
-                                                                                        +₹{charge} <span className="font-normal text-slate-400 text-[9px]">(₹{opt.rate}/kg)</span>
-                                                                                    </span>
-                                                                                </div>
-                                                                            </label>
-                                                                        );
-                                                                    })}
-                                                                </div>
+                                                        {/* Shipping Option Selection */}
+                                                        <div className="pt-2 border-t border-[#41A96A]/20 space-y-2">
+                                                            <div className="flex justify-between items-center text-xs font-bold text-[#0F7438] dark:text-[#8DD3A5]">
+                                                                <span>Shipping Method</span>
+                                                                <span className="text-[10px] font-medium text-slate-500">Select delivery method</span>
                                                             </div>
-                                                        )}
+
+                                                            <div className="bg-[#8DD3A5]/15 dark:bg-slate-800/80 p-2.5 rounded-2xl border border-[#41A96A]/25 grid grid-cols-3 gap-2">
+                                                                {shippingOptions.map((opt: any) => {
+                                                                    const charge = Math.round(opt.rate * chargedWeightKg);
+                                                                    const isSelected = shippingOptionKey === opt.key;
+                                                                    const title = (!opt.method || opt.location === opt.method) ? (opt.location || opt.method) : `${opt.location} - ${opt.method}`;
+
+                                                                    return (
+                                                                        <label
+                                                                            key={opt.key}
+                                                                            onClick={() => setShippingOptionKey(opt.key)}
+                                                                            className={`flex items-start gap-2 p-2 rounded-xl transition-all cursor-pointer select-none ${isSelected
+                                                                                ? "bg-white/90 dark:bg-slate-700/80 shadow-2xs border border-[#238E4E]"
+                                                                                : "bg-white/40 dark:bg-slate-800/40 border border-transparent hover:bg-white/60"
+                                                                                }`}
+                                                                        >
+                                                                            <input
+                                                                                type="radio"
+                                                                                name="shippingOption"
+                                                                                checked={isSelected}
+                                                                                onChange={() => setShippingOptionKey(opt.key)}
+                                                                                className="w-4 h-4 mt-0.5 text-[#238E4E] focus:ring-[#238E4E] accent-[#238E4E] cursor-pointer shrink-0"
+                                                                            />
+                                                                            <div className="flex flex-col min-w-0">
+                                                                                <span className={`text-xs font-bold leading-tight ${isSelected ? "text-[#0F7438] dark:text-[#8DD3A5]" : "text-slate-800 dark:text-slate-200"}`}>
+                                                                                    {title}
+                                                                                </span>
+                                                                                <span className={`text-[10px] font-semibold mt-0.5 ${isSelected ? "text-[#0F7438]" : "text-slate-600 dark:text-slate-300"}`}>
+                                                                                    +₹{charge} <span className="font-normal text-slate-400 text-[9px]">(₹{opt.rate}/kg)</span>
+                                                                                </span>
+                                                                            </div>
+                                                                        </label>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
 
                                                         {/* Total Calculation */}
                                                         {selectedDayData ? (
@@ -2002,10 +2007,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                 <div className="flex justify-between items-center text-xs">
                                                                     <span className="text-slate-600 dark:text-slate-300 font-semibold">PCB Price:</span>
                                                                     <span className="font-bold text-slate-700 dark:text-slate-300">{formatPrice(pcbPrice)}</span>
-                                                                </div>
-                                                                <div className="flex justify-between items-center text-xs">
-                                                                    <span className="text-slate-600 dark:text-slate-300 font-semibold">Shipping Charge:</span>
-                                                                    <span className="font-bold text-slate-700 dark:text-slate-300">₹{shippingCharge.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                                                                 </div>
                                                                 <div className="flex justify-between items-center text-xs">
                                                                     <span className="text-slate-600 dark:text-slate-300 font-semibold">Subtotal:</span>
