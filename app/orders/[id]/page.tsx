@@ -42,6 +42,13 @@ function formatClientLogDescription(description?: string): string {
     cleaned = cleaned.replace(/^(?:Updated|Quantities updated|Status updated|Details updated|Changed|Modified|Created|Edited)\s+by\s+[^:\n]+[:\-]\s*/i, "");
     cleaned = cleaned.replace(/^By\s+[^:\n]+[:\-]\s*/i, "");
     cleaned = cleaned.replace(/^Updated by\s+[^:\n]+[:\-]?\s*/i, "");
+
+    // Strip Razorpay Payment IDs and references from client view
+    cleaned = cleaned.replace(/\s*via Razorpay ID\s*['"][^'"]+['"]/gi, "");
+    cleaned = cleaned.replace(/\s*via Razorpay ID\s+pay_[a-zA-Z0-9]+/gi, "");
+    cleaned = cleaned.replace(/\s*Razorpay ID\s*['"][^'"]+['"]/gi, "");
+    cleaned = cleaned.replace(/\s*pay_[a-zA-Z0-9]+/gi, "");
+
     if (cleaned.length > 0) {
         cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
     }
@@ -488,15 +495,10 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                                         <span>Payment Audit & Transaction Details</span>
                                     </h3>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-medium">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-medium">
                                         <div className="p-3 bg-gray-50 rounded-xl space-y-1">
                                             <span className="text-gray-400 font-bold block text-[10px] uppercase">Transaction Ref</span>
                                             <strong className="text-gray-900 font-mono">{order.transaction_number || "N/A"}</strong>
-                                        </div>
-
-                                        <div className="p-3 bg-gray-50 rounded-xl space-y-1">
-                                            <span className="text-gray-400 font-bold block text-[10px] uppercase">Razorpay Payment ID</span>
-                                            <strong className="text-gray-900 font-mono">{order.razorpay_payment_id || "N/A"}</strong>
                                         </div>
 
                                         <div className="p-3 bg-gray-50 rounded-xl space-y-1">

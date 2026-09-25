@@ -33,15 +33,16 @@ export default function Footer() {
         return null;
     }
 
+    const mainSiteUrl = (process.env.NEXT_PUBLIC_MAIN_URL || "https://megabytecircuit.com").replace(/\/$/, "");
+
     return (
         <footer className="bg-[#0f1729] text-gray-300 pb-4 border-t-4 border-primary">
             <div className="max-w-[1550px] mx-auto px-4">
                 <div className="border-t border-gray-800 pt-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
                     <div>© {new Date().getFullYear()} Megabyte Circuit. All Rights Reserved.</div>
                     <div className="flex gap-6">
-                        <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-                        <a href="#" className="hover:text-white transition-colors">Terms & Conditions</a>
-                        <a href="#" className="hover:text-white transition-colors">Cookies Policy</a>
+                        <a href={`${mainSiteUrl}/privacy-policy`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Privacy Policy</a>
+                        <a href={`${mainSiteUrl}/terms-of-service`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Terms & Conditions</a>
                     </div>
                 </div>
             </div>

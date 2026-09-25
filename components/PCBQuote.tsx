@@ -346,6 +346,8 @@ const PCBPreviewCanvas = ({
 };
 
 export default function PCBQuote() {
+    const mainSiteUrl = (process.env.NEXT_PUBLIC_MAIN_URL || "https://megabytecircuit.com").replace(/\/$/, "");
+
     // State
     const [activeTab, setActiveTab] = useState("standard");
     const [isDragging, setIsDragging] = useState(false);
@@ -1330,9 +1332,8 @@ export default function PCBQuote() {
                     <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
                         <div>© {new Date().getFullYear()} Megabyte Circuit. All Rights Reserved.</div>
                         <div className="flex gap-6">
-                            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-                            <a href="#" className="hover:text-white transition-colors">Terms & Conditions</a>
-                            <a href="#" className="hover:text-white transition-colors">Cookies Policy</a>
+                            <a href={`${mainSiteUrl}/privacy-policy`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Privacy Policy</a>
+                            <a href={`${mainSiteUrl}/terms-of-service`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Terms & Conditions</a>
                         </div>
                     </div>
                 </div>

@@ -343,7 +343,7 @@ function DashboardContent() {
                                             return (
                                                 <tr key={p.id ? `payment-${p.id}-${idx}` : idx} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/50">
                                                     <td className="py-3 font-extrabold text-gray-900 dark:text-white font-mono">
-                                                        {p.transaction_number || p.razorpay_payment_id || `TXN-${p.id}`}
+                                                        {p.transaction_number || `TXN-${p.id}`}
                                                     </td>
                                                     <td className="py-3 font-semibold text-gray-700 dark:text-zinc-300">
                                                         {p.order_number ? `#${p.order_number}` : "-"}

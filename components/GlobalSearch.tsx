@@ -84,7 +84,7 @@ export default function GlobalSearch() {
 
                     // 3. Process Payments
                     (data.payments || []).forEach((p: any) => {
-                        const txnNum = p.transaction_number || p.razorpay_payment_id || `TXN-${p.id}`;
+                        const txnNum = p.transaction_number || `TXN-${p.id}`;
                         const amount = p.amount ? `₹${parseFloat(p.amount).toLocaleString("en-IN")}` : "";
                         const status = (p.status || "").toUpperCase();
 
