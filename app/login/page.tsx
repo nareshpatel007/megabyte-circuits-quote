@@ -11,6 +11,7 @@ function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const redirectUrl = searchParams.get("redirect") || "/";
+    const mainSiteUrl = (process.env.NEXT_PUBLIC_MAIN_URL || "https://megabytecircuit.com").replace(/\/$/, "");
 
     const [viewMode, setViewMode] = useState<"signin" | "signup">("signin");
     const [accountType, setAccountType] = useState<"company" | "personal">("personal");
@@ -420,9 +421,9 @@ function LoginContent() {
                                     />
                                     <span>Remember me</span>
                                 </label>
-                                <a href="#" className="hover:text-primary transition-colors font-medium">
+                                <Link href="/forgot-password" className="hover:text-primary transition-colors font-medium">
                                     Forgot password?
-                                </a>
+                                </Link>
                             </div>
                         )}
 
@@ -440,7 +441,7 @@ function LoginContent() {
                                         className="mt-0.5 rounded accent-primary shrink-0"
                                     />
                                     <span>
-                                        I agree to Megabyte&apos;s <a href="#" className="text-primary hover:underline font-semibold">Terms of Use</a> and <a href="#" className="text-primary hover:underline font-semibold">Privacy Policy</a>.
+                                        I agree to Megabyte&apos;s <a href={`${mainSiteUrl}/terms-of-service`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">Terms of Service</a> and <a href={`${mainSiteUrl}/privacy-policy`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">Privacy Policy</a>.
                                     </span>
                                 </label>
                                 {fieldErrors.agreeTerms && (
