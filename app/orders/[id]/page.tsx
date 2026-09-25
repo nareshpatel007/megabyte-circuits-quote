@@ -35,6 +35,19 @@ interface OrderLog {
     created_at?: string;
 }
 
+function formatClientLogDescription(description?: string): string {
+    if (!description) return "";
+    let cleaned = description;
+    // Strip prefixes containing employee or admin names (e.g. "Updated by Megabyte Admin: ", "Quantities updated by John: ")
+    cleaned = cleaned.replace(/^(?:Updated|Quantities updated|Status updated|Details updated|Changed|Modified|Created|Edited)\s+by\s+[^:\n]+[:\-]\s*/i, "");
+    cleaned = cleaned.replace(/^By\s+[^:\n]+[:\-]\s*/i, "");
+    cleaned = cleaned.replace(/^Updated by\s+[^:\n]+[:\-]?\s*/i, "");
+    if (cleaned.length > 0) {
+        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    }
+    return cleaned;
+}
+
 interface OrderDetail {
     id: number;
     order_number: string;
@@ -303,9 +316,9 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                                         <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                                             <Package className="w-6 h-6" />
                                         </div>
-                                        <div>
-                                            <span className="text-xs text-gray-400 font-bold uppercase block">Status</span>
-                                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-extrabold border mt-0.5 ${
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-400 font-bold uppercase">Status:</span>
+                                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-extrabold border ${
                                                 isCompleted
                                                     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                                     : "bg-amber-50 text-amber-700 border-amber-200"
@@ -543,7 +556,7 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                                                             </span>
                                                         </div>
                                                         <p className="text-gray-600 text-xs font-medium leading-relaxed">
-                                                            {log.description}
+                                                            {formatClientLogDescription(log.description)}
                                                         </p>
                                                     </div>
                                                 </div>

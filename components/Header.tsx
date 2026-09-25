@@ -284,35 +284,59 @@ export default function Header() {
                                     </button>
 
                                     {isBellOpen && (
-                                        <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-2xl z-50 text-xs text-gray-700 dark:text-zinc-300 animate-in fade-in zoom-in-95">
+                                        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-2xl z-50 text-xs text-gray-700 dark:text-zinc-300 animate-in fade-in zoom-in-95">
                                             <div className="px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-gray-50/60 dark:bg-zinc-800/50">
                                                 <span className="font-extrabold text-gray-900 dark:text-white text-xs">Notifications</span>
-                                                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">{unreadCount} new</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">{unreadCount} new</span>
+                                                    {unreadCount > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleMarkAllAsRead();
+                                                            }}
+                                                            className="text-[11px] font-bold text-gray-500 hover:text-emerald-600 dark:text-zinc-400 dark:hover:text-emerald-400 underline cursor-pointer"
+                                                        >
+                                                            Mark all as read
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="divide-y divide-gray-100 dark:divide-zinc-800">
-                                                {notifications.map((n) => (
-                                                    <div
-                                                        key={n.id}
-                                                        onClick={() => {
-                                                            handleMarkAsRead(n.id, n.action_url);
-                                                            setIsBellOpen(false);
-                                                        }}
-                                                        className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer ${!n.is_read ? "bg-emerald-50/50 dark:bg-emerald-950/20" : ""}`}
-                                                    >
-                                                        <div className="flex items-start gap-2.5">
-                                                            {n.unread && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />}
-                                                            <div className={!n.unread ? "ml-4" : ""}>
-                                                                <p className="text-xs font-bold text-gray-900 dark:text-zinc-100 leading-snug">{n.title}</p>
-                                                                <p className="text-[11px] font-medium text-gray-600 dark:text-zinc-400 leading-relaxed mt-0.5">{n.message}</p>
+                                            <div className="divide-y divide-gray-100 dark:divide-zinc-800 max-h-80 overflow-y-auto">
+                                                {notifications.length === 0 ? (
+                                                    <div className="p-6 text-center text-gray-400 dark:text-zinc-500">
+                                                        No notifications
+                                                    </div>
+                                                ) : (
+                                                    notifications.map((n) => (
+                                                        <div
+                                                            key={n.id}
+                                                            onClick={() => {
+                                                                handleMarkAsRead(n.id, n.action_url);
+                                                                setIsBellOpen(false);
+                                                            }}
+                                                            className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer ${!n.is_read ? "bg-emerald-50/50 dark:bg-emerald-950/20" : ""}`}
+                                                        >
+                                                            <div className="flex items-start gap-2.5">
+                                                                {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />}
+                                                                <div className={n.is_read ? "ml-4" : ""}>
+                                                                    <p className="text-xs font-bold text-gray-900 dark:text-zinc-100 leading-snug">{n.title}</p>
+                                                                    <p className="text-[11px] font-medium text-gray-600 dark:text-zinc-400 leading-relaxed mt-0.5">{n.message}</p>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    ))
+                                                )}
                                             </div>
                                             <div className="px-4 py-2.5 border-t border-gray-100 dark:border-zinc-800 bg-gray-50/30 dark:bg-zinc-800/30 text-center">
-                                                <button className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">
+                                                <Link
+                                                    href="/notifications"
+                                                    onClick={() => setIsBellOpen(false)}
+                                                    className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer block w-full"
+                                                >
                                                     View all notifications
-                                                </button>
+                                                </Link>
                                             </div>
                                         </div>
                                     )}

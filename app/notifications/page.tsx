@@ -276,12 +276,27 @@ export default function NotificationsPage() {
                                                 <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
                                                     <span>{n.title}</span>
                                                     {!n.is_read && (
-                                                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold text-[10px] uppercase">New</span>
                                                     )}
                                                 </h3>
-                                                <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-mono shrink-0">
-                                                    {new Date(n.created_at).toLocaleString()}
-                                                </span>
+                                                <div className="flex items-center gap-3 shrink-0">
+                                                    <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-mono">
+                                                        {new Date(n.created_at).toLocaleString()}
+                                                    </span>
+                                                    {!n.is_read && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleMarkAsRead(n.id, null);
+                                                            }}
+                                                            className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                                                        >
+                                                            <Check className="w-3 h-3" />
+                                                            <span>Mark as read</span>
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             <p className="text-xs text-gray-600 dark:text-zinc-400 font-medium leading-relaxed mt-1">

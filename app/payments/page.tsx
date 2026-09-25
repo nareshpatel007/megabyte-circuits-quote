@@ -103,7 +103,6 @@ function PaymentsContent() {
                                     <thead>
                                         <tr className="border-b border-gray-100 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 font-extrabold uppercase">
                                             <th className="pb-3">Transaction #</th>
-                                            <th className="pb-3">Razorpay Ref</th>
                                             <th className="pb-3">Date</th>
                                             <th className="pb-3">Amount</th>
                                             <th className="pb-3">Status</th>
@@ -113,7 +112,6 @@ function PaymentsContent() {
                                         {filteredPayments.map((pmt) => (
                                             <tr key={pmt.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/50">
                                                 <td className="py-3 font-extrabold text-gray-900 dark:text-white">{pmt.transaction_number}</td>
-                                                <td className="py-3 text-gray-600 dark:text-zinc-300 font-mono text-[11px]">{pmt.razorpay_payment_id || "N/A"}</td>
                                                 <td className="py-3 text-gray-500 dark:text-zinc-400">{new Date(pmt.created_at).toLocaleString()}</td>
                                                 <td className="py-3 font-extrabold text-primary dark:text-emerald-400">{formatPrice(pmt.amount)}</td>
                                                 <td className="py-3">
