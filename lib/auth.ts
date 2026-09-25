@@ -2,6 +2,7 @@
 
 const TOKEN_COOKIE_NAME = "megabyte_user_token";
 const USER_COOKIE_NAME = "megabyte_user";
+const LOGOUT_REASON_KEY = "megabyte_logout_reason";
 const COOKIE_MAX_AGE_DAYS = 30;
 
 export function getCookie(name: string): string | null {
@@ -68,5 +69,28 @@ export function clearAuthSession() {
     if (typeof localStorage !== "undefined") {
         localStorage.removeItem(TOKEN_COOKIE_NAME);
         localStorage.removeItem(USER_COOKIE_NAME);
+    }
+}
+
+export function setLogoutReason(reason: { code: string; message: string }) {
+    if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem(LOGOUT_REASON_KEY, JSON.stringify(reason));
+    }
+}
+
+export function getLogoutReason(): { code: string; message: string } | null {
+    if (typeof sessionStorage === "undefined") return null;
+    const raw = sessionStorage.getItem(LOGOUT_REASON_KEY);
+    if (!raw) return null;
+    try {
+        return JSON.parse(raw);
+    } catch {
+        return null;
+    }
+}
+
+export function clearLogoutReason() {
+    if (typeof sessionStorage !== "undefined") {
+        sessionStorage.removeItem(LOGOUT_REASON_KEY);
     }
 }

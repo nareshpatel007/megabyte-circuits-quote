@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck, Loader2, AlertCircle, ArrowLeft, MailCheck } from "lucide-react";
-import { setAuthSession, getAuthToken } from "@/lib/auth";
+import { setAuthSession, getAuthToken, getLogoutReason, clearLogoutReason } from "@/lib/auth";
 import { signInSchema, signUpSchema } from "@/lib/validations/auth";
 
 function LoginContent() {
@@ -60,10 +60,17 @@ function LoginContent() {
     }, [errorMessage]);
 
     useEffect(() => {
-        // 1. Check if error in URL from OAuth redirect
-        const urlError = searchParams.get("error");
-        if (urlError) {
-            setErrorMessage(decodeURIComponent(urlError));
+        // 1. Check if logout reason stored (e.g. ACCOUNT_SUSPENDED)
+        const logoutReason = getLogoutReason();
+        if (logoutReason && logoutReason.message) {
+            setErrorMessage(logoutReason.message);
+            clearLogoutReason();
+        } else {
+            // Check if error in URL from OAuth redirect
+            const urlError = searchParams.get("error");
+            if (urlError) {
+                setErrorMessage(decodeURIComponent(urlError));
+            }
         }
 
         // 2. Skip login if user is already authenticated
