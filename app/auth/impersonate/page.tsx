@@ -23,7 +23,8 @@ function ImpersonateHandoffContent() {
 
         const exchangeCode = async () => {
             try {
-                const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits/megabyte-circuits-api/public";
+                const rawBackendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits/megabyte-circuits-api/public";
+                const backendUrl = rawBackendUrl.replace(/\/+$/, "");
                 const res = await fetch(`${backendUrl}/api/auth/impersonate/exchange`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },

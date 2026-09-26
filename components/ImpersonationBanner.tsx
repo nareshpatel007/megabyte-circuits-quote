@@ -27,7 +27,8 @@ export default function ImpersonationBanner() {
         // Also query /api/auth/me if logged in to be 100% sure of backend impersonation state
         const token = getAuthToken();
         if (token) {
-            const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits/megabyte-circuits-api/public";
+            const rawBackendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits/megabyte-circuits-api/public";
+            const backendUrl = rawBackendUrl.replace(/\/+$/, "");
             fetch(`${backendUrl}/api/auth/me`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
@@ -79,7 +80,8 @@ export default function ImpersonationBanner() {
         setStopping(true);
         try {
             const token = getAuthToken();
-            const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits/megabyte-circuits-api/public";
+            const rawBackendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits/megabyte-circuits-api/public";
+            const backendUrl = rawBackendUrl.replace(/\/+$/, "");
             const res = await fetch(`${backendUrl}/api/auth/impersonation/stop`, {
                 method: "POST",
                 headers: {

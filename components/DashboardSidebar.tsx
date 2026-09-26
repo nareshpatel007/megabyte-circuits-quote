@@ -168,7 +168,8 @@ export default function DashboardSidebar() {
                         try {
                             if (impSession && impSession.active) {
                                 const token = getAuthToken();
-                                const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits/megabyte-circuits-api/public";
+                                const rawBackendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits/megabyte-circuits-api/public";
+                                const backendUrl = rawBackendUrl.replace(/\/+$/, "");
                                 await fetch(`${backendUrl}/api/auth/impersonation/stop`, {
                                     method: "POST",
                                     headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
