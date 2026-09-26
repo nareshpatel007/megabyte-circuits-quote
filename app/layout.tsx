@@ -7,6 +7,8 @@ import { Analytics } from "@vercel/analytics/next";
 import Providers from "./providers";
 import Script from "next/script";
 
+import ImpersonationBanner from "@/components/ImpersonationBanner";
+
 const geistSans = Geist({
     variable: "--font-geist-sans",
     subsets: ["latin"],
@@ -36,6 +38,7 @@ export default function RootLayout({
             <body className="min-h-full flex flex-col" suppressHydrationWarning>
                 <Providers>
                     <TooltipProvider>
+                        <ImpersonationBanner />
                         {children}
                         <Toaster />
                     </TooltipProvider>

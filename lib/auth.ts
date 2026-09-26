@@ -63,9 +63,36 @@ export function setAuthSession(token: string, user: any) {
     }
 }
 
+const IMPERSONATION_KEY = "megabyte_impersonation";
+
+export function setImpersonationSession(data: { active: boolean; admin_id?: number | string; admin_name?: string; session_id?: number | string; expires_at?: string }) {
+    if (typeof localStorage !== "undefined") {
+        localStorage.setItem(IMPERSONATION_KEY, JSON.stringify(data));
+    }
+}
+
+export function getImpersonationSession(): { active: boolean; admin_id?: number | string; admin_name?: string; session_id?: number | string; expires_at?: string } | null {
+    if (typeof localStorage === "undefined") return null;
+    const raw = localStorage.getItem(IMPERSONATION_KEY);
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw);
+        return parsed && parsed.active ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+export function clearImpersonationSession() {
+    if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(IMPERSONATION_KEY);
+    }
+}
+
 export function clearAuthSession() {
     removeCookie(TOKEN_COOKIE_NAME);
     removeCookie(USER_COOKIE_NAME);
+    clearImpersonationSession();
     if (typeof localStorage !== "undefined") {
         localStorage.removeItem(TOKEN_COOKIE_NAME);
         localStorage.removeItem(USER_COOKIE_NAME);

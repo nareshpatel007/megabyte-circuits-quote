@@ -13,7 +13,7 @@ import {
     LogOut,
     Calculator
 } from "lucide-react";
-import { getAuthToken, getAuthUser } from "@/lib/auth";
+import { getAuthToken, getAuthUser, getImpersonationSession, clearAuthSession } from "@/lib/auth";
 
 interface SidebarCounts {
     orders: number;
@@ -164,18 +164,34 @@ export default function DashboardSidebar() {
                 <button
                     type="button"
                     onClick={async () => {
+                        const impSession = getImpersonationSession();
                         try {
-                            await fetch("/api/auth/logout", { method: "POST" });
+                            if (impSession && impSession.active) {
+                                const token = getAuthToken();
+                                const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits/megabyte-circuits-api/public";
+                                await fetch(`${backendUrl}/api/auth/impersonation/stop`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
+                                    body: JSON.stringify({ session_id: impSession.session_id })
+                                });
+                            } else {
+                                await fetch("/api/auth/logout", { method: "POST" });
+                            }
                         } catch (e) {
                             console.error("Logout API call error:", e);
                         } finally {
-                            localStorage.removeItem("megabyte_user_token");
-                            localStorage.removeItem("megabyte_user");
+                            const wasImpersonating = impSession && impSession.active;
+                            clearAuthSession();
                             localStorage.removeItem("megabyte_checkout_items");
                             localStorage.removeItem("selectedCartItemIds");
-                            document.cookie = "megabyte_user_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
                             window.dispatchEvent(new Event("megabyte_auth_updated"));
-                            window.location.href = "/";
+                            
+                            if (wasImpersonating) {
+                                const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || "http://localhost:3000/clients";
+                                window.location.href = adminUrl;
+                            } else {
+                                window.location.href = "/";
+                            }
                         }
                     }}
                     className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all cursor-pointer"
