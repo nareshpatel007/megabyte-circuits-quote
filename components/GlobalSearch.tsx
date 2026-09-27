@@ -137,10 +137,10 @@ export default function GlobalSearch() {
     };
 
     return (
-        <div ref={containerRef} className="relative w-64 sm:w-80 md:w-96 lg:w-[420px]">
+        <div ref={containerRef} className="relative w-28 xs:w-40 sm:w-64 md:w-80 lg:w-[420px] transition-all">
             {/* Search Input Box matched to Admin Panel */}
             <div className="relative flex items-center w-full rounded-xl transition-all duration-200 bg-gray-100/80 dark:bg-zinc-800/70 border border-gray-200/80 dark:border-zinc-700/60 focus-within:border-emerald-500/60 focus-within:ring-1 focus-within:ring-emerald-500/60">
-                <Search className="w-4 h-4 absolute left-3.5 text-gray-400 dark:text-zinc-400 pointer-events-none" />
+                <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 absolute left-2.5 sm:left-3.5 text-gray-400 dark:text-zinc-400 pointer-events-none shrink-0" />
                 <input
                     type="text"
                     value={query}
@@ -148,21 +148,21 @@ export default function GlobalSearch() {
                     onFocus={() => {
                         if (query.trim() && filteredResults.length > 0) setIsOpen(true);
                     }}
-                    placeholder="Search order #, file name, transaction id..."
-                    className="w-full pl-10 pr-9 py-2 text-xs sm:text-sm bg-transparent text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-400 focus:outline-none font-medium"
+                    placeholder="Search orders, files..."
+                    className="w-full pl-8 sm:pl-10 pr-7 sm:pr-9 py-1.5 sm:py-2 text-xs sm:text-sm bg-transparent text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-400 focus:outline-none font-medium truncate"
                 />
                 {isSearching ? (
-                    <Loader2 className="absolute right-3 w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-spin" />
+                    <Loader2 className="absolute right-2.5 sm:right-3 w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400 animate-spin" />
                 ) : query ? (
                     <button
                         onClick={() => {
                             setQuery("");
                             setIsOpen(false);
                         }}
-                        className="absolute right-3 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 transition-colors p-0.5 cursor-pointer"
+                        className="absolute right-2.5 sm:right-3 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 transition-colors p-0.5 cursor-pointer"
                         title="Clear search"
                     >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     </button>
                 ) : (
                     <div className="absolute right-3 flex items-center gap-1 pointer-events-none">
@@ -175,7 +175,7 @@ export default function GlobalSearch() {
 
             {/* Admin-Matching Results Dropdown */}
             {isOpen && (
-                <div className="absolute left-0 top-full mt-2 z-50 w-full rounded-2xl border border-gray-200/90 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute left-0 top-full mt-2 z-50 w-[calc(100vw-32px)] max-w-md sm:w-full rounded-2xl border border-gray-200/90 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                     <div className="max-h-[380px] overflow-y-auto p-1.5 space-y-1">
                         {filteredResults.length === 0 ? (
                             <div className="py-8 text-center text-gray-400 dark:text-zinc-500 text-xs">

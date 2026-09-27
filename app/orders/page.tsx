@@ -174,12 +174,12 @@ function OrdersContent() {
                             <div className="space-y-4">
                                 {orders.map((ord) => (
                                     <div key={ord.id} className="p-4 rounded-xl border border-gray-200/80 dark:border-white/10 hover:border-primary/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#0b0f19]">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-3">
+                                        <div className="space-y-1 min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                                 <span className="text-sm font-black text-gray-900 dark:text-white">{ord.order_number}</span>
                                                 {getStatusBadge(ord.status || ord.status_name)}
                                             </div>
-                                            <p className="text-xs font-bold text-gray-700 dark:text-zinc-300">
+                                            <p className="text-xs font-bold text-gray-700 dark:text-zinc-300 truncate">
                                                 {ord.gerber_name || ord.meta?.board_name || "Standard PCB Order"}
                                             </p>
                                             <p className="text-[11px] text-gray-400 dark:text-zinc-500 font-medium">
@@ -187,12 +187,12 @@ function OrdersContent() {
                                             </p>
                                         </div>
 
-                                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                                        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-stretch sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 dark:border-zinc-800">
                                             {(((ord.status || ord.status_name)?.toLowerCase() === "completed") || ((ord.status || ord.status_name)?.toLowerCase() === "ready to ship")) && (
                                                 <button
                                                     type="button"
                                                     onClick={() => handleReorderClick(ord)}
-                                                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                                    className="flex-1 sm:flex-initial justify-center px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                                                 >
                                                     <RotateCw className="w-3.5 h-3.5" />
                                                     <span>Reorder</span>
@@ -201,7 +201,7 @@ function OrdersContent() {
 
                                             <Link
                                                 href={`/orders/${ord.id}`}
-                                                className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-secondary transition-all cursor-pointer"
+                                                className="flex-1 sm:flex-initial text-center justify-center px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-secondary transition-all cursor-pointer inline-block"
                                             >
                                                 View Details
                                             </Link>
@@ -216,7 +216,7 @@ function OrdersContent() {
                 {/* Reorder Confirmation Modal */}
                 {reorderConfirmOrder && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-                        <div className="bg-white dark:bg-[#0b0f19] border border-gray-200 dark:border-white/10 rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 animate-in fade-in zoom-in duration-200">
+                        <div className="bg-white dark:bg-[#0b0f19] border border-gray-200 dark:border-white/10 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
                             <div className="flex items-center gap-3 border-b border-gray-100 dark:border-zinc-800 pb-3">
                                 <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                                     <RotateCw className="w-5 h-5" />

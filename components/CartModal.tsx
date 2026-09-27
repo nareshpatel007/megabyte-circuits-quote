@@ -107,7 +107,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
             <div className="fixed inset-0 z-40" onClick={onClose} />
 
             {/* Cart Dropdown Modal under Cart Icon */}
-            <div className="cart-modal-container absolute right-0 top-full mt-2 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200/90 overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="cart-modal-container absolute right-0 top-full mt-2 z-50 w-[calc(100vw-24px)] max-w-sm sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200/90 overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in slide-in-from-top-2 duration-200">
                 {/* Arrow Pointing Up */}
                 <div className="absolute top-0 right-4 -mt-1.5 w-3 h-3 bg-white border-t border-l border-gray-200/90 rotate-45 z-10" />
 

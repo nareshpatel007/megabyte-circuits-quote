@@ -95,15 +95,15 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                     <form onSubmit={handleFormSubmit} className="space-y-4 text-xs font-semibold text-slate-700">
                         
                         {/* Size (Single piece) */}
-                        <div className="flex items-center gap-2">
-                            <span className="w-32 shrink-0 text-slate-600">Size(Single piece)</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                            <span className="w-full sm:w-32 shrink-0 text-slate-600">Size(Single piece)</span>
                             <div className="flex items-center gap-1.5 flex-1">
-                                <div className="flex items-center bg-slate-100 border border-slate-200 rounded px-2.5 py-1.5 text-slate-500 font-mono w-24">
+                                <div className="flex items-center bg-slate-100 border border-slate-200 rounded px-2.5 py-1.5 text-slate-500 font-mono flex-1 sm:w-24">
                                     <span>{singleWidth || "91.62"}</span>
                                     <span className="ml-auto text-[10px] text-slate-400">mm</span>
                                 </div>
                                 <span className="text-slate-400 font-bold">*</span>
-                                <div className="flex items-center bg-slate-100 border border-slate-200 rounded px-2.5 py-1.5 text-slate-500 font-mono w-24">
+                                <div className="flex items-center bg-slate-100 border border-slate-200 rounded px-2.5 py-1.5 text-slate-500 font-mono flex-1 sm:w-24">
                                     <span>{singleHeight || "54.35"}</span>
                                     <span className="ml-auto text-[10px] text-slate-400">mm</span>
                                 </div>
@@ -111,20 +111,20 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                         </div>
 
                         {/* Panel Type */}
-                        <div className="flex items-center gap-2">
-                            <span className="w-32 shrink-0 text-slate-600">Panel Type</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                            <span className="w-full sm:w-32 shrink-0 text-slate-600">Panel Type</span>
                             <button
                                 type="button"
-                                className="px-3 py-1 rounded bg-primary/10 border border-primary text-primary font-bold text-xs cursor-pointer"
+                                className="px-3 py-1 rounded bg-primary/10 border border-primary text-primary font-bold text-xs cursor-pointer w-fit"
                             >
                                 {panelType}
                             </button>
                         </div>
 
                         {/* Panel Format (Column & Row) */}
-                        <div className="flex items-start gap-2">
-                            <span className="w-32 shrink-0 text-slate-600 pt-1.5">Panel Format</span>
-                            <div className="flex-1 space-y-2">
+                        <div className="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-2">
+                            <span className="w-full sm:w-32 shrink-0 text-slate-600 pt-1.5">Panel Format</span>
+                            <div className="flex-1 space-y-2 w-full">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-[11px] text-slate-500 font-normal mb-1">Column</label>
@@ -184,8 +184,8 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                         </div>
 
                         {/* Edge Rails */}
-                        <div className="flex items-center gap-2">
-                            <span className="w-32 shrink-0 text-slate-600">Edge Rails</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                            <span className="w-full sm:w-32 shrink-0 text-slate-600">Edge Rails</span>
                             <select
                                 value={edgeRails}
                                 onChange={(e) => setEdgeRails(e.target.value)}
@@ -199,16 +199,16 @@ export const PanelModal: React.FC<PanelModalProps> = ({
                         </div>
 
                         {/* Panel Size (Calculated) */}
-                        <div className="flex items-start gap-2">
-                            <span className="w-32 shrink-0 text-slate-600 pt-1.5">Panel size</span>
-                            <div className="flex-1 space-y-1">
+                        <div className="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-2">
+                            <span className="w-full sm:w-32 shrink-0 text-slate-600 pt-1.5">Panel size</span>
+                            <div className="flex-1 space-y-1 w-full">
                                 <div className="flex items-center gap-1.5">
-                                    <div className="flex items-center bg-slate-100 border border-slate-200 rounded px-2.5 py-1.5 text-slate-700 font-mono font-bold w-24">
+                                    <div className="flex items-center bg-slate-100 border border-slate-200 rounded px-2.5 py-1.5 text-slate-700 font-mono font-bold flex-1 sm:w-24">
                                         <span>{calcPanelWidth}</span>
                                         <span className="ml-auto text-[10px] text-slate-400 font-normal">mm</span>
                                     </div>
                                     <span className="text-slate-400 font-bold">*</span>
-                                    <div className="flex items-center bg-slate-100 border border-slate-200 rounded px-2.5 py-1.5 text-slate-700 font-mono font-bold w-24">
+                                    <div className="flex items-center bg-slate-100 border border-slate-200 rounded px-2.5 py-1.5 text-slate-700 font-mono font-bold flex-1 sm:w-24">
                                         <span>{calcPanelHeight}</span>
                                         <span className="ml-auto text-[10px] text-slate-400 font-normal">mm</span>
                                     </div>

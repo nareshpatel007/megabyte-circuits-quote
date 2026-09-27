@@ -11,9 +11,11 @@ import {
     MapPin,
     User,
     LogOut,
-    Calculator
+    Calculator,
+    X
 } from "lucide-react";
 import { getAuthToken, getAuthUser, getImpersonationSession, clearAuthSession } from "@/lib/auth";
+import { useMobileSidebar } from "@/context/MobileSidebarContext";
 
 interface SidebarCounts {
     orders: number;
@@ -23,6 +25,8 @@ interface SidebarCounts {
 
 export default function DashboardSidebar() {
     const pathname = usePathname();
+    const { isMobileSidebarOpen, closeMobileSidebar } = useMobileSidebar();
+
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isAuthLoaded, setIsAuthLoaded] = useState(false);
     const [counts, setCounts] = useState<SidebarCounts>(() => {
@@ -118,17 +122,60 @@ export default function DashboardSidebar() {
         }
     ];
 
-    return (
-        <aside className="w-full lg:w-[240px] lg:h-screen lg:sticky lg:top-0 shrink-0 bg-[#063319] text-white flex flex-col border-r border-emerald-900/60 shadow-xl overflow-hidden">
+    const handleSignOut = async () => {
+        closeMobileSidebar();
+        const impSession = getImpersonationSession();
+        try {
+            if (impSession && impSession.active) {
+                const token = getAuthToken();
+                const rawBackendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits/megabyte-circuits-api/public";
+                const backendUrl = rawBackendUrl.replace(/\/+$/, "");
+                await fetch(`${backendUrl}/api/auth/impersonation/stop`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
+                    body: JSON.stringify({ session_id: impSession.session_id })
+                });
+            } else {
+                await fetch("/api/auth/logout", { method: "POST" });
+            }
+        } catch (e) {
+            console.error("Logout API call error:", e);
+        } finally {
+            const wasImpersonating = impSession && impSession.active;
+            clearAuthSession();
+            localStorage.removeItem("megabyte_checkout_items");
+            localStorage.removeItem("selectedCartItemIds");
+            window.dispatchEvent(new Event("megabyte_auth_updated"));
+
+            if (wasImpersonating) {
+                const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || "http://localhost:3000/clients";
+                window.location.href = adminUrl;
+            } else {
+                window.location.href = "/";
+            }
+        }
+    };
+
+    const renderNavContent = () => (
+        <>
             {/* Top Left Logo Header */}
             <div className="h-[64px] px-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-emerald-950/40">
-                <Link href="/" className="flex items-center gap-2">
+                <Link href="/" onClick={closeMobileSidebar} className="flex items-center gap-2">
                     <img
                         src="/images/logo.png"
                         alt="Megabyte Circuits"
-                        className="h-10 w-auto object-contain brightness-0 invert"
+                        className="h-9 sm:h-10 w-auto object-contain brightness-0 invert"
                     />
                 </Link>
+                {/* Close Button for Mobile Drawer */}
+                <button
+                    type="button"
+                    onClick={closeMobileSidebar}
+                    className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors lg:hidden cursor-pointer"
+                    title="Close navigation"
+                >
+                    <X className="w-5 h-5" />
+                </button>
             </div>
 
             {/* Nav Links */}
@@ -139,6 +186,7 @@ export default function DashboardSidebar() {
                         <Link
                             key={item.href}
                             href={item.href}
+                            onClick={closeMobileSidebar}
                             className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
                                 item.active
                                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold"
@@ -163,38 +211,7 @@ export default function DashboardSidebar() {
             <div className="p-3 border-t border-white/10 shrink-0 bg-emerald-950/20">
                 <button
                     type="button"
-                    onClick={async () => {
-                        const impSession = getImpersonationSession();
-                        try {
-                            if (impSession && impSession.active) {
-                                const token = getAuthToken();
-                                const rawBackendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost/megabyte-circuits/megabyte-circuits-api/public";
-                                const backendUrl = rawBackendUrl.replace(/\/+$/, "");
-                                await fetch(`${backendUrl}/api/auth/impersonation/stop`, {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
-                                    body: JSON.stringify({ session_id: impSession.session_id })
-                                });
-                            } else {
-                                await fetch("/api/auth/logout", { method: "POST" });
-                            }
-                        } catch (e) {
-                            console.error("Logout API call error:", e);
-                        } finally {
-                            const wasImpersonating = impSession && impSession.active;
-                            clearAuthSession();
-                            localStorage.removeItem("megabyte_checkout_items");
-                            localStorage.removeItem("selectedCartItemIds");
-                            window.dispatchEvent(new Event("megabyte_auth_updated"));
-                            
-                            if (wasImpersonating) {
-                                const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || "http://localhost:3000/clients";
-                                window.location.href = adminUrl;
-                            } else {
-                                window.location.href = "/";
-                            }
-                        }
-                    }}
+                    onClick={handleSignOut}
                     className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all cursor-pointer"
                 >
                     <div className="flex items-center gap-3">
@@ -203,6 +220,31 @@ export default function DashboardSidebar() {
                     </div>
                 </button>
             </div>
-        </aside>
+        </>
+    );
+
+    return (
+        <>
+            {/* Desktop Sidebar (lg screens and above) */}
+            <aside className="hidden lg:flex w-[240px] h-screen sticky top-0 shrink-0 bg-[#063319] text-white flex-col border-r border-emerald-900/60 shadow-xl overflow-hidden">
+                {renderNavContent()}
+            </aside>
+
+            {/* Mobile Drawer Sidebar (screens below lg) */}
+            {isMobileSidebarOpen && (
+                <div className="lg:hidden fixed inset-0 z-[100] flex">
+                    {/* Backdrop Overlay */}
+                    <div
+                        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+                        onClick={closeMobileSidebar}
+                    />
+
+                    {/* Drawer Content */}
+                    <aside className="relative z-10 w-72 max-w-[85vw] h-[100dvh] bg-[#063319] text-white flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-left duration-250">
+                        {renderNavContent()}
+                    </aside>
+                </div>
+            )}
+        </>
     );
 }

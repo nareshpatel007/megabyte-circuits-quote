@@ -108,31 +108,30 @@ export default function ImpersonationBanner() {
     };
 
     return (
-        <div className="sticky top-0 z-50 w-full bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white shadow-xl border-b border-amber-400/40 px-4 py-2.5 transition-all">
-            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-amber-950/40 border border-amber-300/40 flex items-center justify-center shrink-0">
-                        <ShieldAlert className="w-4 h-4 text-amber-200 animate-pulse" />
+        <div className="sticky top-0 z-50 w-full bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white shadow-xl border-b border-amber-400/40 px-3 py-2 sm:py-2.5 transition-all">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 text-xs">
+                <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-950/40 border border-amber-300/40 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                        <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-200 animate-pulse" />
                     </div>
-                    <div>
-                        <div className="font-extrabold flex items-center gap-2">
-                            <span>⚠ You are logged in as Client:</span>
-                            <span className="underline decoration-amber-300 underline-offset-2 font-black">{clientDisplayName}</span>
+                    <div className="min-w-0 flex-1">
+                        <div className="font-extrabold flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+                            <span>⚠ Logged in as Client:</span>
+                            <span className="underline decoration-amber-300 underline-offset-2 font-black truncate max-w-[180px] sm:max-w-none">{clientDisplayName}</span>
                         </div>
-                        <div className="text-amber-100/90 text-[11px] font-medium flex items-center gap-1 mt-0.5">
-                            <span>Admin Actor:</span>
-                            <strong className="text-white font-bold">{adminDisplayName}</strong>
-                            <span className="opacity-75">· Admin Impersonation Session Active</span>
+                        <div className="text-amber-100/90 text-[10px] sm:text-[11px] font-medium flex flex-wrap items-center gap-x-1 mt-0.5">
+                            <span>Actor: <strong className="text-white font-bold">{adminDisplayName}</strong></span>
+                            <span className="opacity-75">· Session Active</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
                     <button
                         type="button"
                         onClick={handleReturnToAdmin}
                         disabled={stopping}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black bg-amber-950 hover:bg-black text-amber-200 border border-amber-400/40 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-black bg-amber-950 hover:bg-black text-amber-200 border border-amber-400/40 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
                     >
                         {stopping ? (
                             <>

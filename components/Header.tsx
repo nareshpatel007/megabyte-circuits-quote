@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingCart, User, ChevronDown, Loader2, ClipboardList, FolderArchive, Cpu, Mail, Ticket, LogOut, Bell, Sun, Moon } from "lucide-react";
+import { ShoppingCart, User, ChevronDown, Loader2, ClipboardList, FolderArchive, Cpu, Mail, Ticket, LogOut, Bell, Sun, Moon, Menu } from "lucide-react";
 import { useCurrency } from "../context/CurrencyContext";
 import CartModal from "./CartModal";
 import { loadCartFromBackend } from "@/lib/cartSession";
 import { getAuthUser, clearAuthSession } from "@/lib/auth";
 import { toast } from "@/hooks/use-toast";
 import { showBrowserNotification } from "@/lib/browser-notifications";
+import { useMobileSidebar } from "@/context/MobileSidebarContext";
 
 import GlobalSearch from "./GlobalSearch";
 
@@ -222,36 +223,57 @@ export default function Header() {
         loadCartFromBackend().then(() => updateCartCount());
     }, [pathname]);
 
+    const { toggleMobileSidebar } = useMobileSidebar();
+
     return (
         <>
-            <header className="bg-white dark:bg-zinc-900 border-b border-gray-200/90 dark:border-zinc-800 sticky top-0 z-50 shadow-xs h-14 transition-colors">
-                <div className={`w-full h-full flex items-center justify-between gap-4 ${user ? "px-4 sm:px-6" : "max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12"}`}>
-                    {/* Brand Logo (visible only when not logged in or in header layout) */}
-                    {!user ? (
-                        <div className="flex items-center gap-4 shrink-0">
-                            <a href={process.env.NEXT_PUBLIC_MAIN_URL || "https://megabytecircuit.com"} className="flex items-center gap-2 group">
+            <header className="bg-white dark:bg-zinc-900 border-b border-gray-200/90 dark:border-zinc-800 sticky top-0 z-40 shadow-xs h-14 transition-colors">
+                <div className={`w-full h-full flex items-center justify-between gap-2 sm:gap-4 ${user ? "px-3 sm:px-6" : "max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12"}`}>
+                    {/* Left Section: Mobile Hamburger + Logo + Search */}
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        {user && (
+                            <button
+                                type="button"
+                                onClick={toggleMobileSidebar}
+                                className="p-2 rounded-lg text-gray-700 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors lg:hidden cursor-pointer shrink-0"
+                                title="Open navigation menu"
+                                aria-label="Open navigation menu"
+                            >
+                                <Menu className="w-5 h-5" />
+                            </button>
+                        )}
+
+                        {!user ? (
+                            <a href={process.env.NEXT_PUBLIC_MAIN_URL || "https://megabytecircuit.com"} className="flex items-center gap-2 group shrink-0">
                                 <img
                                     src="/images/logo.png"
                                     alt="Megabyte Circuit Logo"
-                                    className="h-9 sm:h-10 w-auto object-contain transition-transform group-hover:scale-[1.02] dark:brightness-0 dark:invert"
+                                    className="h-8 sm:h-10 w-auto object-contain transition-transform group-hover:scale-[1.02] dark:brightness-0 dark:invert"
                                 />
                             </a>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-3">
-                            <GlobalSearch />
-                        </div>
-                    )}
+                        ) : (
+                            <>
+                                <a href="/" className="lg:hidden shrink-0 flex items-center gap-1.5">
+                                    <img
+                                        src="/images/logo.png"
+                                        alt="Megabyte Circuits"
+                                        className="h-7 w-auto object-contain dark:brightness-0 dark:invert"
+                                    />
+                                </a>
+                                <GlobalSearch />
+                            </>
+                        )}
+                    </div>
 
                     {/* Right Side Options (Pushed to Right End) */}
-                    <div className="flex items-center gap-2 sm:gap-3 ml-auto">
+                    <div className="flex items-center gap-1.5 sm:gap-3 ml-auto shrink-0">
                         {user && (
                             <>
                                 {/* Theme toggle (Exact Admin Panel Icons & Animations) */}
                                 <button
                                     type="button"
                                     onClick={toggleThemeMode}
-                                    className="relative p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-300 transition-all duration-200 cursor-pointer flex items-center justify-center"
+                                    className="relative p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-300 transition-all duration-200 cursor-pointer flex items-center justify-center"
                                     title={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
                                 >
                                     <Sun
@@ -284,7 +306,7 @@ export default function Header() {
                                     </button>
 
                                     {isBellOpen && (
-                                        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-2xl z-50 text-xs text-gray-700 dark:text-zinc-300 animate-in fade-in zoom-in-95">
+                                        <div className="absolute right-0 mt-2 w-[calc(100vw-24px)] max-w-sm sm:w-96 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-2xl z-50 text-xs text-gray-700 dark:text-zinc-300 animate-in fade-in zoom-in-95">
                                             <div className="px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-gray-50/60 dark:bg-zinc-800/50">
                                                 <span className="font-extrabold text-gray-900 dark:text-white text-xs">Notifications</span>
                                                 <div className="flex items-center gap-2">

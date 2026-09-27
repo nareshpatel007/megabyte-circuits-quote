@@ -98,32 +98,58 @@ function PaymentsContent() {
                                 No successful or failed payment transactions recorded yet.
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-xs">
-                                    <thead>
-                                        <tr className="border-b border-gray-100 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 font-extrabold uppercase">
-                                            <th className="pb-3">Transaction #</th>
-                                            <th className="pb-3">Date</th>
-                                            <th className="pb-3">Amount</th>
-                                            <th className="pb-3">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
-                                        {filteredPayments.map((pmt) => (
-                                            <tr key={pmt.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/50">
-                                                <td className="py-3 font-extrabold text-gray-900 dark:text-white">{pmt.transaction_number}</td>
-                                                <td className="py-3 text-gray-500 dark:text-zinc-400">{new Date(pmt.created_at).toLocaleString()}</td>
-                                                <td className="py-3 font-extrabold text-primary dark:text-emerald-400">{formatPrice(pmt.amount)}</td>
-                                                <td className="py-3">
-                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${pmt.status?.toLowerCase() === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-                                                        {pmt.status?.toLowerCase() === "success" ? "SUCCESS" : "FAILED"}
-                                                    </span>
-                                                </td>
+                            <>
+                                {/* Mobile Card View */}
+                                <div className="block sm:hidden space-y-3">
+                                    {filteredPayments.map((pmt) => (
+                                        <div key={pmt.id} className="p-4 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50/50 dark:bg-zinc-900/50 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-extrabold font-mono text-gray-900 dark:text-white">
+                                                    {pmt.transaction_number}
+                                                </span>
+                                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${pmt.status?.toLowerCase() === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                                                    {pmt.status?.toLowerCase() === "success" ? "SUCCESS" : "FAILED"}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-zinc-400">
+                                                <span>Date: {new Date(pmt.created_at).toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs font-extrabold text-gray-900 dark:text-white pt-1 border-t border-gray-100 dark:border-zinc-800">
+                                                <span>Amount Paid:</span>
+                                                <span className="text-primary dark:text-emerald-400">{formatPrice(pmt.amount)}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Desktop Table View */}
+                                <div className="hidden sm:block overflow-x-auto">
+                                    <table className="w-full text-left text-xs">
+                                        <thead>
+                                            <tr className="border-b border-gray-100 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 font-extrabold uppercase">
+                                                <th className="pb-3">Transaction #</th>
+                                                <th className="pb-3">Date</th>
+                                                <th className="pb-3">Amount</th>
+                                                <th className="pb-3">Status</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                                            {filteredPayments.map((pmt) => (
+                                                <tr key={pmt.id} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/50">
+                                                    <td className="py-3 font-extrabold text-gray-900 dark:text-white">{pmt.transaction_number}</td>
+                                                    <td className="py-3 text-gray-500 dark:text-zinc-400">{new Date(pmt.created_at).toLocaleString()}</td>
+                                                    <td className="py-3 font-extrabold text-primary dark:text-emerald-400">{formatPrice(pmt.amount)}</td>
+                                                    <td className="py-3">
+                                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${pmt.status?.toLowerCase() === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                                                            {pmt.status?.toLowerCase() === "success" ? "SUCCESS" : "FAILED"}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </>
                         )}
                     </div>
                 </main>
