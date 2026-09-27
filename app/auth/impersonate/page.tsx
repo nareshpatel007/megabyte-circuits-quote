@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, ShieldAlert, CheckCircle2, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { setAuthSession, setImpersonationSession } from "@/lib/auth";
+import { setAuthSession, setImpersonationSession, clearAuthSession } from "@/lib/auth";
 
 function ImpersonateHandoffContent() {
     const router = useRouter();
@@ -43,10 +43,31 @@ function ImpersonateHandoffContent() {
                         return;
                     }
 
-                    // Save session
+                    // Clear all previous client session state and caches completely
+                    clearAuthSession();
+
+                    // Save new session
                     setAuthSession(token, userObj);
                     if (impersonationData) {
                         setImpersonationSession(impersonationData);
+                    }
+
+                    // Verify fresh user identity from /api/auth/me
+                    try {
+                        const meRes = await fetch(`${backendUrl}/api/auth/me`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        const meData = await meRes.json();
+                        if (meData.status || meData.success) {
+                            if (meData.user) {
+                                setAuthSession(token, meData.user);
+                            }
+                            if (meData.impersonation) {
+                                setImpersonationSession(meData.impersonation);
+                            }
+                        }
+                    } catch (e) {
+                        // ignore me fetch error and use exchanged user payload
                     }
 
                     window.dispatchEvent(new Event("megabyte_auth_updated"));
@@ -54,7 +75,7 @@ function ImpersonateHandoffContent() {
                     setMessage(`Logged in as client: ${userObj.name || userObj.email}`);
 
                     setTimeout(() => {
-                        router.push("/dashboard");
+                        window.location.href = "/dashboard";
                     }, 500);
                 } else {
                     setStatus("error");

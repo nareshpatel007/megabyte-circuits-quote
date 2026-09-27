@@ -96,6 +96,11 @@ export function clearAuthSession() {
     if (typeof localStorage !== "undefined") {
         localStorage.removeItem(TOKEN_COOKIE_NAME);
         localStorage.removeItem(USER_COOKIE_NAME);
+        localStorage.removeItem("megabyte_dashboard_metrics");
+        localStorage.removeItem("megabyte_sidebar_counts");
+        localStorage.removeItem("megabyte_recent_orders");
+        localStorage.removeItem("megabyte_recent_payments");
+        localStorage.removeItem("megabyte_cart_items");
     }
 }
 

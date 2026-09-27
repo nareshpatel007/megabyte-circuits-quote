@@ -25,7 +25,9 @@ export async function handleApiProxy(
             );
         }
 
-        const clientAuth = req.headers.get("Authorization");
+        const clientAuthHeader = req.headers.get("Authorization");
+        const cookieToken = req.cookies.get("megabyte_user_token")?.value;
+        const clientAuth = clientAuthHeader || (cookieToken ? `Bearer ${cookieToken}` : null);
         const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "";
 
         const headers: HeadersInit = {
