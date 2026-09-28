@@ -13,6 +13,7 @@ import { showBrowserNotification } from "@/lib/browser-notifications";
 import { useMobileSidebar } from "@/context/MobileSidebarContext";
 
 import GlobalSearch from "./GlobalSearch";
+import UserAvatar from "./UserAvatar";
 
 export default function Header() {
     const { currency, setCurrency, symbol, availableCurrencies, isLoading } = useCurrency();
@@ -45,7 +46,7 @@ export default function Header() {
         }
     };
     const [cartCount, setCartCount] = useState(0);
-    const [user, setUser] = useState<{ id?: string | number; name?: string; email?: string } | null>(null);
+    const [user, setUser] = useState<{ id?: string | number; name?: string; email?: string; avatar_url?: string | null; avatar?: string | null; custom_avatar_url?: string | null; google_avatar_url?: string | null; google_avatar?: string | null } | null>(null);
 
     const currencyRef = useRef<HTMLDivElement>(null);
     const accountRef = useRef<HTMLDivElement>(null);
@@ -392,7 +393,13 @@ export default function Header() {
                                     onClick={() => setIsAccountOpen(!isAccountOpen)}
                                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-800/70 hover:bg-gray-100/90 dark:hover:bg-zinc-800 text-xs sm:text-sm font-bold text-gray-800 dark:text-zinc-200 transition-all cursor-pointer select-none"
                                 >
-                                    <User className="w-4 h-4 text-primary dark:text-emerald-400 shrink-0" />
+                                    <UserAvatar
+                                        src={user.avatar_url || user.avatar || user.custom_avatar_url}
+                                        googleSrc={user.google_avatar_url || user.google_avatar}
+                                        name={user.name || user.email}
+                                        className="w-6 h-6"
+                                        iconClassName="w-3.5 h-3.5 text-primary dark:text-emerald-400"
+                                    />
                                     <span className="truncate max-w-[120px] sm:max-w-[160px]">{user.name || user.email}</span>
                                     <ChevronDown className={`w-3.5 h-3.5 text-gray-500 dark:text-zinc-400 transition-transform ${isAccountOpen ? "rotate-180" : ""}`} />
                                 </button>
@@ -400,13 +407,21 @@ export default function Header() {
                                 {isAccountOpen && (
                                     <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-gray-200/90 dark:border-zinc-800 rounded-xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 text-xs text-gray-700 dark:text-zinc-300">
                                         {/* Account Header */}
-                                        <div className="px-4 py-2.5 border-b border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50">
-                                            <p className="font-extrabold text-gray-900 dark:text-white text-xs truncate">
-                                                {user.name || "Customer"}
-                                            </p>
-                                            <p className="text-[10px] text-gray-500 dark:text-zinc-400 truncate font-medium mt-0.5">
-                                                {user.email || ""}
-                                            </p>
+                                        <div className="px-4 py-2.5 border-b border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/50 flex items-center gap-2.5">
+                                            <UserAvatar
+                                                src={user.avatar_url || user.avatar || user.custom_avatar_url}
+                                                googleSrc={user.google_avatar_url || user.google_avatar}
+                                                name={user.name || user.email}
+                                                className="w-8 h-8"
+                                            />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="font-extrabold text-gray-900 dark:text-white text-xs truncate">
+                                                    {user.name || "Customer"}
+                                                </p>
+                                                <p className="text-[10px] text-gray-500 dark:text-zinc-400 truncate font-medium mt-0.5">
+                                                    {user.email || ""}
+                                                </p>
+                                            </div>
                                         </div>
 
                                         <div className="py-1">
