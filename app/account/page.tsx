@@ -13,7 +13,13 @@ import { getAuthUser, setAuthSession } from "@/lib/auth";
 interface UserProfile {
     id?: number | string;
     name?: string;
+    first_name?: string;
+    last_name?: string;
     email?: string;
+    phone_number?: string;
+    company_name?: string;
+    gst_number?: string;
+    country?: string;
     created_at?: string;
     avatar_url?: string | null;
     avatar?: string | null;
@@ -27,7 +33,7 @@ interface UserProfile {
 
 function AccountSkeleton() {
     return (
-        <div className="space-y-6 animate-pulse max-w-lg">
+        <div className="space-y-6 animate-pulse max-w-2xl">
             <div className="flex items-center gap-6 p-6 rounded-2xl bg-gray-100 dark:bg-zinc-800/40 border border-gray-200/80 dark:border-zinc-800">
                 <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-zinc-700 shrink-0"></div>
                 <div className="space-y-2 flex-1">
@@ -36,7 +42,9 @@ function AccountSkeleton() {
                     <div className="h-8 bg-gray-200 dark:bg-zinc-700 rounded w-28 mt-2"></div>
                 </div>
             </div>
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="h-16 bg-gray-100 dark:bg-zinc-800/40 rounded-xl w-full"></div>
+                <div className="h-16 bg-gray-100 dark:bg-zinc-800/40 rounded-xl w-full"></div>
                 <div className="h-16 bg-gray-100 dark:bg-zinc-800/40 rounded-xl w-full"></div>
                 <div className="h-16 bg-gray-100 dark:bg-zinc-800/40 rounded-xl w-full"></div>
             </div>
@@ -54,6 +62,17 @@ function AccountContent() {
     const [isRemoving, setIsRemoving] = useState(false);
     const [showRemoveModal, setShowRemoveModal] = useState(false);
 
+    // Form fields state
+    const [formData, setFormData] = useState({
+        name: "",
+        email: "",
+        phone_number: "",
+        company_name: "",
+        gst_number: "",
+        country: "",
+    });
+    const [isSaving, setIsSaving] = useState(false);
+
     const fetchAccountData = async () => {
         try {
             const currentUser = getAuthUser();
@@ -69,10 +88,26 @@ function AccountContent() {
                 const data = await res.json();
                 if (data.status && data.user) {
                     setUser(data.user);
+                    setFormData({
+                        name: data.user.name || "",
+                        email: data.user.email || "",
+                        phone_number: data.user.phone_number || "",
+                        company_name: data.user.company_name || "",
+                        gst_number: data.user.gst_number || "",
+                        country: data.user.country || "",
+                    });
                     // Sync storage
                     setAuthSession(data.user, token);
                 } else {
                     setUser(currentUser);
+                    setFormData({
+                        name: currentUser.name || "",
+                        email: currentUser.email || "",
+                        phone_number: (currentUser as any).phone_number || "",
+                        company_name: (currentUser as any).company_name || "",
+                        gst_number: (currentUser as any).gst_number || "",
+                        country: (currentUser as any).country || "",
+                    });
                 }
             }
         } catch (e) {
@@ -85,6 +120,58 @@ function AccountContent() {
     useEffect(() => {
         fetchAccountData();
     }, [router]);
+
+    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleSaveChanges = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const currentUser = getAuthUser();
+        if (!currentUser?.id) return;
+
+        setIsSaving(true);
+        try {
+            const res = await fetch("/api/dashboard/account", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    user_id: currentUser.id,
+                    ...formData,
+                }),
+            });
+            const data = await res.json();
+
+            if (res.ok && data.status && data.user) {
+                const token = localStorage.getItem("megabyte_user_token") || "";
+                setUser(data.user);
+                setAuthSession(data.user, token);
+                window.dispatchEvent(new Event("megabyte_auth_updated"));
+
+                toast({
+                    title: "Profile Updated",
+                    description: data.message || "Account profile updated successfully.",
+                });
+            } else {
+                toast({
+                    title: "Update Failed",
+                    description: data.message || "Failed to update account details.",
+                    variant: "destructive",
+                });
+            }
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "An error occurred while updating profile details.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -332,32 +419,134 @@ function AccountContent() {
                                     </div>
                                 </div>
 
-                                {/* Account Details Section */}
-                                <div className="space-y-4">
-                                    <div className="border-b border-gray-100 dark:border-zinc-800/80 pb-2">
-                                        <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">Account Details</h2>
-                                        <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium">Your account personal information.</p>
+                                {/* Account Details Form Section */}
+                                <form onSubmit={handleSaveChanges} className="space-y-6">
+                                    <div className="border-b border-gray-100 dark:border-zinc-800/80 pb-3 flex items-center justify-between">
+                                        <div>
+                                            <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">Account & Business Details</h2>
+                                            <p className="text-xs text-gray-500 dark:text-zinc-400 font-medium">Update your profile, contact details, and company information.</p>
+                                        </div>
                                     </div>
 
-                                    <div className="max-w-md space-y-4 text-xs font-semibold">
-                                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800/40 space-y-1 border border-gray-200/80 dark:border-zinc-800">
-                                            <span className="text-gray-400 dark:text-zinc-500 font-bold block text-[10px] uppercase">Full Name</span>
-                                            <p className="text-sm font-extrabold text-gray-900 dark:text-white">{user?.name || "Customer"}</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs font-semibold">
+                                        {/* Full Name */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-gray-600 dark:text-zinc-400 font-bold block text-xs">
+                                                Full Name / Contact Name <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="name"
+                                                value={formData.name}
+                                                onChange={handleFormChange}
+                                                required
+                                                placeholder="e.g. John Doe"
+                                                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary text-xs transition-all"
+                                            />
                                         </div>
 
-                                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800/40 space-y-1 border border-gray-200/80 dark:border-zinc-800">
-                                            <span className="text-gray-400 dark:text-zinc-500 font-bold block text-[10px] uppercase">Email Address</span>
-                                            <p className="text-sm font-extrabold text-gray-900 dark:text-white">{user?.email || "N/A"}</p>
+                                        {/* Email Address */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-gray-600 dark:text-zinc-400 font-bold block text-xs">
+                                                Email Address <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                value={formData.email}
+                                                onChange={handleFormChange}
+                                                required
+                                                placeholder="e.g. john@example.com"
+                                                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary text-xs transition-all"
+                                            />
                                         </div>
 
-                                        {user?.created_at && (
-                                            <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-800/40 space-y-1 border border-gray-200/80 dark:border-zinc-800">
-                                                <span className="text-gray-400 dark:text-zinc-500 font-bold block text-[10px] uppercase">Member Since</span>
-                                                <p className="text-sm font-extrabold text-gray-900 dark:text-white">{new Date(user.created_at).toLocaleDateString()}</p>
-                                            </div>
-                                        )}
+                                        {/* Phone Number */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-gray-600 dark:text-zinc-400 font-bold block text-xs">
+                                                Phone Number
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="phone_number"
+                                                value={formData.phone_number}
+                                                onChange={handleFormChange}
+                                                placeholder="e.g. +91 98765 43210"
+                                                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary text-xs transition-all"
+                                            />
+                                        </div>
+
+                                        {/* Company Name */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-gray-600 dark:text-zinc-400 font-bold block text-xs">
+                                                Company / Business Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="company_name"
+                                                value={formData.company_name}
+                                                onChange={handleFormChange}
+                                                placeholder="e.g. Megabyte Circuits Pvt Ltd"
+                                                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary text-xs transition-all"
+                                            />
+                                        </div>
+
+                                        {/* GST Number */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-gray-600 dark:text-zinc-400 font-bold block text-xs">
+                                                GST Number
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="gst_number"
+                                                value={formData.gst_number}
+                                                onChange={handleFormChange}
+                                                placeholder="e.g. 24AAAAA0000A1Z5"
+                                                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary text-xs transition-all uppercase"
+                                            />
+                                        </div>
+
+                                        {/* Country */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-gray-600 dark:text-zinc-400 font-bold block text-xs">
+                                                Country
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="country"
+                                                value={formData.country}
+                                                onChange={handleFormChange}
+                                                placeholder="e.g. India"
+                                                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary text-xs transition-all"
+                                            />
+                                        </div>
                                     </div>
-                                </div>
+
+                                    {/* Additional info badge */}
+                                    {user?.created_at && (
+                                        <div className="pt-1 flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
+                                            <span>Member since: <strong className="text-gray-800 dark:text-zinc-200">{new Date(user.created_at).toLocaleDateString()}</strong></span>
+                                        </div>
+                                    )}
+
+                                    {/* Action buttons */}
+                                    <div className="pt-4 border-t border-gray-100 dark:border-zinc-800/80 flex items-center justify-end gap-3">
+                                        <button
+                                            type="submit"
+                                            disabled={isSaving}
+                                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50"
+                                        >
+                                            {isSaving ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    <span>Saving Changes...</span>
+                                                </>
+                                            ) : (
+                                                <span>Save Profile Changes</span>
+                                            )}
+                                        </button>
+                                    </div>
+                                </form>
                             </>
                         )}
                     </div>
