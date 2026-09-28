@@ -68,9 +68,21 @@ function LoginSuccessContent() {
                     setUserId(userObj.id);
                 }
 
-                // Show GST prompt modal
-                setStatus("gst_prompt");
-                setMessage("Successfully signed in with Google!");
+                const userKey = userObj.email || userObj.id;
+                const isHandled = userKey ? localStorage.getItem(`megabyte_gst_prompt_handled_${userKey}`) : null;
+                const hasExistingGst = Boolean((userObj as any).gst_number);
+
+                if (isHandled === "true" || hasExistingGst) {
+                    setStatus("success");
+                    setMessage("Successfully signed in with Google!");
+                    setTimeout(() => {
+                        router.push("/dashboard");
+                    }, 600);
+                } else {
+                    // Show GST prompt modal only on first login when not previously skipped or saved
+                    setStatus("gst_prompt");
+                    setMessage("Successfully signed in with Google!");
+                }
             } catch (err) {
                 console.error("Auth token processing error:", err);
                 setStatus("error");
@@ -80,11 +92,20 @@ function LoginSuccessContent() {
             setStatus("error");
             setMessage("No authentication token received from Google callback.");
         }
-    }, [searchParams]);
+    }, [searchParams, router]);
 
     const handleSaveGst = async (skip: boolean = false) => {
         setIsSavingGst(true);
         try {
+            // Mark prompt as handled so it is never shown again on subsequent logins
+            const userKey = searchParams.get("email") || userId;
+            if (userKey) {
+                localStorage.setItem(`megabyte_gst_prompt_handled_${userKey}`, "true");
+            }
+            if (userId) {
+                localStorage.setItem(`megabyte_gst_prompt_handled_${userId}`, "true");
+            }
+
             if (!skip && gstNumber.trim() && userId) {
                 const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
                 await fetch(`${backendUrl}/api/dashboard/update-gst`, {
