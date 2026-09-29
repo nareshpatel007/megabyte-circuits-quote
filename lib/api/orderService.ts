@@ -53,6 +53,7 @@ export interface OrderFormData {
 
     // Customer Information
     board_name: string;
+    pn_number?: string;
     user_mobile: string;
     user_email: string;
     gst_number: string;

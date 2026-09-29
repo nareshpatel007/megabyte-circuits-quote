@@ -538,6 +538,18 @@ export default function QuoteForm({
 
                     {specsOpen && (
                         <div className="py-2 space-y-1">
+                            <ConfigRow label="P/N Number" tooltip="Optional Part Number (P/N). If a Gerber file is uploaded, the filename will be used as default.">
+                                <div className="flex items-center gap-2 max-w-sm w-full">
+                                    <input
+                                        type="text"
+                                        value={formData.pnNumber || ""}
+                                        onChange={(e) => updateField("pnNumber", e.target.value)}
+                                        placeholder="e.g. ABC123"
+                                        className="w-full h-9 px-3 border border-gray-200 rounded-xl text-sm font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-sm transition-all"
+                                    />
+                                </div>
+                            </ConfigRow>
+
                             <ConfigRow label="Different Design">
                                 {["1", "2", "3", "4"].map(d => (
                                     <Pill

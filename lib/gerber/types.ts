@@ -49,6 +49,7 @@ export interface PCBPreview {
 }
 
 export interface QuoteFormData {
+    pnNumber?: string;
     baseMaterial: string;
     layers: string;
     width: string;

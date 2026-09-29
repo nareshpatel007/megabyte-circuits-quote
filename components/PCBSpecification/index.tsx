@@ -18,6 +18,7 @@ import { saveCartToBackend } from "@/lib/cartSession";
 import { useCurrency } from "../../context/CurrencyContext";
 
 const INITIAL_FORM_DATA: QuoteFormData = {
+    pnNumber: "",
     baseMaterial: "FR-4",
     layers: "2",
     width: "100",
@@ -1091,7 +1092,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             layers: layerCountVal,
             width: widthVal,
             height: heightVal,
-            unit: "mm"
+            unit: "mm",
+            pnNumber: prev.pnNumber || file.name,
+            boardName: prev.boardName || file.name
         }));
     };
 
@@ -1206,6 +1209,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
             // Customer Information
             board_name: formData.boardName,
+            pn_number: formData.pnNumber || (uploadedFile ? (uploadedFile as any).name : formData.boardName),
             user_mobile: formData.userMobile,
             user_email: formData.userEmail,
             gst_number: formData.gstNumber,
@@ -1366,9 +1370,13 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
             const pcbColorName = hexToColorName[formData.pcbColor] || formData.pcbColor || "Green";
             const colorSlug = pcbColorName.toLowerCase();
+            const defaultPnFromFilename = uploadedFile
+                ? (typeof uploadedFile === 'string' ? uploadedFile : (uploadedFile.name || (uploadedFile as any).filename || ""))
+                : "";
+            const pnNumberVal = formData.pnNumber || defaultPnFromFilename || formData.boardName || "";
             const gerberName = uploadedFile
                 ? (typeof uploadedFile === 'string' ? uploadedFile : (uploadedFile.name || (uploadedFile as any).filename || "Gerber_Board.zip"))
-                : (formData.boardName || "Gerber_Board.zip");
+                : "";
             const previewSvg = (uploadedGerberFileId ? `/api/gerber/${uploadedGerberFileId}/preview/front?color=${colorSlug}` : (topSvg || bottomSvg || ""));
             const generatedBoardId = "Y2-" + Math.floor(10000000 + Math.random() * 90000000);
 
@@ -1411,8 +1419,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const newItem = {
                 id: 'cart_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
                 productType: selectedProduct || "pcb",
-                boardName: formData.boardName || gerberName,
-                gerberFileName: gerberName,
+                boardName: formData.boardName || pnNumberVal || (uploadedFile ? gerberName : "PCB_Board"),
+                pn_number: pnNumberVal,
+                pnNumber: pnNumberVal,
+                gerberFileName: uploadedFile ? gerberName : undefined,
                 gerber_file_id: uploadedGerberFileId || undefined,
                 jlcpcb_file_key: jlcpcbFileKey || undefined,
                 quotation_source: isJlcpcbCart ? "jlcpcb" : "internal",
@@ -2067,19 +2077,16 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                 })()}
 
                                 {(() => {
-                                    const hasValidGerber = !!uploadedFile;
                                     const hasValidDimensions = (parseFloat(formData.width) || 0) > 0 && (parseFloat(formData.height) || 0) > 0 && (parseInt(formData.qty, 10) || 0) > 0;
                                     const hasSelectedDelivery = selectedDay !== null && selectedDay !== undefined;
                                     const hasRequiredSpecs = Boolean(formData.layers && formData.thickness && formData.surfaceFinish && formData.copperWeight);
 
                                     const layersCount = parseInt(formData.layers, 10) || 1;
                                     const isJlcValid = layersCount <= 2 || (!isJlcpcbLoading && !jlcpcbError && !!jlcpcbQuote);
-                                    const isCanSaveToCart = hasValidGerber && hasValidDimensions && hasSelectedDelivery && hasRequiredSpecs && isJlcValid;
+                                    const isCanSaveToCart = hasValidDimensions && hasSelectedDelivery && hasRequiredSpecs && isJlcValid;
 
                                     let validationMessage = "";
-                                    if (!hasValidGerber) {
-                                        validationMessage = "Please upload a Gerber file";
-                                    } else if (!hasValidDimensions) {
+                                    if (!hasValidDimensions) {
                                         validationMessage = "Please specify valid dimensions & quantity";
                                     } else if (!hasSelectedDelivery) {
                                         validationMessage = "Please pick a delivery date";
