@@ -954,7 +954,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         const areaInSqCm = totalAreaInSqM * 10000;
 
         // If JLCPCB is required, use live JLCPCB API quote when available
-        if (isJlcpcbRequired(formData) || layers > 2) {
+        if (isJlcpcbRequired(formData)) {
             if (jlcpcbQuote) {
                 const usdTotalFee = parseFloat(jlcpcbQuote?.pcbCostInfo?.totalFee || jlcpcbQuote?.priceWithoutFreight || 0);
                 if (usdTotalFee > 0) {
@@ -973,8 +973,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 }
             }
 
-            // Fallback calculation for > 2 layers when live quote is pending
-            const layerFactor = 1 + (layers - 2) * 0.4;
+            // Fallback calculation when JLCPCB option selected and live quote is pending
+            const layerFactor = 1 + Math.max(0, layers - 2) * 0.4;
             const baseCost = Math.round(5500 * layerFactor + (areaInSqCm * 1.2 * layerFactor));
             const daysList = [1, 3, 5, 7, 10, 13, 15, 17, 20];
             const options = daysList.map((day) => {
@@ -1313,7 +1313,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         const daysAhead = targetDay;
         let matchedOrderValue = defaultOrderValue;
 
-        if (layers > 2) {
+        if (isJlcpcbRequired(formData)) {
             if (jlcpcbQuote && jlcpcbQuote.dates && Array.isArray(jlcpcbQuote.dates)) {
                 const targetDateObj = new Date();
                 targetDateObj.setDate(targetDateObj.getDate() + targetDay);
@@ -1334,52 +1334,50 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 }
             }
         } else {
-            const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
-                const o1 = getOption(d1);
-                const o2 = getOption(d2);
-                if (o1 && o2) {
-                    const val1 = parseFloat(o1.orderValue);
-                    const val2 = parseFloat(o2.orderValue);
-                    return val1 + (val2 - val1) * ratio;
-                } else if (o2) {
-                    return parseFloat(o2.orderValue);
-                } else if (o1) {
-                    return parseFloat(o1.orderValue);
-                }
-                return null;
-            };
+            const directOpt = getOption(daysAhead);
+            if (directOpt) {
+                matchedOrderValue = parseFloat(directOpt.orderValue);
+            } else {
+                const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
+                    const o1 = getOption(d1);
+                    const o2 = getOption(d2);
+                    if (o1 && o2) {
+                        const val1 = parseFloat(o1.orderValue);
+                        const val2 = parseFloat(o2.orderValue);
+                        return val1 + (val2 - val1) * ratio;
+                    } else if (o2) {
+                        return parseFloat(o2.orderValue);
+                    } else if (o1) {
+                        return parseFloat(o1.orderValue);
+                    }
+                    return null;
+                };
 
-            if (daysAhead === 1) {
-                const o = getOption(1);
-                if (o) matchedOrderValue = parseFloat(o.orderValue);
-            } else if (daysAhead === 2) {
-                const res = interpolate(1, 3, 0.5);
-                if (res !== null) matchedOrderValue = res;
-            } else if (daysAhead === 3) {
-                const o = getOption(3);
-                if (o) matchedOrderValue = parseFloat(o.orderValue);
-            } else if (daysAhead === 4) {
-                const res = interpolate(3, 5, 0.5);
-                if (res !== null) matchedOrderValue = res;
-            } else if (daysAhead === 5) {
-                const o = getOption(5);
-                if (o) matchedOrderValue = parseFloat(o.orderValue);
-            } else if (daysAhead === 6) {
-                const res = interpolate(5, 7, 0.5);
-                if (res !== null) matchedOrderValue = res;
-            } else if (daysAhead === 7) {
-                const o = getOption(7);
-                if (o) matchedOrderValue = parseFloat(o.orderValue);
-            } else if (daysAhead === 8) {
-                const res = interpolate(7, 10, 1 / 3);
-                if (res !== null) matchedOrderValue = res;
-            } else if (daysAhead === 9) {
-                const res = interpolate(7, 10, 2 / 3);
-                if (res !== null) matchedOrderValue = res;
-            } else if (daysAhead >= 10 && daysAhead <= 20) {
-                const ratio = (daysAhead - 10) / 10;
-                const res = interpolate(10, 20, ratio);
-                if (res !== null) matchedOrderValue = res;
+                if (daysAhead === 2) {
+                    const res = interpolate(1, 3, 0.5);
+                    if (res !== null) matchedOrderValue = res;
+                } else if (daysAhead === 4) {
+                    const res = interpolate(3, 5, 0.5);
+                    if (res !== null) matchedOrderValue = res;
+                } else if (daysAhead === 6) {
+                    const res = interpolate(5, 7, 0.5);
+                    if (res !== null) matchedOrderValue = res;
+                } else if (daysAhead === 8) {
+                    const res = interpolate(7, 10, 1 / 3);
+                    if (res !== null) matchedOrderValue = res;
+                } else if (daysAhead === 9) {
+                    const res = interpolate(7, 10, 2 / 3);
+                    if (res !== null) matchedOrderValue = res;
+                } else if (daysAhead >= 10 && daysAhead <= 20) {
+                    const ratio = (daysAhead - 10) / 10;
+                    const res = interpolate(10, 20, ratio);
+                    if (res !== null) {
+                        matchedOrderValue = res;
+                    } else {
+                        const o20 = getOption(20);
+                        if (o20) matchedOrderValue = parseFloat(o20.orderValue);
+                    }
+                }
             }
         }
 
@@ -1426,7 +1424,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const activeShippingObj = currentShippingOpts.find((o: any) => o.key === shippingOptionKey) || currentShippingOpts[0];
 
             const totalAreaInSqM = ((Number(formData.width) || 100) / 1000) * ((Number(formData.height) || 100) / 1000) * (Number(formData.qty) || 5);
-            const isJlcpcbCart = isJlcpcbRequired(formData) || (Number(formData.layers) || 2) > 2 || !!jlcpcbQuote;
+            const isJlcpcbCart = isJlcpcbRequired(formData) && !!jlcpcbQuote;
             let jlcCartWeightKg: number | null = null;
             if (isJlcpcbCart && jlcpcbQuote) {
                 if (jlcpcbQuote.weight_kg !== undefined && jlcpcbQuote.weight_kg !== null && parseFloat(jlcpcbQuote.weight_kg) > 0) {
@@ -1633,7 +1631,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                     let next20Days: any[] = [];
 
-                                    if (layers > 2) {
+                                    if (isJlcpcbRequired(formData)) {
                                         const jlcDate = getJlcpcbQuotationDate(new Date(), publicHolidays);
                                         const yyyy = jlcDate.getFullYear();
                                         const mm = String(jlcDate.getMonth() + 1).padStart(2, "0");
@@ -1734,27 +1732,20 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                 };
 
                                                 const dayNum = workingDayNum;
-                                                if (dayNum === 1) {
-                                                    const o = getOption(1);
-                                                    if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
+                                                const directOpt = getOption(dayNum);
+                                                if (directOpt) {
+                                                    matchedOrderValue = parseFloat(directOpt.orderValue);
+                                                    matchedUnitPrice = parseFloat(directOpt.unitPrice);
+                                                    visible = true;
                                                 } else if (dayNum === 2) {
                                                     const res = interpolate(1, 3, 0.5);
                                                     if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                                } else if (dayNum === 3) {
-                                                    const o = getOption(3);
-                                                    if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
                                                 } else if (dayNum === 4) {
                                                     const res = interpolate(3, 5, 0.5);
                                                     if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                                } else if (dayNum === 5) {
-                                                    const o = getOption(5);
-                                                    if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
                                                 } else if (dayNum === 6) {
                                                     const res = interpolate(5, 7, 0.5);
                                                     if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                                } else if (dayNum === 7) {
-                                                    const o = getOption(7);
-                                                    if (o) { matchedOrderValue = parseFloat(o.orderValue); matchedUnitPrice = parseFloat(o.unitPrice); visible = true; }
                                                 } else if (dayNum === 8) {
                                                     const res = interpolate(7, 10, 1 / 3);
                                                     if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
@@ -1764,7 +1755,18 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                 } else if (dayNum >= 10) {
                                                     const ratio = Math.min((dayNum - 10) / 10, 1);
                                                     const res = interpolate(10, 20, ratio);
-                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                                                    if (res) {
+                                                        matchedOrderValue = res.orderValue;
+                                                        matchedUnitPrice = res.unitPrice;
+                                                        visible = res.visible;
+                                                    } else {
+                                                        const o20 = getOption(20);
+                                                        if (o20) {
+                                                            matchedOrderValue = parseFloat(o20.orderValue);
+                                                            matchedUnitPrice = parseFloat(o20.unitPrice);
+                                                            visible = true;
+                                                        }
+                                                    }
                                                 }
                                             }
 
@@ -1800,7 +1802,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                     const selectedDayData = next20Days.find(item => item.day === selectedDay && !item.isUnavailable) || next20Days.find(item => !item.isUnavailable);
                                     const hasValidGerber = !!uploadedFile && detectedInfo?.layers !== "0" && (!!topSvg || !!bottomSvg || previewLoading);
 
-                                    if ((layers > 2 || isJlcpcbRequired(formData)) && isJlcpcbLoading) {
+                                    if (isJlcpcbRequired(formData) && isJlcpcbLoading) {
                                         return (
                                             <div className="space-y-4 animate-pulse">
                                                 <div className="bg-[#8DD3A5]/15 dark:bg-[#0F7438]/20 p-5 rounded-2xl border border-[#41A96A]/30 space-y-3">
@@ -1823,7 +1825,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                         );
                                     }
 
-                                    if ((layers > 2 || isJlcpcbRequired(formData)) && jlcpcbError) {
+                                    if (isJlcpcbRequired(formData) && jlcpcbError) {
                                         return (
                                             <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-2xl text-center space-y-3">
                                                 <p className="text-xs font-bold text-red-600 dark:text-red-400">
@@ -1846,7 +1848,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                 <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-[#41A96A]/20 dark:border-[#69C48A]/30 relative z-10 gap-2">
                                                     <div className="min-w-0">
                                                         <h3 className="text-xs sm:text-sm font-bold text-[#0F7438] dark:text-[#8DD3A5] uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
-                                                            <span className="w-2 h-2 rounded-full bg-[#238E4E] inline-block ring-2 ring-[#8DD3A5]/50 shrink-0" />
+                                                             <span className="w-2 h-2 rounded-full bg-[#238E4E] inline-block ring-2 ring-[#8DD3A5]/50 shrink-0" />
                                                             <span>Select Delivery Date</span>
                                                         </h3>
                                                         <p className="text-[10px] sm:text-[11px] text-[#238E4E] dark:text-[#69C48A] font-medium mt-0.5 whitespace-nowrap">
@@ -1858,7 +1860,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                     </div>
                                                 </div>
 
-                                                <div className={layers > 2 ? "flex justify-center max-w-[180px] mx-auto relative z-10" : "grid grid-cols-5 gap-2.5 sm:gap-3.5 relative z-10"}>
+                                                <div className={isJlcpcbRequired(formData) ? "flex justify-center max-w-[180px] mx-auto relative z-10" : "grid grid-cols-5 gap-2.5 sm:gap-3.5 relative z-10"}>
                                                     {next20Days.map((item, idx) => {
                                                         const isSelected = selectedDayData?.day === item.day;
                                                         const stickyColors = [
@@ -1958,7 +1960,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                             {/* Shipping Options & Total Calculation */}
                                             {(() => {
-                                                const isJLCPCB = layers > 2 || isJlcpcbRequired(formData) || !!jlcpcbQuote;
+                                                const isJLCPCB = isJlcpcbRequired(formData) && !!jlcpcbQuote;
                                                 let jlcWeightKg: number | null = null;
                                                 if (isJLCPCB && jlcpcbQuote) {
                                                     if (jlcpcbQuote.weight_kg !== undefined && jlcpcbQuote.weight_kg !== null && parseFloat(jlcpcbQuote.weight_kg) > 0) {
@@ -2117,7 +2119,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                     const hasRequiredSpecs = Boolean(formData.layers && formData.thickness && formData.surfaceFinish && formData.copperWeight);
 
                                     const layersCount = parseInt(formData.layers, 10) || 1;
-                                    const isJlcValid = (!isJlcpcbRequired(formData) && layersCount <= 2) || (!isJlcpcbLoading && !jlcpcbError && !!jlcpcbQuote);
+                                    const isJlcValid = !isJlcpcbRequired(formData) || (!isJlcpcbLoading && !jlcpcbError && !!jlcpcbQuote);
                                     const isCanSaveToCart = hasValidDimensions && hasSelectedDelivery && hasRequiredSpecs && isJlcValid;
 
                                     let validationMessage = "";

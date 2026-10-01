@@ -525,11 +525,7 @@ export default function CartPage() {
         const minQty = targetItem.productType === "part" ? getMinCartQuantity() : 5;
         const validQty = Math.max(minQty, isNaN(newQty) ? minQty : newQty);
 
-        const isJlcpcb = isJlcpcbRequired(targetItem) ||
-            (targetItem as any).quotation_source === "jlcpcb" ||
-            (targetItem as any).order_type === "jlcpcb" ||
-            (parseInt(String(targetItem.layers || "").replace(/\D/g, ""), 10) || 2) > 2 ||
-            !!(targetItem as any).jlcpcb_file_key;
+        const isJlcpcb = isJlcpcbRequired(targetItem);
 
         if (isJlcpcb) {
             // Instantly reflect quantity update in local state for fast UI feedback
@@ -906,7 +902,7 @@ export default function CartPage() {
                                                         <div className="space-y-1 min-w-0 flex-1">
                                                             <div className="flex flex-wrap items-center gap-2">
                                                                 <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">{item.boardName || (item as any).partNumber}</h3>
-                                                                {item.productType !== "part" && (isJlcpcbRequired(item) || item.quotation_source === "jlcpcb") && (
+                                                                {item.productType !== "part" && isJlcpcbRequired(item) && (
                                                                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
                                                                         <Zap className="w-3 h-3 text-amber-500 fill-amber-400" />
                                                                         JLCPCB Live
