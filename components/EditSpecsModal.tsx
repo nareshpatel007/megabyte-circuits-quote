@@ -252,7 +252,11 @@ export default function EditSpecsModal({
                             edgeRounding: edgePlating === "Yes",
                             blindSlots: blindSlots === "Yes" ? 1 : 0,
                             minHole: minHoleVal,
-                            serviceConfigVos: []
+                            serviceConfigVos: plateTypeVal === 5 ? [
+                                { serviceConfigCode: "HFMT", configOptionShow: materialType || "RO4350B(Dk=3.48,Df=0.0037)" }
+                            ] : plateTypeVal === 6 ? [
+                                { serviceConfigCode: "HFMT", configOptionShow: materialType || "ZYF300CA-C(Dk=2.94,Df=0.0016)" }
+                            ] : []
                         }
                     };
 

@@ -449,7 +449,11 @@ export default function CartPage() {
                     edgeRounding: (item as any).edgePlating === "Yes",
                     blindSlots: (item as any).blindSlots === "Yes" ? 1 : 0,
                     minHole: minHoleVal,
-                    serviceConfigVos: []
+                    serviceConfigVos: plateTypeVal === 5 ? [
+                        { serviceConfigCode: "HFMT", configOptionShow: (item as any).materialType || "RO4350B(Dk=3.48,Df=0.0037)" }
+                    ] : plateTypeVal === 6 ? [
+                        { serviceConfigCode: "HFMT", configOptionShow: (item as any).materialType || "ZYF300CA-C(Dk=2.94,Df=0.0016)" }
+                    ] : []
                 }
             };
 

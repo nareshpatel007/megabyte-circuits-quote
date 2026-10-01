@@ -816,7 +816,11 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     edgeRounding: formData.edgePlating === "Yes",
                     blindSlots: formData.blindSlots === "Yes" ? 1 : 0,
                     minHole: minHoleVal,
-                    serviceConfigVos: []
+                    serviceConfigVos: plateTypeVal === 5 ? [
+                        { serviceConfigCode: "HFMT", configOptionShow: formData.materialType || "RO4350B(Dk=3.48,Df=0.0037)" }
+                    ] : plateTypeVal === 6 ? [
+                        { serviceConfigCode: "HFMT", configOptionShow: formData.materialType || "ZYF300CA-C(Dk=2.94,Df=0.0016)" }
+                    ] : []
                 }
             };
 
