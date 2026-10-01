@@ -758,7 +758,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
             let copperWeightVal = formData.copperWeight?.includes("2") ? 2 : 1;
             if (plateTypeVal === 7) {
-                copperWeightVal = 0.33;
+                // For Flex PCB: 1-2 layers uses 0.33 oz (12µm foil); 4 layers uses 1 oz
+                copperWeightVal = layersCount >= 4 ? 1 : 0.33;
             }
 
             let viaCoveringVal = 1;
@@ -782,6 +783,25 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             else if (mh.includes("0.25")) minHoleVal = 0.25;
 
             const rawThickness = parseFloat((formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "")) || 1.6;
+
+            const serviceConfigs: any[] = [];
+            if (plateTypeVal === 7) {
+                // FPC Coverlay Thickness
+                serviceConfigs.push({
+                    serviceConfigCode: "CTC",
+                    configOptionShow: layersCount >= 4 ? "PI:25um/AD:25um" : "PI:12.5um/AD:15um"
+                });
+            } else if (plateTypeVal === 5) {
+                serviceConfigs.push({
+                    serviceConfigCode: "HFMT",
+                    configOptionShow: formData.materialType || "RO4350B(Dk=3.48,Df=0.0037)"
+                });
+            } else if (plateTypeVal === 6) {
+                serviceConfigs.push({
+                    serviceConfigCode: "HFMT",
+                    configOptionShow: formData.materialType || "ZYF300CA-C(Dk=2.94,Df=0.0016)"
+                });
+            }
 
             const payload = {
                 orderType: 1,
@@ -816,11 +836,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     edgeRounding: formData.edgePlating === "Yes",
                     blindSlots: formData.blindSlots === "Yes" ? 1 : 0,
                     minHole: minHoleVal,
-                    serviceConfigVos: plateTypeVal === 5 ? [
-                        { serviceConfigCode: "HFMT", configOptionShow: formData.materialType || "RO4350B(Dk=3.48,Df=0.0037)" }
-                    ] : plateTypeVal === 6 ? [
-                        { serviceConfigCode: "HFMT", configOptionShow: formData.materialType || "ZYF300CA-C(Dk=2.94,Df=0.0016)" }
-                    ] : []
+                    serviceConfigVos: serviceConfigs
                 }
             };
 
