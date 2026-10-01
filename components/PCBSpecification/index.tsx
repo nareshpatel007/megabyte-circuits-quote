@@ -750,10 +750,16 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
             let plateTypeVal = 1; // 1-FR-4
             const mat = (formData.baseMaterial || "").toLowerCase();
-            if (mat.includes("flex")) plateTypeVal = 8;
-            else if (mat.includes("roger")) plateTypeVal = 6;
-            else if (mat.includes("ptfe") || mat.includes("teflon")) plateTypeVal = 7;
+            if (mat.includes("flex")) plateTypeVal = 7;
+            else if (mat.includes("roger")) plateTypeVal = 5;
+            else if (mat.includes("ptfe") || mat.includes("teflon")) plateTypeVal = 6;
             else if (mat.includes("aluminum")) plateTypeVal = 2;
+            else if (mat.includes("hdi")) plateTypeVal = layersCount >= 4 ? 8 : 1;
+
+            let copperWeightVal = formData.copperWeight?.includes("2") ? 2 : 1;
+            if (plateTypeVal === 7) {
+                copperWeightVal = 0.33;
+            }
 
             let viaCoveringVal = 1;
             const vc = (formData.viaCovering || "").toLowerCase();
@@ -791,8 +797,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     thickness: rawThickness,
                     pcbColor: colorMap[formData.pcbColor] ?? 0,
                     surfaceFinish: surfaceFinishVal,
-                    copperWeight: formData.copperWeight?.includes("2") ? 2 : 1,
-                    insideCuprumThickness: "0.5",
+                    copperWeight: copperWeightVal,
+                    ...(layersCount >= 4 ? { insideCuprumThickness: "0.5" } : {}),
                     goldFinger: formData.goldFingers === "Yes" ? 1 : 0,
                     materialDetails: 0,
                     panelFlag: 0,
@@ -800,7 +806,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     flyingProbeTest: formData.elecTest === "Flying Probe Fully Test" ? 2 : 1,
                     castellatedHoles: formData.castellated === "Yes" ? 1 : 0,
                     orderDetailsRemark: "Web Quotation",
-                    cascadeStructure: 0,
                     impedanceFlag: "no",
                     isAddCustomerCode: "nocode",
                     plateType: plateTypeVal,

@@ -171,10 +171,16 @@ export default function EditSpecsModal({
 
                     let plateTypeVal = 1;
                     const matLower = baseMaterial.toLowerCase();
-                    if (matLower.includes("flex")) plateTypeVal = 8;
-                    else if (matLower.includes("roger")) plateTypeVal = 6;
-                    else if (matLower.includes("ptfe") || matLower.includes("teflon")) plateTypeVal = 7;
+                    if (matLower.includes("flex")) plateTypeVal = 7;
+                    else if (matLower.includes("roger")) plateTypeVal = 5;
+                    else if (matLower.includes("ptfe") || matLower.includes("teflon")) plateTypeVal = 6;
                     else if (matLower.includes("aluminum")) plateTypeVal = 2;
+                    else if (matLower.includes("hdi")) plateTypeVal = layersCount >= 4 ? 8 : 1;
+
+                    let copperWeightVal = (item.copperWeight || "").includes("2") ? 2 : 1;
+                    if (plateTypeVal === 7) {
+                        copperWeightVal = 0.33;
+                    }
 
                     let viaCoveringVal = 1;
                     const vc = viaCovering.toLowerCase();
@@ -227,8 +233,8 @@ export default function EditSpecsModal({
                             thickness: rawThickness,
                             pcbColor: colorMap[item.pcbColor || "Green"] ?? 0,
                             surfaceFinish: surfaceFinishVal,
-                            copperWeight: (item.copperWeight || "").includes("2") ? 2 : 1,
-                            insideCuprumThickness: "0.5",
+                            copperWeight: copperWeightVal,
+                            ...(layersCount >= 4 ? { insideCuprumThickness: "0.5" } : {}),
                             goldFinger: goldFingers === "Yes" ? 1 : 0,
                             materialDetails: materialDetailsVal,
                             panelFlag: 0,
@@ -236,7 +242,6 @@ export default function EditSpecsModal({
                             flyingProbeTest: item.elecTest === "Flying Probe Fully Test" ? 2 : 1,
                             castellatedHoles: castellated === "Yes" ? 1 : 0,
                             orderDetailsRemark: "Cart Specification Edit",
-                            cascadeStructure: 0,
                             impedanceFlag: "no",
                             isAddCustomerCode: "nocode",
                             plateType: plateTypeVal,
