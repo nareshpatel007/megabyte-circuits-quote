@@ -16,6 +16,7 @@ import { fetchPublicHolidays, PublicHoliday, getJlcpcbQuotationDate } from "../.
 import Toast, { ToastType } from "../Toast";
 import { saveCartToBackend } from "@/lib/cartSession";
 import { useCurrency } from "../../context/CurrencyContext";
+import { isJlcpcbRequired } from "@/lib/jlcpcbCondition";
 
 const INITIAL_FORM_DATA: QuoteFormData = {
     pnNumber: "",
@@ -698,11 +699,12 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [quoteTrigger, setQuoteTrigger] = useState<number>(0);
     const quoteReqVersion = React.useRef(0);
 
-    // Fetch JLCPCB live quotation whenever layers > 2
+    // Fetch JLCPCB live quotation whenever any JLCPCB triggering option or layers > 2 is selected
     React.useEffect(() => {
         const layersCount = parseInt(formData.layers, 10) || 1;
+        const shouldCallJlcpcb = isJlcpcbRequired(formData);
 
-        if (layersCount <= 2) {
+        if (!shouldCallJlcpcb) {
             setJlcpcbQuote(null);
             setIsJlcpcbLoading(false);
             setJlcpcbError(null);
@@ -746,6 +748,33 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 surfaceFinishVal = 2; // ENIG (HASL is not available for 6-layer PCBs)
             }
 
+            let plateTypeVal = 1; // 1-FR-4
+            const mat = (formData.baseMaterial || "").toLowerCase();
+            if (mat.includes("flex")) plateTypeVal = 8;
+            else if (mat.includes("roger")) plateTypeVal = 6;
+            else if (mat.includes("ptfe") || mat.includes("teflon")) plateTypeVal = 7;
+            else if (mat.includes("aluminum")) plateTypeVal = 2;
+
+            let viaCoveringVal = 1;
+            const vc = (formData.viaCovering || "").toLowerCase();
+            if (vc.includes("copper") && (vc.includes("paste") || vc.includes("fill"))) {
+                viaCoveringVal = 5;
+            } else if (vc.includes("epoxy")) {
+                viaCoveringVal = 4;
+            } else if (vc.includes("plugged")) {
+                viaCoveringVal = 3;
+            } else if (vc.includes("untented")) {
+                viaCoveringVal = 2;
+            } else {
+                viaCoveringVal = 1;
+            }
+
+            let minHoleVal = 0.3;
+            const mh = (formData.minHole || "").toLowerCase();
+            if (mh.includes("0.15")) minHoleVal = 0.15;
+            else if (mh.includes("0.2mm") || mh.startsWith("0.2/")) minHoleVal = 0.2;
+            else if (mh.includes("0.25")) minHoleVal = 0.25;
+
             const rawThickness = parseFloat((formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "")) || 1.6;
 
             const payload = {
@@ -774,12 +803,14 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     cascadeStructure: 0,
                     impedanceFlag: "no",
                     isAddCustomerCode: "nocode",
-                    plateType: 1,
+                    plateType: plateTypeVal,
                     autoConfirmProductionFile: true,
                     markOnPcb: 1,
-                    viaCovering: formData.viaCovering === "Untented" ? 2 : 1,
+                    viaCovering: viaCoveringVal,
                     needTechnics: 0,
                     edgeRounding: formData.edgePlating === "Yes",
+                    blindSlots: formData.blindSlots === "Yes" ? 1 : 0,
+                    minHole: minHoleVal,
                     serviceConfigVos: []
                 }
             };
@@ -827,6 +858,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     }, [
         quoteTrigger,
         formData.layers,
+        formData.baseMaterial,
         formData.width,
         formData.height,
         formData.qty,
@@ -840,7 +872,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         formData.elecTest,
         formData.castellated,
         formData.viaCovering,
+        formData.viaPlating,
+        formData.minHole,
         formData.edgePlating,
+        formData.blindSlots,
         uploadedGerberFileId,
         jlcpcbFileKey
     ]);
@@ -918,8 +953,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         const totalAreaInSqM = areaPerBoard * quantity;
         const areaInSqCm = totalAreaInSqM * 10000;
 
-        // If layers > 2, use live JLCPCB API quote when available
-        if (layers > 2) {
+        // If JLCPCB is required, use live JLCPCB API quote when available
+        if (isJlcpcbRequired(formData) || layers > 2) {
             if (jlcpcbQuote) {
                 const usdTotalFee = parseFloat(jlcpcbQuote?.pcbCostInfo?.totalFee || jlcpcbQuote?.priceWithoutFreight || 0);
                 if (usdTotalFee > 0) {
@@ -1391,7 +1426,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const activeShippingObj = currentShippingOpts.find((o: any) => o.key === shippingOptionKey) || currentShippingOpts[0];
 
             const totalAreaInSqM = ((Number(formData.width) || 100) / 1000) * ((Number(formData.height) || 100) / 1000) * (Number(formData.qty) || 5);
-            const isJlcpcbCart = (Number(formData.layers) || 2) > 2 || !!jlcpcbQuote;
+            const isJlcpcbCart = isJlcpcbRequired(formData) || (Number(formData.layers) || 2) > 2 || !!jlcpcbQuote;
             let jlcCartWeightKg: number | null = null;
             if (isJlcpcbCart && jlcpcbQuote) {
                 if (jlcpcbQuote.weight_kg !== undefined && jlcpcbQuote.weight_kg !== null && parseFloat(jlcpcbQuote.weight_kg) > 0) {
@@ -1765,7 +1800,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                     const selectedDayData = next20Days.find(item => item.day === selectedDay && !item.isUnavailable) || next20Days.find(item => !item.isUnavailable);
                                     const hasValidGerber = !!uploadedFile && detectedInfo?.layers !== "0" && (!!topSvg || !!bottomSvg || previewLoading);
 
-                                    if (layers > 2 && isJlcpcbLoading) {
+                                    if ((layers > 2 || isJlcpcbRequired(formData)) && isJlcpcbLoading) {
                                         return (
                                             <div className="space-y-4 animate-pulse">
                                                 <div className="bg-[#8DD3A5]/15 dark:bg-[#0F7438]/20 p-5 rounded-2xl border border-[#41A96A]/30 space-y-3">
@@ -1788,7 +1823,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                         );
                                     }
 
-                                    if (layers > 2 && jlcpcbError) {
+                                    if ((layers > 2 || isJlcpcbRequired(formData)) && jlcpcbError) {
                                         return (
                                             <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-2xl text-center space-y-3">
                                                 <p className="text-xs font-bold text-red-600 dark:text-red-400">
@@ -1923,7 +1958,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                             {/* Shipping Options & Total Calculation */}
                                             {(() => {
-                                                const isJLCPCB = layers > 2 || !!jlcpcbQuote;
+                                                const isJLCPCB = layers > 2 || isJlcpcbRequired(formData) || !!jlcpcbQuote;
                                                 let jlcWeightKg: number | null = null;
                                                 if (isJLCPCB && jlcpcbQuote) {
                                                     if (jlcpcbQuote.weight_kg !== undefined && jlcpcbQuote.weight_kg !== null && parseFloat(jlcpcbQuote.weight_kg) > 0) {
@@ -2082,7 +2117,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                     const hasRequiredSpecs = Boolean(formData.layers && formData.thickness && formData.surfaceFinish && formData.copperWeight);
 
                                     const layersCount = parseInt(formData.layers, 10) || 1;
-                                    const isJlcValid = layersCount <= 2 || (!isJlcpcbLoading && !jlcpcbError && !!jlcpcbQuote);
+                                    const isJlcValid = (!isJlcpcbRequired(formData) && layersCount <= 2) || (!isJlcpcbLoading && !jlcpcbError && !!jlcpcbQuote);
                                     const isCanSaveToCart = hasValidDimensions && hasSelectedDelivery && hasRequiredSpecs && isJlcValid;
 
                                     let validationMessage = "";

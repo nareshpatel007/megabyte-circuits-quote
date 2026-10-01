@@ -1011,9 +1011,9 @@ export default function PCBQuote() {
                                                             "ZYF265D(Dk=2.65,Df=0.0019)",
                                                             "ZYF255DA(Dk=2.55,Df=0.0018)"
                                                           ]
-                                                        : ["FR4-TG135"]
+                                                        : ["FR4 TG135", "KB6164 - TG135", "Nan Ya NP-140F", "S1141 TG140", "S1000H TG155"]
                                                 ).map(m => (
-                                                    <Pill key={m} active={materialType === m} onClick={() => setMaterialType(m)}>{m}</Pill>
+                                                    <Pill key={m} active={materialType === m || (m === "FR4 TG135" && materialType === "FR4-TG135")} onClick={() => setMaterialType(m)}>{m}</Pill>
                                                 ))}
                                             </ConfigRow>
                                         )}

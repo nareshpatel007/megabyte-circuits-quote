@@ -713,10 +713,10 @@ export default function QuoteForm({
                             {formData.baseMaterial !== "Flex" && (
                                 <ConfigRow label="Material Type">
                                     {formData.baseMaterial === "FR-4" && (
-                                        ["FR4-TG135"].map(m => (
+                                        ["FR4 TG135", "KB6164 - TG135", "Nan Ya NP-140F", "S1141 TG140", "S1000H TG155"].map(m => (
                                             <Pill
                                                 key={m}
-                                                active={(formData.materialType || "FR4-TG135") === m}
+                                                active={(formData.materialType || "FR4 TG135") === m || (m === "FR4 TG135" && formData.materialType === "FR4-TG135")}
                                                 onClick={() => updateField("materialType", m)}
                                             >
                                                 {m}

@@ -7,9 +7,11 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
-import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus, Loader2 } from "lucide-react";
+import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus, Loader2, Sliders, Zap } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend, setCartSessionId, getMinCartQuantity, safeSetStorage } from "@/lib/cartSession";
+import { isJlcpcbRequired, getMatchedJlcpcbConditions } from "@/lib/jlcpcbCondition";
+import EditSpecsModal from "@/components/EditSpecsModal";
 
 import { getAuthToken, getAuthUser } from "@/lib/auth";
 
@@ -28,6 +30,8 @@ interface CartItem {
     price: number;
     unitPrice?: number;
     material: string;
+    baseMaterial?: string;
+    materialType?: string;
     thickness: string;
     surfaceFinish?: string;
     copperWeight?: string;
@@ -48,6 +52,27 @@ interface CartItem {
     jlcpcb_quotation_snapshot?: any;
     quotation_source?: string;
     order_type?: string;
+    substrateType?: string;
+    copperType?: string;
+    coverlayColor?: string;
+    coverlayThickness?: string;
+    stiffener?: string;
+    emiShielding?: string;
+    cuttingMethod?: string;
+    edaSoftware?: string;
+    silkscreenOnStiffener?: string;
+    viaCovering?: string;
+    viaPlating?: string;
+    minHole?: string;
+    goldFingers?: string;
+    castellated?: string;
+    edgePlating?: string;
+    blindSlots?: string;
+    silkscreen?: string;
+    differentDesign?: string;
+    elecTest?: string;
+    pnNumber?: string;
+    pn_number?: string;
 }
 
 const calculateCartDeliveryDate = (targetWorkingDays: number): string => {
@@ -130,6 +155,7 @@ export default function CartPage() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [minPartsOrderAmount, setMinPartsOrderAmount] = useState<number>(3000);
     const [calculatingItemIds, setCalculatingItemIds] = useState<Record<string, boolean>>({});
+    const [editingItem, setEditingItem] = useState<CartItem | null>(null);
 
     const saveBackendTimerRef = useRef<NodeJS.Timeout | null>(null);
     const jlcpcbDebounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
@@ -227,6 +253,31 @@ export default function CartPage() {
                     return validatePcbItemLeadTime(item);
                 });
                 setCartItems(items);
+
+                // Auto-fetch live JLCPCB quotation for items that require JLCPCB and do not have jlcpcb_price
+                const pendingJlcItems = items.filter(
+                    (it) => it.productType === "pcb" && isJlcpcbRequired(it) && !it.jlcpcb_price
+                );
+                if (pendingJlcItems.length > 0) {
+                    setTimeout(async () => {
+                        let currentList = [...items];
+                        let hasChanges = false;
+                        for (const it of pendingJlcItems) {
+                            try {
+                                const quoted = await recalculateJlcpcbQuote(it, it.qty);
+                                currentList = currentList.map((x) => (String(x.id) === String(it.id) ? quoted : x));
+                                hasChanges = true;
+                            } catch (e) {
+                                console.error("Initial cart JLCPCB auto-quote error:", e);
+                            }
+                        }
+                        if (hasChanges) {
+                            setCartItems(currentList);
+                            saveCart(currentList, true);
+                        }
+                    }, 50);
+                }
+
                 const allIds = items.map((item) => String(item.id));
                 const savedSelected = localStorage.getItem("selectedCartItemIds");
                 if (savedSelected) {
@@ -310,14 +361,54 @@ export default function CartPage() {
                 "White": 4, "Black": 5, "Purple": 6, "Matte Black": 7, "Matte Green": 8
             };
 
-            const sf = (item.surfaceFinish || "").toLowerCase();
             let surfaceFinishVal = 0;
+            const sf = (item.surfaceFinish || "").toLowerCase();
             if (sf.includes("enig")) surfaceFinishVal = 2;
-            else if (sf.includes("lead-free") || sf.includes("hasl(lead-free)")) surfaceFinishVal = 1;
+            else if (sf.includes("lead-free") || sf.includes("hasl(lead-free)") || sf.includes("leadfree")) surfaceFinishVal = 1;
             else if (sf.includes("osp")) surfaceFinishVal = 3;
+            else surfaceFinishVal = 0;
+
+            if (layersCount >= 6 && surfaceFinishVal === 0) {
+                surfaceFinishVal = 2;
+            }
+
+            let plateTypeVal = 1; // 1-FR-4
+            const mat = (item.baseMaterial || item.material || "").toLowerCase();
+            if (mat.includes("flex")) plateTypeVal = 8;
+            else if (mat.includes("roger")) plateTypeVal = 6;
+            else if (mat.includes("ptfe") || mat.includes("teflon")) plateTypeVal = 7;
+            else if (mat.includes("aluminum")) plateTypeVal = 2;
+
+            let viaCoveringVal = 1;
+            const vc = (item.viaCovering || "").toLowerCase();
+            if (vc.includes("copper") && (vc.includes("paste") || vc.includes("fill"))) {
+                viaCoveringVal = 5;
+            } else if (vc.includes("epoxy")) {
+                viaCoveringVal = 4;
+            } else if (vc.includes("plugged")) {
+                viaCoveringVal = 3;
+            } else if (vc.includes("untented")) {
+                viaCoveringVal = 2;
+            } else {
+                viaCoveringVal = 1;
+            }
+
+            let minHoleVal = 0.3;
+            const mh = (item.minHole || "").toLowerCase();
+            if (mh.includes("0.15")) minHoleVal = 0.15;
+            else if (mh.includes("0.2mm") || mh.startsWith("0.2/")) minHoleVal = 0.2;
+            else if (mh.includes("0.25")) minHoleVal = 0.25;
 
             const fileKey = (item as any).jlcpcb_file_key || (item as any).jlcpcbFileKey || (item as any).fileKey || "";
             const gerberId = (item as any).gerber_file_id || (item as any).uploadedGerberFileId || undefined;
+
+            let materialDetailsVal = 0;
+            const mt = ((item as any).materialType || "").toLowerCase();
+            if (mt.includes("kb6164")) materialDetailsVal = 1;
+            else if (mt.includes("nan ya") || mt.includes("np-140f")) materialDetailsVal = 2;
+            else if (mt.includes("s1141")) materialDetailsVal = 3;
+            else if (mt.includes("s1000h")) materialDetailsVal = 4;
+            else materialDetailsVal = 0;
 
             const payload = {
                 orderType: 1,
@@ -336,7 +427,7 @@ export default function CartPage() {
                     copperWeight: (item.copperWeight || "").includes("2") ? 2 : 1,
                     insideCuprumThickness: "0.5",
                     goldFinger: (item as any).goldFingers === "Yes" || (item as any).gold_fingers === "Yes" ? 1 : 0,
-                    materialDetails: 0,
+                    materialDetails: materialDetailsVal,
                     panelFlag: 0,
                     differentDesign: parseInt((item as any).differentDesign || "1", 10) || 1,
                     flyingProbeTest: (item as any).elecTest === "Flying Probe Fully Test" || (item as any).elec_test === "Flying Probe Fully Test" ? 2 : 1,
@@ -345,12 +436,14 @@ export default function CartPage() {
                     cascadeStructure: 0,
                     impedanceFlag: "no",
                     isAddCustomerCode: "nocode",
-                    plateType: 1,
+                    plateType: plateTypeVal,
                     autoConfirmProductionFile: true,
                     markOnPcb: 1,
-                    viaCovering: (item as any).viaCovering === "Untented" || (item as any).via_covering === "Untented" ? 2 : 1,
+                    viaCovering: viaCoveringVal,
                     needTechnics: 0,
                     edgeRounding: (item as any).edgePlating === "Yes",
+                    blindSlots: (item as any).blindSlots === "Yes" ? 1 : 0,
+                    minHole: minHoleVal,
                     serviceConfigVos: []
                 }
             };
@@ -400,6 +493,8 @@ export default function CartPage() {
                     unitPrice: unitPrice,
                     jlcpcb_price: jlcBasePrice,
                     shippingCharge: newShippingCharge,
+                    quotation_source: "jlcpcb",
+                    order_type: "jlcpcb",
                     jlcpcb_quote: json,
                     jlcpcb_quotation_snapshot: json,
                     jlcpcb_file_key: json.fileKey || fileKey
@@ -430,7 +525,8 @@ export default function CartPage() {
         const minQty = targetItem.productType === "part" ? getMinCartQuantity() : 5;
         const validQty = Math.max(minQty, isNaN(newQty) ? minQty : newQty);
 
-        const isJlcpcb = (targetItem as any).quotation_source === "jlcpcb" ||
+        const isJlcpcb = isJlcpcbRequired(targetItem) ||
+            (targetItem as any).quotation_source === "jlcpcb" ||
             (targetItem as any).order_type === "jlcpcb" ||
             (parseInt(String(targetItem.layers || "").replace(/\D/g, ""), 10) || 2) > 2 ||
             !!(targetItem as any).jlcpcb_file_key;
@@ -808,22 +904,83 @@ export default function CartPage() {
                                                             )}
                                                         </div>
                                                         <div className="space-y-1 min-w-0 flex-1">
-                                                            <div className="flex items-center gap-1.5">
+                                                            <div className="flex flex-wrap items-center gap-2">
                                                                 <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">{item.boardName || (item as any).partNumber}</h3>
+                                                                {item.productType !== "part" && (isJlcpcbRequired(item) || item.quotation_source === "jlcpcb") && (
+                                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
+                                                                        <Zap className="w-3 h-3 text-amber-500 fill-amber-400" />
+                                                                        JLCPCB Live
+                                                                    </span>
+                                                                )}
+                                                                {item.productType !== "part" && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setEditingItem(item)}
+                                                                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-white hover:bg-primary bg-primary/10 px-2 py-0.5 rounded transition-all cursor-pointer shadow-2xs"
+                                                                        title="Edit board specifications and recalculate live quotation"
+                                                                    >
+                                                                        <Sliders className="w-3 h-3" />
+                                                                        Edit Specs
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                             {item.productType === "part" ? (
                                                                 <p className="text-[11px] text-gray-500 font-medium leading-relaxed line-clamp-2">
                                                                     {(item as any).description || "Electronic Component"}
                                                                 </p>
                                                             ) : (
-                                                                <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
-                                                                    {item.layers} Layer, {item.dimensions}, {item.thickness} Thickness, {item.material || "FR-4"}
-                                                                    {(item as any).materialType ? `, ${(item as any).materialType}` : ""}
-                                                                    {(item as any).substrateType ? `, ${(item as any).substrateType}` : ""}
-                                                                    {(item as any).copperType ? `, Copper: ${(item as any).copperType}` : ""}
-                                                                    {(item as any).coverlayColor ? `, Coverlay: ${(item as any).coverlayColor}` : ""}
-                                                                    {(item as any).stiffener && (item as any).stiffener !== "Without" ? `, Stiffener: ${(item as any).stiffener}` : ""}
-                                                                </p>
+                                                                <>
+                                                                    <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                                        {item.layers} Layer, {item.dimensions}, {item.thickness} Thickness, {item.material || "FR-4"}
+                                                                        {(item as any).materialType ? `, ${(item as any).materialType}` : ""}
+                                                                        {(item as any).substrateType ? `, ${(item as any).substrateType}` : ""}
+                                                                        {(item as any).copperType ? `, Copper: ${(item as any).copperType}` : ""}
+                                                                        {(item as any).coverlayColor ? `, Coverlay: ${(item as any).coverlayColor}` : ""}
+                                                                        {(item as any).stiffener && (item as any).stiffener !== "Without" ? `, Stiffener: ${(item as any).stiffener}` : ""}
+                                                                    </p>
+                                                                    <div className="flex flex-wrap gap-1 pt-0.5">
+                                                                        {(item as any).materialType && (item as any).materialType !== "FR4-TG135" && (item as any).materialType !== "FR4 TG135" && (
+                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-blue-50 text-blue-700 rounded border border-blue-200">
+                                                                                Material: {(item as any).materialType}
+                                                                            </span>
+                                                                        )}
+                                                                        {item.surfaceFinish && item.surfaceFinish !== "HASL" && (
+                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-gray-100 text-gray-700 rounded border border-gray-200">
+                                                                                Finish: {item.surfaceFinish}
+                                                                            </span>
+                                                                        )}
+                                                                        {item.viaCovering && item.viaCovering !== "Tented" && (
+                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-gray-100 text-gray-700 rounded border border-gray-200">
+                                                                                Via: {item.viaCovering}
+                                                                            </span>
+                                                                        )}
+                                                                        {(item as any).viaPlatingMethod && (item as any).viaPlatingMethod !== "Standard" && (
+                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-gray-100 text-gray-700 rounded border border-gray-200">
+                                                                                Plating: {(item as any).viaPlatingMethod}
+                                                                            </span>
+                                                                        )}
+                                                                        {(item as any).goldFingers && (item as any).goldFingers !== "No" && (
+                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-amber-50 text-amber-700 rounded border border-amber-200">
+                                                                                Gold Fingers
+                                                                            </span>
+                                                                        )}
+                                                                        {(item as any).castellatedHoles && (item as any).castellatedHoles !== "No" && (
+                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-amber-50 text-amber-700 rounded border border-amber-200">
+                                                                                Castellated Holes
+                                                                            </span>
+                                                                        )}
+                                                                        {(item as any).edgePlating && (item as any).edgePlating !== "No" && (
+                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-amber-50 text-amber-700 rounded border border-amber-200">
+                                                                                Edge Plating
+                                                                            </span>
+                                                                        )}
+                                                                        {(item as any).blindSlots && (item as any).blindSlots !== "No" && (
+                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-amber-50 text-amber-700 rounded border border-amber-200">
+                                                                                Blind Slots
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </>
                                                             )}
                                                         </div>
                                                     </div>
@@ -981,6 +1138,19 @@ export default function CartPage() {
                         </div>
                     </div>
                 </main>
+                {editingItem && (
+                    <EditSpecsModal
+                        isOpen={!!editingItem}
+                        item={editingItem}
+                        onClose={() => setEditingItem(null)}
+                        onSave={async (updatedItem) => {
+                            const updated = cartItems.map((it) => (String(it.id) === String(updatedItem.id) ? updatedItem : it));
+                            setCartItems(updated);
+                            await saveCart(updated, true);
+                            setEditingItem(null);
+                        }}
+                    />
+                )}
                 <Footer />
             </div>
         </div>
