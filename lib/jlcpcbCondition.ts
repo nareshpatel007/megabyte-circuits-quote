@@ -1,21 +1,13 @@
 /**
  * Helper to determine if a PCB item or Quote configuration requires JLCPCB API quotation.
  * 
- * Criteria (triggers JLCPCB):
- * - Base Material: Flex, Rogers, PTFE Teflon
- * - Dimensions: 350 x 350 MM or above (width >= 350 || height >= 350)
- * - PCB Thickness: 0.6 MM
- * - Surface Finish: LeadFree HASL, ENIG, OSP
- * - Via Covering: Plugged, Epoxy Filled&Capped, Copper Paste Filled&Capped
- * - Via Plating Method: Conductive Adhesive, Horizontal Electroless Copper Plating
- * - Min via hole size/diameter: 0.25mm/(0.35/0.4mm), 0.2mm/(0.3/0.35mm), 0.15mm/(0.25/0.3mm)
- * - Gold Fingers: Yes
- * - Castellated Holes: Yes
- * - Edge Plating: Yes
- * - Blind Slots: Yes
- * 
- * If user selected other than these options, use local pricing (which is already set up in the flow).
- * Layer count alone (e.g. 4, 6 layers) or uploading a Gerber file does NOT trigger JLCPCB.
+ * Core Business Rule:
+ * - FR-4 with 1 and 2 layers calculates from the LOCAL PRICING METHOD.
+ * - All other options calculate from JLCPCB:
+ *   1. Multilayer boards (> 2 layers: 4, 6, 8, 10, etc.)
+ *   2. Non-FR-4 base materials (Flex, Rogers, PTFE Teflon, Aluminum, etc.)
+ *   3. Special manufacturing features: Gold Fingers, Castellated Holes, Edge Plating, Blind Slots,
+ *      large dimensions (>= 350mm), advanced via plating/covering, min hole <= 0.25mm.
  */
 
 export interface JlcpcbConditionCheckInput {
@@ -62,17 +54,66 @@ export function getMatchedJlcpcbConditions(data: JlcpcbConditionCheckInput | nul
 
     const matches: string[] = [];
 
-    // 1. Base Material: Flex, Rogers, PTFE Teflon
-    const mat = String(data.baseMaterial || data.base_material || data.material || "").trim().toLowerCase();
-    if (mat.includes("flex")) {
-        matches.push("Base Material: Flex");
-    } else if (mat.includes("roger")) {
-        matches.push("Base Material: Rogers");
-    } else if (mat.includes("ptfe") || mat.includes("teflon")) {
-        matches.push("Base Material: PTFE Teflon");
+    // Parse layer count
+    const layers = parseInt(String(data.layers ?? data.layer ?? "2"), 10) || 2;
+
+    // Base material check
+    const mat = String(data.baseMaterial || data.base_material || data.material || "FR-4").trim().toLowerCase();
+    const isFr4 = !mat || mat === "fr-4" || mat === "fr4" || mat === "fr_4" || mat.includes("fr-4") || mat.includes("fr4") || mat.includes("fr_4") || mat.includes("standard") || mat.includes("tg135") || mat.includes("tg140") || mat.includes("tg150") || mat.includes("tg170");
+
+    // CORE BUSINESS RULE:
+    // FR-4 for 1 and 2 layers always calculates from the LOCAL PRICING METHOD.
+    // For other options (layers > 2, non-FR-4 base materials, etc.), calculate from JLCPCB.
+    if (isFr4 && layers <= 2) {
+        return [];
     }
 
-    // 2. Dimensions: 350 x 350 MM or above (width >= 350 || height >= 350)
+    // 1. Multilayer PCB (> 2 layers: 4, 6, 8, 10...) must use JLCPCB
+    if (layers > 2) {
+        matches.push(`Multilayer PCB (${layers} Layers)`);
+    }
+
+    // 2. Base Material other than FR-4 must use JLCPCB
+    if (!isFr4) {
+        if (mat.includes("flex")) {
+            matches.push("Base Material: Flex");
+        } else if (mat.includes("roger")) {
+            matches.push("Base Material: Rogers");
+        } else if (mat.includes("ptfe") || mat.includes("teflon")) {
+            matches.push("Base Material: PTFE Teflon");
+        } else if (mat.includes("aluminum")) {
+            matches.push("Base Material: Aluminum");
+        } else {
+            matches.push(`Base Material: ${data.baseMaterial || data.material}`);
+        }
+    }
+
+    // 3. Special manufacturing features requiring JLCPCB:
+    // Gold Fingers
+    const gf = String(data.goldFingers ?? data.gold_fingers ?? data.goldFinger ?? "").trim().toLowerCase();
+    if (gf === "yes" || gf === "true" || gf === "1") {
+        matches.push("Gold Fingers: Yes");
+    }
+
+    // Castellated Holes
+    const ch = String(data.castellated ?? data.castellatedHoles ?? data.castellated_holes ?? "").trim().toLowerCase();
+    if (ch === "yes" || ch === "true" || ch === "1") {
+        matches.push("Castellated Holes: Yes");
+    }
+
+    // Edge Plating
+    const ep = String(data.edgePlating ?? data.edge_plating ?? data.edgeRounding ?? "").trim().toLowerCase();
+    if (ep === "yes" || ep === "true" || ep === "1") {
+        matches.push("Edge Plating: Yes");
+    }
+
+    // Blind Slots
+    const bs = String(data.blindSlots ?? data.blind_slots ?? "").trim().toLowerCase();
+    if (bs === "yes" || bs === "true" || bs === "1") {
+        matches.push("Blind Slots: Yes");
+    }
+
+    // Dimensions: 350 x 350 MM or above (width >= 350 || height >= 350)
     let w = Number(data.width) || 0;
     let h = Number(data.height || data.length) || 0;
     if (data.dimensions) {
@@ -92,24 +133,15 @@ export function getMatchedJlcpcbConditions(data: JlcpcbConditionCheckInput | nul
         matches.push(`Dimensions: ${w || "?"}x${h || "?"}mm (≥350mm)`);
     }
 
-    // 3. PCB Thickness: 0.6 MM
-    const rawThick = String(data.thickness || "").trim().toLowerCase();
-    const parsedThick = parseFloat(rawThick.replace(/[^0-9.]/g, ""));
-    if (parsedThick === 0.6 || rawThick.startsWith("0.6")) {
-        matches.push("PCB Thickness: 0.6mm");
+    // Via Plating Method: Conductive Adhesive, Horizontal Electroless Copper Plating
+    const vp = String(data.viaPlating || data.via_plating || "").trim().toLowerCase();
+    if (vp.includes("conductive") && vp.includes("adhesive")) {
+        matches.push("Via Plating: Conductive Adhesive");
+    } else if (vp.includes("horizontal") || vp.includes("electroless")) {
+        matches.push("Via Plating: Horizontal Electroless Copper");
     }
 
-    // 4. Surface Finish: LeadFree HASL, ENIG, OSP
-    const sf = String(data.surfaceFinish || data.surface_finish || "").trim().toLowerCase();
-    if (sf.includes("leadfree") || sf.includes("lead-free") || sf.includes("lead free")) {
-        matches.push("Surface Finish: LeadFree HASL");
-    } else if (sf.includes("enig")) {
-        matches.push("Surface Finish: ENIG");
-    } else if (sf.includes("osp")) {
-        matches.push("Surface Finish: OSP");
-    }
-
-    // 5. Via Covering: Plugged, Epoxy Filled&Capped, Copper Paste Filled&Capped
+    // Via Covering: Plugged, Epoxy Filled&Capped, Copper Paste Filled&Capped
     const vc = String(data.viaCovering || data.via_covering || "").trim().toLowerCase();
     if (vc.includes("copper") && (vc.includes("paste") || vc.includes("fill"))) {
         matches.push("Via Covering: Copper Paste Filled&Capped");
@@ -119,15 +151,7 @@ export function getMatchedJlcpcbConditions(data: JlcpcbConditionCheckInput | nul
         matches.push("Via Covering: Plugged");
     }
 
-    // 6. Via Plating Method: Conductive Adhesive, Horizontal Electroless Copper Plating
-    const vp = String(data.viaPlating || data.via_plating || "").trim().toLowerCase();
-    if (vp.includes("conductive") && vp.includes("adhesive")) {
-        matches.push("Via Plating: Conductive Adhesive");
-    } else if (vp.includes("horizontal") || vp.includes("electroless")) {
-        matches.push("Via Plating: Horizontal Electroless Copper");
-    }
-
-    // 7. Min via hole size/diameter: 0.25mm/(0.35/0.4mm), 0.2mm/(0.3/0.35mm), 0.15mm/(0.25/0.3mm)
+    // Min via hole size <= 0.25mm
     const mh = String(data.minHole || data.min_hole || "").trim().toLowerCase();
     if (mh.includes("0.15")) {
         matches.push("Min Hole: 0.15mm/(0.25/0.3mm)");
@@ -135,30 +159,6 @@ export function getMatchedJlcpcbConditions(data: JlcpcbConditionCheckInput | nul
         matches.push("Min Hole: 0.25mm/(0.35/0.4mm)");
     } else if (mh.includes("0.2mm") || mh.startsWith("0.2/") || (mh.includes("0.2") && !mh.includes("0.25"))) {
         matches.push("Min Hole: 0.2mm/(0.3/0.35mm)");
-    }
-
-    // 8. Gold Fingers: Yes
-    const gf = String(data.goldFingers ?? data.gold_fingers ?? data.goldFinger ?? "").trim().toLowerCase();
-    if (gf === "yes" || gf === "true" || gf === "1") {
-        matches.push("Gold Fingers: Yes");
-    }
-
-    // 9. Castellated Holes: Yes
-    const ch = String(data.castellated ?? data.castellatedHoles ?? data.castellated_holes ?? "").trim().toLowerCase();
-    if (ch === "yes" || ch === "true" || ch === "1") {
-        matches.push("Castellated Holes: Yes");
-    }
-
-    // 10. Edge Plating: Yes
-    const ep = String(data.edgePlating ?? data.edge_plating ?? data.edgeRounding ?? "").trim().toLowerCase();
-    if (ep === "yes" || ep === "true" || ep === "1") {
-        matches.push("Edge Plating: Yes");
-    }
-
-    // 11. Blind Slots: Yes
-    const bs = String(data.blindSlots ?? data.blind_slots ?? "").trim().toLowerCase();
-    if (bs === "yes" || bs === "true" || bs === "1") {
-        matches.push("Blind Slots: Yes");
     }
 
     return matches;
