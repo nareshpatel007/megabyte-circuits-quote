@@ -55,5 +55,35 @@ describe("JLCPCB Condition & Local Pricing Selection", () => {
         const specs = { ...standardSpecs, layers: 2, fileKey: "some_gerber_key.zip", jlcpcb_file_key: "jlc_key_123" };
         expect(isJlcpcbRequired(specs)).toBe(false);
     });
+
+    test("Transition Scenarios A-E: Provider switches back to Local when layers <= 2", () => {
+        // Scenario A: 1 layer -> 2 layers -> 1 layer
+        expect(isJlcpcbRequired({ ...standardSpecs, layers: 1 })).toBe(false);
+        expect(isJlcpcbRequired({ ...standardSpecs, layers: 2 })).toBe(false);
+        expect(isJlcpcbRequired({ ...standardSpecs, layers: 1 })).toBe(false);
+
+        // Scenario B: 2 layers -> 4 layers -> 2 layers
+        expect(isJlcpcbRequired({ ...standardSpecs, layers: 2 })).toBe(false);
+        expect(isJlcpcbRequired({ ...standardSpecs, layers: 4 })).toBe(true);
+        expect(isJlcpcbRequired({ ...standardSpecs, layers: 2 })).toBe(false);
+
+        // Scenario C: 2 layers -> 6 layers -> 2 layers
+        expect(isJlcpcbRequired({ ...standardSpecs, layers: 2 })).toBe(false);
+        expect(isJlcpcbRequired({ ...standardSpecs, layers: 6 })).toBe(true);
+        expect(isJlcpcbRequired({ ...standardSpecs, layers: 2 })).toBe(false);
+
+        // Scenario D: 4 layers -> 2 layers (Critical bug regression test)
+        const fourLayerSpecs = { ...standardSpecs, layers: 4 };
+        expect(isJlcpcbRequired(fourLayerSpecs)).toBe(true);
+        const switchedToTwoLayers = { ...fourLayerSpecs, layers: 2, jlcpcb_file_key: "stale_key", quotation_source: "jlcpcb" };
+        expect(isJlcpcbRequired(switchedToTwoLayers)).toBe(false);
+
+        // Scenario E: 6 layers -> 1 layer
+        const sixLayerSpecs = { ...standardSpecs, layers: 6 };
+        expect(isJlcpcbRequired(sixLayerSpecs)).toBe(true);
+        const switchedToOneLayer = { ...sixLayerSpecs, layers: 1, jlcpcb_file_key: "stale_key", quotation_source: "jlcpcb" };
+        expect(isJlcpcbRequired(switchedToOneLayer)).toBe(false);
+    });
 });
+
 

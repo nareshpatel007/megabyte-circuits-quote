@@ -70,6 +70,11 @@ export interface OrderFormData {
 
     // File Upload
     gerber_file?: File;
+
+    // Routing / Quotation Source
+    quotation_source?: string;
+    order_type?: string;
+    jlcpcb_file_key?: string;
 }
 
 export interface OrderResponse {

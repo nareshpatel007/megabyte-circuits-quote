@@ -533,11 +533,19 @@ export default function CartPage() {
         const pcbUnitPrice = item.unitPrice || (item.qty > 0 ? prevPcbPrice / item.qty : prevPcbPrice);
         const newPcbPrice = Math.max(Math.round(pcbUnitPrice * newQty), 10);
 
+        const isJlc = isJlcpcbRequired(item);
+
         return validatePcbItemLeadTime({
             ...item,
             qty: newQty,
             price: newPcbPrice + prevShippingCharge,
-            unitPrice: pcbUnitPrice
+            unitPrice: pcbUnitPrice,
+            quotation_source: isJlc ? (item.quotation_source || "jlcpcb") : "internal",
+            order_type: isJlc ? (item.order_type || "jlcpcb") : "normal",
+            jlcpcb_price: isJlc ? item.jlcpcb_price : undefined,
+            jlcpcb_quote: isJlc ? item.jlcpcb_quote : undefined,
+            jlcpcb_quotation_snapshot: isJlc ? item.jlcpcb_quotation_snapshot : undefined,
+            jlcpcb_file_key: isJlc ? item.jlcpcb_file_key : undefined,
         });
     };
 

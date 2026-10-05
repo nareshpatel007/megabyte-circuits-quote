@@ -705,6 +705,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         const shouldCallJlcpcb = isJlcpcbRequired(formData);
 
         if (!shouldCallJlcpcb) {
+            ++quoteReqVersion.current;
             setJlcpcbQuote(null);
             setIsJlcpcbLoading(false);
             setJlcpcbError(null);
@@ -712,6 +713,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         }
 
         const currentReqId = ++quoteReqVersion.current;
+        const abortController = new AbortController();
         setIsJlcpcbLoading(true);
         setJlcpcbError(null);
 
@@ -844,7 +846,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 const res = await fetch("/api/jlcpcb/calculate", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    signal: abortController.signal
                 });
                 const json = await res.json();
                 if (currentReqId !== quoteReqVersion.current) return;
@@ -864,7 +867,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                         setJlcpcbQuote(null);
                         setJlcpcbError(json.message || "Unable to calculate JLCPCB quotation. Please try again.");
                     }
-            } catch (err) {
+            } catch (err: any) {
+                if (err?.name === "AbortError") return;
                 console.error("Error calling JLCPCB quotation API:", err);
                 if (currentReqId === quoteReqVersion.current) {
                     setJlcpcbQuote(null);
@@ -879,6 +883,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
         return () => {
             clearTimeout(timer);
+            abortController.abort();
         };
     }, [
         quoteTrigger,
@@ -1286,6 +1291,11 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
             // File Upload
             gerber_file: uploadedFile || undefined,
+
+            // Canonical Quotation Source & Routing
+            quotation_source: isJlcpcbRequired(formData) ? "jlcpcb" : "internal",
+            order_type: isJlcpcbRequired(formData) ? "jlcpcb" : "normal",
+            jlcpcb_file_key: isJlcpcbRequired(formData) ? (jlcpcbFileKey || undefined) : undefined,
         };
 
         // Submit to backend
@@ -1482,9 +1492,12 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 pnNumber: pnNumberVal,
                 gerberFileName: uploadedFile ? gerberName : undefined,
                 gerber_file_id: uploadedGerberFileId || undefined,
-                jlcpcb_file_key: jlcpcbFileKey || undefined,
+                jlcpcb_file_key: isJlcpcbCart ? (jlcpcbFileKey || undefined) : undefined,
                 quotation_source: isJlcpcbCart ? "jlcpcb" : "internal",
+                order_type: isJlcpcbCart ? "jlcpcb" : "normal",
                 jlcpcb_price: isJlcpcbCart ? pcbBasePrice : undefined,
+                jlcpcb_quote: isJlcpcbCart ? jlcpcbQuote : undefined,
+                jlcpcb_quotation_snapshot: isJlcpcbCart ? jlcpcbQuote : undefined,
                 gerberPreview: previewSvg,
                 boardId: generatedBoardId,
                 pcbColor: pcbColorName,

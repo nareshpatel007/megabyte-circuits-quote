@@ -392,7 +392,7 @@ export default function EditSpecsModal({
                 jlcpcb_price: isJlc ? (finalPcbPrice - calculatedShipping) : undefined,
                 jlcpcb_quote: isJlc ? (jlcQuoteData || item.jlcpcb_quote) : undefined,
                 jlcpcb_quotation_snapshot: isJlc ? (jlcQuoteData || item.jlcpcb_quotation_snapshot) : undefined,
-                jlcpcb_file_key: jlcQuoteData?.fileKey || item.jlcpcb_file_key
+                jlcpcb_file_key: isJlc ? (jlcQuoteData?.fileKey || item.jlcpcb_file_key) : undefined
             };
 
             await onSave(updatedItem);
