@@ -156,7 +156,7 @@ export default function QuoteForm({
                 next.silkscreen = "White";
                 next.copperType = "Electro-deposited";
                 next.coverlayColor = next.coverlayColor || "Yellow";
-                next.goldThickness = next.goldThickness || "1 U\"";
+                next.goldThickness = (!next.goldThickness || next.goldThickness === "N/A" || next.goldThickness === "1 U*") ? "1 U\"" : next.goldThickness;
 
                 if (next.layers === "1") next.thickness = "0.07mm";
                 else if (next.layers === "2") next.thickness = "0.11mm";
@@ -165,7 +165,7 @@ export default function QuoteForm({
                 next.layers = "2";
                 next.materialType = "RO4350B(Dk=3.48,Df=0.0037)";
                 next.surfaceFinish = "ENIG";
-                next.goldThickness = next.goldThickness || "1 U\"";
+                next.goldThickness = (!next.goldThickness || next.goldThickness === "N/A" || next.goldThickness === "1 U*") ? "1 U\"" : next.goldThickness;
                 if (!["0.51mm", "0.76mm", "1.52mm"].includes(next.thickness)) {
                     next.thickness = "0.51mm";
                 }
@@ -173,9 +173,13 @@ export default function QuoteForm({
                 next.layers = "2";
                 next.materialType = "ZYF300CA-C(Dk=2.94,Df=0.0016)";
                 next.surfaceFinish = "ENIG";
-                next.goldThickness = next.goldThickness || "1 U\"";
+                next.goldThickness = (!next.goldThickness || next.goldThickness === "N/A" || next.goldThickness === "1 U*") ? "1 U\"" : next.goldThickness;
                 if (!["0.76mm", "1.52mm"].includes(next.thickness)) {
                     next.thickness = "0.76mm";
+                }
+            } else if (field === "baseMaterial" && value === "FR-4") {
+                if (next.surfaceFinish !== "ENIG") {
+                    next.goldThickness = "N/A";
                 }
             } else if (field === "substrateType" && next.baseMaterial === "Flex") {
                 if (value === "Transparent") {
@@ -210,9 +214,18 @@ export default function QuoteForm({
                 }
             }
 
+            if (field === "surfaceFinish") {
+                if (value === "ENIG") {
+                    next.goldThickness = (!next.goldThickness || next.goldThickness === "N/A" || next.goldThickness === "1 U*") ? "1 U\"" : next.goldThickness;
+                } else {
+                    next.goldThickness = "N/A";
+                }
+            }
+
             if (field === "layers" && parseInt(value, 10) >= 6) {
                 if (["HASL(Leaded)", "HASL(with lead)", "HASL"].includes(next.surfaceFinish)) {
                     next.surfaceFinish = "ENIG";
+                    next.goldThickness = (!next.goldThickness || next.goldThickness === "N/A" || next.goldThickness === "1 U*") ? "1 U\"" : next.goldThickness;
                 }
             }
             return next;
@@ -807,7 +820,7 @@ export default function QuoteForm({
                                     {["1 U\"", "2 U\""].map(gt => (
                                         <Pill
                                             key={gt}
-                                            active={(formData.goldThickness || "1 U\"") === gt || (gt === "1 U\"" && formData.goldThickness === "1 U*")}
+                                            active={((formData.goldThickness && formData.goldThickness !== "N/A" && formData.goldThickness !== "1 U*") ? formData.goldThickness : "1 U\"") === gt}
                                             onClick={() => updateField("goldThickness", gt)}
                                         >
                                             {gt}
@@ -868,7 +881,6 @@ export default function QuoteForm({
                                     {["Tented", "Untented", "Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map(v => (
                                         <Pill
                                             key={v}
-                                            disabled={v === "Copper paste Filled & Capped"}
                                             active={formData.viaCovering === v}
                                             onClick={() => updateField("viaCovering", v)}
                                         >

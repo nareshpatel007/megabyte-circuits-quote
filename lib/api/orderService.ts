@@ -21,6 +21,7 @@ export interface OrderFormData {
     silkscreen: string;
     material_type: string;
     surface_finish: string;
+    gold_thickness?: string;
 
     // High-spec Options
     copper_weight: string;

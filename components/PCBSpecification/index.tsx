@@ -34,7 +34,7 @@ const INITIAL_FORM_DATA: QuoteFormData = {
     silkscreen: "White",
     materialType: "FR4-TG135",
     surfaceFinish: "HASL(Leaded)",
-    goldThickness: "1 U*",
+    goldThickness: "N/A",
     copperWeight: "1 oz",
     viaCovering: "Not Specified",
     viaPlating: "Not Specified",
@@ -569,7 +569,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                             deliveryFormat: item.deliveryFormat || "Single PCB",
                             panelColumn: item.panelColumn || "",
                             panelRow: item.panelRow || "",
-                            goldThickness: item.goldThickness || '1 U"',
+                            goldThickness: (item.surfaceFinish === "ENIG" || item.baseMaterial === "Flex") ? (item.goldThickness && item.goldThickness !== "N/A" && item.goldThickness !== "1 U*" ? item.goldThickness : '1 U"') : "N/A",
                             viaCovering: item.viaCovering || "Not Specified",
                             viaPlating: item.viaPlating || item.viaPlatingMethod || "Not Specified",
                             minHole: item.minHole || "0.3mm/(0.4/0.45mm)",
@@ -903,7 +903,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
             let viaCoveringVal = 1;
             const vc = (formData.viaCovering || "").toLowerCase();
-            if (vc.includes("copper") && (vc.includes("paste") || vc.includes("fill"))) {
+            if (vc.includes("copper") || (vc.includes("paste") && vc.includes("fill"))) {
                 viaCoveringVal = 5;
             } else if (vc.includes("epoxy")) {
                 viaCoveringVal = 4;
@@ -939,6 +939,13 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 serviceConfigs.push({
                     serviceConfigCode: "HFMT",
                     configOptionShow: formData.materialType || "ZYF300CA-C(Dk=2.94,Df=0.0016)"
+                });
+            }
+
+            if (formData.viaPlating && formData.viaPlating !== "Not Specified") {
+                serviceConfigs.push({
+                    serviceConfigCode: "VAPG",
+                    configOptionShow: formData.viaPlating
                 });
             }
 
@@ -1387,6 +1394,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             silkscreen: formData.silkscreen,
             material_type: formData.materialType,
             surface_finish: formData.surfaceFinish,
+            gold_thickness: (formData.surfaceFinish === "ENIG" || formData.baseMaterial === "Flex") ? (formData.goldThickness && formData.goldThickness !== "N/A" && formData.goldThickness !== "1 U*" ? formData.goldThickness : "1 U\"") : "N/A",
 
             // High-spec Options
             copper_weight: formData.copperWeight,
@@ -1842,7 +1850,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 deliveryFormat: formData.deliveryFormat || "Single PCB",
                 panelColumn: formData.panelColumn || "",
                 panelRow: formData.panelRow || "",
-                goldThickness: formData.goldThickness || "1 U\"",
+                goldThickness: ((formData.surfaceFinish || (formData.baseMaterial === "Flex" ? "ENIG" : "HASL(Leaded)")) === "ENIG" || formData.baseMaterial === "Flex") ? (formData.goldThickness && formData.goldThickness !== "N/A" && formData.goldThickness !== "1 U*" ? formData.goldThickness : "1 U\"") : "N/A",
                 viaCovering: formData.viaCovering || "Not Specified",
                 viaPlating: formData.viaPlating || "Not Specified",
                 minHole: formData.minHole || "0.3mm/(0.4/0.45mm)",

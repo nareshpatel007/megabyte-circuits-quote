@@ -411,7 +411,7 @@ export default function CartPage() {
 
             let viaCoveringVal = 1;
             const vc = (item.viaCovering || "").toLowerCase();
-            if (vc.includes("copper") && (vc.includes("paste") || vc.includes("fill"))) {
+            if (vc.includes("copper") || (vc.includes("paste") && vc.includes("fill"))) {
                 viaCoveringVal = 5;
             } else if (vc.includes("epoxy")) {
                 viaCoveringVal = 4;
@@ -455,6 +455,13 @@ export default function CartPage() {
                 cartServiceConfigs.push({
                     serviceConfigCode: "HFMT",
                     configOptionShow: (item as any).materialType || "ZYF300CA-C(Dk=2.94,Df=0.0016)"
+                });
+            }
+
+            if ((item as any).viaPlating && (item as any).viaPlating !== "Not Specified") {
+                cartServiceConfigs.push({
+                    serviceConfigCode: "VAPG",
+                    configOptionShow: (item as any).viaPlating
                 });
             }
 

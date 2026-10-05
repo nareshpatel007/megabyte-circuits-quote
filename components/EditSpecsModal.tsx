@@ -185,7 +185,7 @@ export default function EditSpecsModal({
 
                     let viaCoveringVal = 1;
                     const vc = viaCovering.toLowerCase();
-                    if (vc.includes("copper") && (vc.includes("paste") || vc.includes("fill"))) {
+                    if (vc.includes("copper") || (vc.includes("paste") && vc.includes("fill"))) {
                         viaCoveringVal = 5;
                     } else if (vc.includes("epoxy")) {
                         viaCoveringVal = 4;
@@ -235,6 +235,13 @@ export default function EditSpecsModal({
                         modalServiceConfigs.push({
                             serviceConfigCode: "HFMT",
                             configOptionShow: materialType || "ZYF300CA-C(Dk=2.94,Df=0.0016)"
+                        });
+                    }
+
+                    if (viaPlating && viaPlating !== "Not Specified") {
+                        modalServiceConfigs.push({
+                            serviceConfigCode: "VAPG",
+                            configOptionShow: viaPlating
                         });
                     }
 
@@ -377,6 +384,7 @@ export default function EditSpecsModal({
                 dimensions: `${width}x${height}mm`,
                 thickness,
                 surfaceFinish,
+                goldThickness: (surfaceFinish === "ENIG" || baseMaterial === "Flex") ? (item.goldThickness && item.goldThickness !== "N/A" && item.goldThickness !== "1 U*" ? item.goldThickness : "1 U\"") : "N/A",
                 viaCovering,
                 viaPlating,
                 minHole,

@@ -199,22 +199,32 @@ export function resolveManufacturingProvider(data: JlcpcbConditionCheckInput | n
         reasons.push("Blind Slots: Yes requires JLCPCB.");
     }
 
-    // 13. Via Covering: Plugged, Epoxy Filled & Capped, Copper Paste Filled & Capped force JLCPCB
+    // 13. Via Covering: Only Tented, Untented, and Not Specified qualify for In-House;
+    // Plugged, Epoxy Filled & Capped, Copper Paste Filled & Capped force JLCPCB
     const rawVc = String(data.viaCovering || data.via_covering || "").trim().toLowerCase();
-    if (rawVc.includes("plugged")) {
-        reasons.push("Via Covering: Plugged requires JLCPCB.");
-    } else if (rawVc.includes("epoxy")) {
-        reasons.push("Via Covering: Epoxy Filled & Capped requires JLCPCB.");
-    } else if (rawVc.includes("copper") && (rawVc.includes("paste") || rawVc.includes("fill"))) {
-        reasons.push("Via Covering: Copper Paste Filled & Capped requires JLCPCB.");
+    if (rawVc && rawVc !== "not specified" && rawVc !== "tented" && rawVc !== "untented") {
+        if (rawVc.includes("plugged")) {
+            reasons.push("Via Covering: Plugged requires JLCPCB.");
+        } else if (rawVc.includes("epoxy")) {
+            reasons.push("Via Covering: Epoxy Filled & Capped requires JLCPCB.");
+        } else if (rawVc.includes("copper") || (rawVc.includes("paste") && rawVc.includes("fill"))) {
+            reasons.push("Via Covering: Copper Paste Filled & Capped requires JLCPCB.");
+        } else {
+            reasons.push(`Via Covering: ${data.viaCovering || data.via_covering} requires JLCPCB.`);
+        }
     }
 
-    // 14. Via Plating Method: Conductive Adhesive, Horizontal Electroless Copper force JLCPCB
+    // 14. Via Plating Method: Only Not Specified qualifies for In-House;
+    // Conductive Adhesive, Horizontal Electroless Copper Plating force JLCPCB
     const rawVp = String(data.viaPlating || data.via_plating || data.viaPlatingMethod || "").trim().toLowerCase();
-    if (rawVp.includes("conductive") && rawVp.includes("adhesive")) {
-        reasons.push("Via Plating: Conductive Adhesive requires JLCPCB.");
-    } else if (rawVp.includes("horizontal") || rawVp.includes("electroless")) {
-        reasons.push("Via Plating: Horizontal Electroless Copper Plating requires JLCPCB.");
+    if (rawVp && rawVp !== "not specified") {
+        if (rawVp.includes("conductive") && rawVp.includes("adhesive")) {
+            reasons.push("Via Plating: Conductive Adhesive requires JLCPCB.");
+        } else if (rawVp.includes("horizontal") || rawVp.includes("electroless")) {
+            reasons.push("Via Plating: Horizontal Electroless Copper Plating requires JLCPCB.");
+        } else {
+            reasons.push(`Via Plating: ${data.viaPlating || data.via_plating || data.viaPlatingMethod} requires JLCPCB.`);
+        }
     }
 
     const isEligible = reasons.length === 0;
