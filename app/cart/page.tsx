@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
-import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus, Loader2, Sliders, Zap } from "lucide-react";
+import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus, Loader2, Sliders, Zap, Pencil } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend, setCartSessionId, getMinCartQuantity, safeSetStorage } from "@/lib/cartSession";
 import { isJlcpcbRequired, getMatchedJlcpcbConditions } from "@/lib/jlcpcbCondition";
@@ -924,7 +924,7 @@ export default function CartPage() {
                                                 </>
                                             )}
                                             <span className="w-32 text-right">Price</span>
-                                            <div className="w-8 flex justify-center">
+                                            <div className="w-14 flex justify-end items-center pr-1">
                                                 <button type="button" onClick={handleRemoveSelectedItems} disabled={selectedItemIds.length === 0} className={`p-1 rounded transition-colors ${selectedItemIds.length > 0 ? "text-red-500 hover:bg-red-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`} title="Delete Selected">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -991,16 +991,6 @@ export default function CartPage() {
                                                         <div className="space-y-1 min-w-0 flex-1">
                                                             <div className="flex flex-wrap items-center gap-2">
                                                                 <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">{item.boardName || (item as any).partNumber}</h3>
-                                                                {item.productType !== "part" && (
-                                                                    <Link
-                                                                        href={`/quote?cart_item_id=${item.id}`}
-                                                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:text-white hover:bg-primary bg-primary/10 px-2.5 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs"
-                                                                        title="Edit board specifications in Instant Quote"
-                                                                    >
-                                                                        <Sliders className="w-3 h-3" />
-                                                                        Edit
-                                                                    </Link>
-                                                                )}
                                                             </div>
                                                             {item.productType === "part" ? (
                                                                 <p className="text-[11px] text-gray-500 font-medium leading-relaxed line-clamp-2">
@@ -1021,59 +1011,10 @@ export default function CartPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 shrink-0">
-                                                        <div className="w-24 flex justify-center">
-                                                            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden h-7 bg-gray-50/50">
-                                                                {(() => {
-                                                                    const min = item.productType === "part" ? getMinCartQuantity() : 5;
-                                                                    const currentQty = item.qty ?? min;
-                                                                    const isMinReached = currentQty <= min;
-                                                                    return (
-                                                                        <>
-                                                                            <button
-                                                                                type="button"
-                                                                                disabled={isMinReached}
-                                                                                onClick={() => {
-                                                                                    const step = 1;
-                                                                                    handleQuantityChange(item.id, Math.max(min, currentQty - step));
-                                                                                }}
-                                                                                className={`w-6 h-full flex items-center justify-center text-xs font-bold transition-colors ${isMinReached
-                                                                                    ? "text-gray-300 bg-gray-100 cursor-not-allowed"
-                                                                                    : "text-gray-500 hover:bg-gray-200 cursor-pointer"
-                                                                                    }`}
-                                                                            >
-                                                                                -
-                                                                            </button>
-                                                                            <input
-                                                                                type="number"
-                                                                                min={min}
-                                                                                step={1}
-                                                                                value={currentQty}
-                                                                                onChange={(e) => {
-                                                                                    const val = parseInt(e.target.value, 10);
-                                                                                    handleQuantityChange(item.id, val);
-                                                                                }}
-                                                                                onBlur={(e) => {
-                                                                                    const val = parseInt(e.target.value, 10);
-                                                                                    if (isNaN(val) || val < min) {
-                                                                                        handleQuantityChange(item.id, min);
-                                                                                    }
-                                                                                }}
-                                                                                className="w-11 text-center text-xs font-bold text-gray-800 bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                            />
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => {
-                                                                                    const step = 1;
-                                                                                    handleQuantityChange(item.id, currentQty + step);
-                                                                                }}
-                                                                                className="w-6 h-full flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs font-bold cursor-pointer"
-                                                                            >
-                                                                                +
-                                                                            </button>
-                                                                        </>
-                                                                    );
-                                                                })()}
-                                                            </div>
+                                                        <div className="w-24 flex justify-center items-center">
+                                                            <span className="text-xs sm:text-sm font-bold text-gray-800">
+                                                                {item.qty || (item.productType === "part" ? getMinCartQuantity() : 5)}
+                                                            </span>
                                                         </div>
                                                         {item.productType !== "part" && (
                                                             <>
@@ -1119,7 +1060,16 @@ export default function CartPage() {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <div className="w-8 flex justify-center items-center">
+                                                        <div className="w-14 flex items-center justify-end gap-1.5">
+                                                            {item.productType !== "part" && (
+                                                                <Link
+                                                                    href={`/quote?cart_item_id=${item.id}`}
+                                                                    className="p-1 rounded text-gray-400 hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                                                    title="Edit item specifications"
+                                                                >
+                                                                    <Pencil className="w-4 h-4" />
+                                                                </Link>
+                                                            )}
                                                             <button type="button" onClick={() => handleRemoveItem(item.id)} className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer" title="Remove item"><Trash2 className="w-4 h-4" /></button>
                                                         </div>
                                                     </div>
