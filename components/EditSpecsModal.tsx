@@ -28,7 +28,7 @@ export default function EditSpecsModal({
     const [height, setHeight] = useState(100);
     const [thickness, setThickness] = useState("1.6mm");
     const [surfaceFinish, setSurfaceFinish] = useState("HASL(Leaded)");
-    const [viaCovering, setViaCovering] = useState("Tented");
+    const [viaCovering, setViaCovering] = useState("Not Specified");
     const [viaPlating, setViaPlating] = useState("Not Specified");
     const [minHole, setMinHole] = useState("0.3mm/(0.4/0.45mm)");
     const [goldFingers, setGoldFingers] = useState("No");
@@ -81,7 +81,8 @@ export default function EditSpecsModal({
 
         setThickness(item.thickness || "1.6mm");
         setSurfaceFinish(item.surfaceFinish || "HASL(Leaded)");
-        setViaCovering(item.viaCovering || "Tented");
+        const rawVc = item.viaCovering || "Not Specified";
+        setViaCovering((rawVc === "Tented" || rawVc === "Untented") ? "Not Specified" : rawVc);
         setViaPlating(item.viaPlating || "Not Specified");
         setMinHole(item.minHole || "0.3mm/(0.4/0.45mm)");
         setGoldFingers(item.goldFingers || "No");
@@ -101,12 +102,16 @@ export default function EditSpecsModal({
             if (!["FR4 TG135", "KB6164 - TG135", "Nan Ya NP-140F", "S1141 TG140", "S1000H TG155"].includes(materialType)) {
                 setMaterialType("FR4 TG135");
             }
+            setSurfaceFinish(parseInt(layers, 10) >= 6 ? "LeadFree HASL" : "HASL(Leaded)");
         } else if (mat === "Rogers") {
             setMaterialType("RO4350B(Dk=3.48,Df=0.0037)");
+            setSurfaceFinish("ENIG");
         } else if (mat === "PTFE Teflon") {
             setMaterialType("ZYF300CA-P(Dk=3.0,Df=0.0016)");
+            setSurfaceFinish("ENIG");
         } else if (mat === "Flex") {
             setMaterialType("Polyimide (PI)");
+            setSurfaceFinish("ENIG");
         }
     };
 
@@ -129,6 +134,7 @@ export default function EditSpecsModal({
         castellated,
         edgePlating,
         blindSlots,
+        elecTest: baseMaterial === "Rogers" ? "Flying Probe Fully Test" : (item?.elecTest || ""),
         jlcpcb_file_key: item?.jlcpcb_file_key || item?.fileKey
     };
 
@@ -226,6 +232,18 @@ export default function EditSpecsModal({
                             serviceConfigCode: "CTC",
                             configOptionShow: layersCount >= 4 ? "PI:25um/AD:25um" : "PI:12.5um/AD:15um"
                         });
+                        if (item.coverlayColor) {
+                            modalServiceConfigs.push({
+                                serviceConfigCode: "PCYB",
+                                configOptionShow: item.coverlayColor
+                            });
+                        }
+                        if (item.copperType) {
+                            modalServiceConfigs.push({
+                                serviceConfigCode: "CT",
+                                configOptionShow: item.copperType
+                            });
+                        }
                     } else if (plateTypeVal === 5) {
                         modalServiceConfigs.push({
                             serviceConfigCode: "HFMT",
@@ -259,13 +277,16 @@ export default function EditSpecsModal({
                             thickness: rawThickness,
                             pcbColor: colorMap[item.pcbColor || "Green"] ?? 0,
                             surfaceFinish: surfaceFinishVal,
+                            ...(surfaceFinishVal === 2 || plateTypeVal === 7 ? {
+                                goldThickness: (item.goldThickness && String(item.goldThickness).includes("2")) ? 2 : 1
+                            } : {}),
                             copperWeight: copperWeightVal,
                             ...(layersCount >= 4 ? { insideCuprumThickness: "0.5" } : {}),
                             goldFinger: goldFingers === "Yes" ? 1 : 0,
                             materialDetails: materialDetailsVal,
                             panelFlag: 0,
                             differentDesign: parseInt(item.differentDesign || "1", 10) || 1,
-                            flyingProbeTest: item.elecTest === "Flying Probe Fully Test" ? 2 : 1,
+                            flyingProbeTest: (plateTypeVal === 7 || plateTypeVal === 5 || item.elecTest === "Flying Probe Fully Test") ? 2 : 1,
                             castellatedHoles: castellated === "Yes" ? 1 : 0,
                             orderDetailsRemark: "Cart Specification Edit",
                             impedanceFlag: "no",
@@ -392,6 +413,7 @@ export default function EditSpecsModal({
                 castellated,
                 edgePlating,
                 blindSlots,
+                elecTest: baseMaterial === "Rogers" ? "Flying Probe Fully Test" : (item.elecTest || ""),
                 price: finalPcbPrice,
                 unitPrice: unitPrice,
                 shippingCharge: calculatedShipping,
@@ -651,11 +673,11 @@ export default function EditSpecsModal({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100">
                         <label className="font-bold text-gray-700 sm:w-44">Via Covering</label>
                         <div className="flex flex-wrap gap-2 flex-1">
-                            {["Tented", "Untented", "Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map((vc) => (
+                            {["Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map((vc) => (
                                 <button
                                     key={vc}
                                     type="button"
-                                    onClick={() => setViaCovering(vc)}
+                                    onClick={() => setViaCovering(viaCovering === vc ? "Not Specified" : vc)}
                                     className={`px-3 py-1.5 rounded-lg font-bold border transition-all cursor-pointer ${
                                         viaCovering === vc
                                             ? "border-primary bg-primary/10 text-primary shadow-2xs"

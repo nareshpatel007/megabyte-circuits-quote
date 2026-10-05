@@ -17,6 +17,7 @@ import Toast, { ToastType } from "../Toast";
 import { saveCartToBackend, loadCartFromBackend } from "@/lib/cartSession";
 import { useCurrency } from "../../context/CurrencyContext";
 import { isJlcpcbRequired } from "@/lib/jlcpcbCondition";
+import { fetchActiveProviderRules } from "@/lib/manufacturingProviderResolver";
 
 const INITIAL_FORM_DATA: QuoteFormData = {
     pnNumber: "",
@@ -31,18 +32,20 @@ const INITIAL_FORM_DATA: QuoteFormData = {
     deliveryFormat: "Single PCB",
     thickness: "1.6mm",
     pcbColor: "#52c41a",
+    coverlayColor: "",
     silkscreen: "White",
     materialType: "FR4-TG135",
     surfaceFinish: "HASL(Leaded)",
     goldThickness: "N/A",
     copperWeight: "1 oz",
+    copperType: "",
     viaCovering: "Not Specified",
     viaPlating: "Not Specified",
     minHole: "0.3mm",
     tolerance: "Regular",
     confirmFile: "No",
-    markOnPcb: "Remove Mark",
-    elecTest: "Flying Probe Fully Test",
+    markOnPcb: "",
+    elecTest: "",
     goldFingers: "No",
     castellated: "No",
     edgePlating: "No",
@@ -506,6 +509,11 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
     const [pricingConfig, setPricingConfig] = useState<{ fixedCosts: any; priceTiers: any; shippingOptions?: any[]; gstPercentage?: number; minPartsOrderAmount?: number } | null>(null);
 
+    // Fetch active quotation provider routing rules from admin / DB
+    React.useEffect(() => {
+        fetchActiveProviderRules().catch(() => {});
+    }, []);
+
     // Read URL search params for prefilling parameters passed from main site or cart item edit
     React.useEffect(() => {
         if (typeof window === "undefined") return;
@@ -570,12 +578,12 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                             panelColumn: item.panelColumn || "",
                             panelRow: item.panelRow || "",
                             goldThickness: (item.surfaceFinish === "ENIG" || item.baseMaterial === "Flex") ? (item.goldThickness && item.goldThickness !== "N/A" && item.goldThickness !== "1 U*" ? item.goldThickness : '1 U"') : "N/A",
-                            viaCovering: item.viaCovering || "Not Specified",
+                            viaCovering: (item.viaCovering === "Tented" || item.viaCovering === "Untented") ? "Not Specified" : (item.viaCovering || "Not Specified"),
                             viaPlating: item.viaPlating || item.viaPlatingMethod || "Not Specified",
                             minHole: item.minHole || "0.3mm/(0.4/0.45mm)",
                             confirmFile: item.confirmFile || "No",
-                            markOnPcb: item.markOnPcb || "Remove Mark",
-                            elecTest: item.elecTest || "Flying Probe Fully Test",
+                            markOnPcb: item.markOnPcb || "",
+                            elecTest: (item.baseMaterial === "Rogers" || item.material === "Rogers") ? "Flying Probe Fully Test" : (item.elecTest || ""),
                             goldFingers: item.goldFingers || "No",
                             castellated: item.castellated || "No",
                             edgePlating: item.edgePlating || "No",
@@ -677,6 +685,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     if (!params.get("copperWeight")) updates.copperWeight = "0.5 oz";
                 } else if (matchedMaterial === "Rogers") {
                     updates.materialType = "RO4350B(Dk=3.48,Df=0.0037)";
+                    updates.elecTest = "Flying Probe Fully Test";
                 } else if (matchedMaterial === "PTFE Teflon") {
                     updates.materialType = "ZYF300CA-P(Dk=3.0,Df=0.0016)";
                 } else if (matchedMaterial === "FR-4") {
@@ -707,7 +716,12 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 if (spec.pcbColor) updates.pcbColor = String(spec.pcbColor);
                 if (spec.surfaceFinish) updates.surfaceFinish = String(spec.surfaceFinish);
                 if (spec.copperWeight) updates.copperWeight = String(spec.copperWeight);
-                if (spec.baseMaterial) updates.baseMaterial = String(spec.baseMaterial);
+                if (spec.baseMaterial) {
+                    updates.baseMaterial = String(spec.baseMaterial);
+                    if (String(spec.baseMaterial) === "Rogers") {
+                        updates.elecTest = "Flying Probe Fully Test";
+                    }
+                }
                 if (spec.boardName) updates.boardName = String(spec.boardName);
 
                 if (Object.keys(updates).length > 0) {
@@ -882,11 +896,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 "OSP": 3
             };
 
-            let surfaceFinishVal = finishMap[formData.surfaceFinish] ?? 0;
-            if (layersCount >= 6 && surfaceFinishVal === 0) {
-                surfaceFinishVal = 2; // ENIG (HASL is not available for 6-layer PCBs)
-            }
-
             let plateTypeVal = 1; // 1-FR-4
             const mat = (formData.baseMaterial || "").toLowerCase();
             if (mat.includes("flex")) plateTypeVal = 7;
@@ -894,6 +903,11 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             else if (mat.includes("ptfe") || mat.includes("teflon")) plateTypeVal = 6;
             else if (mat.includes("aluminum")) plateTypeVal = 2;
             else if (mat.includes("hdi")) plateTypeVal = layersCount >= 4 ? 8 : 1;
+
+            let surfaceFinishVal = finishMap[formData.surfaceFinish] ?? 0;
+            if (plateTypeVal === 7 || (layersCount >= 6 && surfaceFinishVal === 0)) {
+                surfaceFinishVal = 2; // Flex PCBs and 6+ layer PCBs only support ENIG
+            }
 
             let copperWeightVal = formData.copperWeight?.includes("2") ? 2 : 1;
             if (plateTypeVal === 7) {
@@ -926,10 +940,25 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const serviceConfigs: any[] = [];
             if (plateTypeVal === 7) {
                 // FPC Coverlay Thickness
+                const ctcOption = formData.substrateType === "Transparent"
+                    ? "PET:25um/AD:25um"
+                    : (layersCount >= 4 ? "PI:25um/AD:25um" : "PI:12.5um/AD:15um");
                 serviceConfigs.push({
                     serviceConfigCode: "CTC",
-                    configOptionShow: layersCount >= 4 ? "PI:25um/AD:25um" : "PI:12.5um/AD:15um"
+                    configOptionShow: ctcOption
                 });
+                if (formData.coverlayColor) {
+                    serviceConfigs.push({
+                        serviceConfigCode: "PCYB",
+                        configOptionShow: formData.coverlayColor
+                    });
+                }
+                if (formData.copperType) {
+                    serviceConfigs.push({
+                        serviceConfigCode: "CT",
+                        configOptionShow: formData.copperType
+                    });
+                }
             } else if (plateTypeVal === 5) {
                 serviceConfigs.push({
                     serviceConfigCode: "HFMT",
@@ -963,6 +992,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     thickness: rawThickness,
                     pcbColor: colorMap[formData.pcbColor] ?? 0,
                     surfaceFinish: surfaceFinishVal,
+                    ...(surfaceFinishVal === 2 || plateTypeVal === 7 ? {
+                        goldThickness: (formData.goldThickness && String(formData.goldThickness).includes("2")) ? 2 : 1
+                    } : {}),
                     copperWeight: copperWeightVal,
                     ...(layersCount >= 4 ? { insideCuprumThickness: "0.5" } : {}),
                     goldFinger: formData.goldFingers === "Yes" ? 1 : 0,
@@ -976,14 +1008,14 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     })(),
                     panelFlag: 0,
                     differentDesign: parseInt(formData.differentDesign || "1", 10) || 1,
-                    flyingProbeTest: formData.elecTest === "Flying Probe Fully Test" ? 2 : 1,
+                    flyingProbeTest: (plateTypeVal === 7 || plateTypeVal === 5 || formData.elecTest === "Flying Probe Fully Test") ? 2 : 1,
                     castellatedHoles: formData.castellated === "Yes" ? 1 : 0,
                     orderDetailsRemark: "Web Quotation",
                     impedanceFlag: "no",
                     isAddCustomerCode: "nocode",
                     plateType: plateTypeVal,
                     autoConfirmProductionFile: true,
-                    markOnPcb: 1,
+                    markOnPcb: (formData.markOnPcb || "").toLowerCase().includes("barcode") ? 2 : 1,
                     viaCovering: viaCoveringVal,
                     needTechnics: 0,
                     edgeRounding: formData.edgePlating === "Yes",
@@ -1040,14 +1072,18 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         quoteTrigger,
         formData.layers,
         formData.baseMaterial,
+        formData.substrateType,
         formData.materialType,
         formData.width,
         formData.height,
         formData.qty,
         formData.thickness,
         formData.pcbColor,
+        formData.coverlayColor,
         formData.surfaceFinish,
+        formData.goldThickness,
         formData.copperWeight,
+        formData.copperType,
         formData.unit,
         formData.goldFingers,
         formData.differentDesign,
@@ -1058,6 +1094,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         formData.minHole,
         formData.edgePlating,
         formData.blindSlots,
+        formData.markOnPcb,
         uploadedGerberFileId,
         jlcpcbFileKey
     ]);
@@ -1855,8 +1892,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 viaPlating: formData.viaPlating || "Not Specified",
                 minHole: formData.minHole || "0.3mm/(0.4/0.45mm)",
                 confirmFile: formData.confirmFile || "No",
-                markOnPcb: formData.markOnPcb || "Remove Mark",
-                elecTest: formData.elecTest || "Flying Probe Fully Test",
+                markOnPcb: formData.markOnPcb || "",
+                elecTest: formData.baseMaterial === "Rogers" ? "Flying Probe Fully Test" : (formData.elecTest || ""),
                 goldFingers: formData.goldFingers || "No",
                 castellated: formData.castellated || "No",
                 edgePlating: formData.edgePlating || "No",

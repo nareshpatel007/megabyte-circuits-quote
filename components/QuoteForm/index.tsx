@@ -154,8 +154,8 @@ export default function QuoteForm({
                 next.substrateType = next.substrateType || "25µm dielectric thickness";
                 next.surfaceFinish = "ENIG";
                 next.silkscreen = "White";
-                next.copperType = "Electro-deposited";
-                next.coverlayColor = next.coverlayColor || "Yellow";
+                next.copperType = next.copperType || "";
+                next.coverlayColor = next.coverlayColor || "";
                 next.goldThickness = (!next.goldThickness || next.goldThickness === "N/A" || next.goldThickness === "1 U*") ? "1 U\"" : next.goldThickness;
 
                 if (next.layers === "1") next.thickness = "0.07mm";
@@ -169,6 +169,7 @@ export default function QuoteForm({
                 if (!["0.51mm", "0.76mm", "1.52mm"].includes(next.thickness)) {
                     next.thickness = "0.51mm";
                 }
+                next.elecTest = "Flying Probe Fully Test";
             } else if (field === "baseMaterial" && value === "PTFE Teflon") {
                 next.layers = "2";
                 next.materialType = "ZYF300CA-C(Dk=2.94,Df=0.0016)";
@@ -177,9 +178,17 @@ export default function QuoteForm({
                 if (!["0.76mm", "1.52mm"].includes(next.thickness)) {
                     next.thickness = "0.76mm";
                 }
+                if (prev.baseMaterial === "Rogers" && next.elecTest === "Flying Probe Fully Test") {
+                    next.elecTest = "";
+                }
             } else if (field === "baseMaterial" && value === "FR-4") {
-                if (next.surfaceFinish !== "ENIG") {
-                    next.goldThickness = "N/A";
+                next.surfaceFinish = parseInt(next.layers, 10) >= 6 ? "LeadFree HASL" : "HASL(Leaded)";
+                next.goldThickness = "N/A";
+                if (!["FR4 TG135", "KB6164 - TG135", "Nan Ya NP-140F", "S1141 TG140", "S1000H TG155", "FR4-TG135"].includes(next.materialType)) {
+                    next.materialType = "FR4 TG135";
+                }
+                if (prev.baseMaterial === "Rogers" && next.elecTest === "Flying Probe Fully Test") {
+                    next.elecTest = "";
                 }
             } else if (field === "substrateType" && next.baseMaterial === "Flex") {
                 if (value === "Transparent") {
@@ -188,7 +197,7 @@ export default function QuoteForm({
                     else if (next.layers === "2") next.thickness = "0.24mm";
                 } else {
                     if (next.coverlayColor === "Transparent") {
-                        next.coverlayColor = "Yellow";
+                        next.coverlayColor = "";
                     }
                     if (value === "50µm dielectric thickness") {
                         if (next.layers === "1") next.thickness = "0.12mm";
@@ -210,7 +219,7 @@ export default function QuoteForm({
                 } else if (value === "4") {
                     next.thickness = "0.2mm";
                     next.substrateType = "25µm dielectric thickness";
-                    if (next.coverlayColor === "Transparent") next.coverlayColor = "Yellow";
+                    if (next.coverlayColor === "Transparent") next.coverlayColor = "";
                 }
             }
 
@@ -227,6 +236,14 @@ export default function QuoteForm({
                     next.surfaceFinish = "ENIG";
                     next.goldThickness = (!next.goldThickness || next.goldThickness === "N/A" || next.goldThickness === "1 U*") ? "1 U\"" : next.goldThickness;
                 }
+            }
+
+            if (next.baseMaterial === "Flex") {
+                next.surfaceFinish = "ENIG";
+            }
+
+            if (next.baseMaterial === "Rogers") {
+                next.elecTest = "Flying Probe Fully Test";
             }
             return next;
         });
@@ -674,9 +691,19 @@ export default function QuoteForm({
                                         </Pill>
                                     ) : (
                                         <div className="flex flex-wrap gap-2.5">
-                                            <ColorCirclePill color="#fadb14" name="Yellow" active={(formData.coverlayColor || "Yellow") === "Yellow"} onClick={() => updateField("coverlayColor", "Yellow")} />
-                                            <ColorCirclePill color="#000000" name="Black" active={formData.coverlayColor === "Black"} onClick={() => updateField("coverlayColor", "Black")} />
-                                            <ColorCirclePill color="#ffffff" name="White" active={formData.coverlayColor === "White"} onClick={() => updateField("coverlayColor", "White")} />
+                                            {[
+                                                { color: "#fadb14", name: "Yellow" },
+                                                { color: "#000000", name: "Black" },
+                                                { color: "#ffffff", name: "White" }
+                                            ].map(item => (
+                                                <ColorCirclePill
+                                                    key={item.name}
+                                                    color={item.color}
+                                                    name={item.name}
+                                                    active={formData.coverlayColor === item.name}
+                                                    onClick={() => updateField("coverlayColor", formData.coverlayColor === item.name ? "" : item.name)}
+                                                />
+                                            ))}
                                         </div>
                                     )}
                                 </ConfigRow>
@@ -707,16 +734,15 @@ export default function QuoteForm({
                             {formData.baseMaterial === "Flex" && (
                                 <ConfigRow label="Copper Type">
                                     {[
-                                        { val: "Electro-deposited", disabled: false },
-                                        { val: "Rolled Annealed", disabled: true }
+                                        "Electro-deposited",
+                                        "Rolled Annealed"
                                     ].map(ct => (
                                         <Pill
-                                            key={ct.val}
-                                            disabled={ct.disabled}
-                                            active={(formData.copperType || "Electro-deposited") === ct.val}
-                                            onClick={() => updateField("copperType", ct.val)}
+                                            key={ct}
+                                            active={formData.copperType === ct}
+                                            onClick={() => updateField("copperType", formData.copperType === ct ? "" : ct)}
                                         >
-                                            {ct.val}
+                                            {ct}
                                         </Pill>
                                     ))}
                                 </ConfigRow>
@@ -878,11 +904,11 @@ export default function QuoteForm({
                             {/* Standard Via Covering for FR-4 / Rogers / PTFE */}
                             {formData.baseMaterial !== "Flex" && (
                                 <ConfigRow label="Via Covering">
-                                    {["Tented", "Untented", "Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map(v => (
+                                    {["Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map(v => (
                                         <Pill
                                             key={v}
                                             active={formData.viaCovering === v}
-                                            onClick={() => updateField("viaCovering", v)}
+                                            onClick={() => updateField("viaCovering", formData.viaCovering === v ? "Not Specified" : v)}
                                         >
                                             {v}
                                         </Pill>
@@ -995,11 +1021,11 @@ export default function QuoteForm({
                             </ConfigRow>
 
                             <ConfigRow label="Mark on PCB">
-                                {["Remove Mark", "2D barcode (Serial Number)"].map(m => (
+                                {["Remove Mark"].map(m => (
                                     <Pill
                                         key={m}
                                         active={formData.markOnPcb === m}
-                                        onClick={() => updateField("markOnPcb", m)}
+                                        onClick={() => updateField("markOnPcb", formData.markOnPcb === m ? "" : m)}
                                     >
                                         {m}
                                     </Pill>
@@ -1010,8 +1036,14 @@ export default function QuoteForm({
                                 {["Flying Probe Fully Test"].map(et => (
                                     <Pill
                                         key={et}
-                                        active={formData.elecTest === et}
-                                        onClick={() => updateField("elecTest", et)}
+                                        active={formData.elecTest === et || formData.baseMaterial === "Rogers"}
+                                        onClick={() => {
+                                            if (formData.baseMaterial === "Rogers") {
+                                                updateField("elecTest", "Flying Probe Fully Test");
+                                            } else {
+                                                updateField("elecTest", formData.elecTest === et ? "" : et);
+                                            }
+                                        }}
                                     >
                                         {et}
                                     </Pill>
@@ -1064,7 +1096,6 @@ export default function QuoteForm({
                                     {["No", "Yes"].map(e => (
                                         <Pill
                                             key={e}
-                                            disabled={e === "Yes"}
                                             active={formData.edgePlating === e}
                                             onClick={() => updateField("edgePlating", e)}
                                         >

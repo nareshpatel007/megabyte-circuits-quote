@@ -253,6 +253,44 @@ describe("Complete IN-HOUSE vs JLCPCB Production Routing - 14 Conditions", () =>
         });
     });
 
+    // Rule 15: Mark on PCB (Empty/none qualifies; selecting any value forces JLCPCB)
+    describe("Rule 15: Mark on PCB", () => {
+        test("Empty, None, and Not Specified qualify for IN-HOUSE", () => {
+            expect(isJlcpcbRequired({ ...baselineInHouseSpecs, markOnPcb: "" })).toBe(false);
+            expect(isJlcpcbRequired({ ...baselineInHouseSpecs, markOnPcb: "none" })).toBe(false);
+            expect(isJlcpcbRequired({ ...baselineInHouseSpecs, markOnPcb: "Not Specified" })).toBe(false);
+        });
+
+        test("Selecting any value (Remove Mark, Specify Location) forces JLCPCB", () => {
+            const forbiddenMark = [
+                "Remove Mark",
+                "Specify Location",
+                "Any Location"
+            ];
+            forbiddenMark.forEach(m => {
+                const specs = { ...baselineInHouseSpecs, markOnPcb: m };
+                expect(isJlcpcbRequired(specs)).toBe(true);
+                expect(getMatchedJlcpcbConditions(specs).some(r => r.includes("Mark on PCB"))).toBe(true);
+            });
+        });
+    });
+
+    // Rule 16: Electrical Test (Empty/none qualifies; Flying Probe Fully Test forces JLCPCB)
+    describe("Rule 16: Electrical Test", () => {
+        test("Empty, None, Not Tested qualify for IN-HOUSE", () => {
+            expect(isJlcpcbRequired({ ...baselineInHouseSpecs, elecTest: "" })).toBe(false);
+            expect(isJlcpcbRequired({ ...baselineInHouseSpecs, elecTest: "none" })).toBe(false);
+            expect(isJlcpcbRequired({ ...baselineInHouseSpecs, elecTest: "not tested" })).toBe(false);
+            expect(isJlcpcbRequired({ ...baselineInHouseSpecs, elec_test: "" })).toBe(false);
+        });
+
+        test("Flying Probe Fully Test forces JLCPCB", () => {
+            const specs = { ...baselineInHouseSpecs, elecTest: "Flying Probe Fully Test" };
+            expect(isJlcpcbRequired(specs)).toBe(true);
+            expect(getMatchedJlcpcbConditions(specs).some(r => r.includes("Electrical Test"))).toBe(true);
+        });
+    });
+
     // Mandatory Regression & Transition Scenarios
     describe("Mandatory Transition and Regression Scenarios", () => {
         test("2 layers -> 4 layers -> 2 layers", () => {

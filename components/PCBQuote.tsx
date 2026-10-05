@@ -487,8 +487,8 @@ export default function PCBQuote() {
     const [minHole, setMinHole] = useState("0.3mm");
     const [tolerance, setTolerance] = useState("Regular");
     const [confirmFile, setConfirmFile] = useState("No");
-    const [markOnPcb, setMarkOnPcb] = useState("Remove Mark");
-    const [elecTest, setElecTest] = useState("Flying Probe Fully Test");
+    const [markOnPcb, setMarkOnPcb] = useState("");
+    const [elecTest, setElecTest] = useState("");
     const [goldFingers, setGoldFingers] = useState("No");
     const [castellated, setCastellated] = useState("No");
     const [edgePlating, setEdgePlating] = useState("No");
@@ -696,6 +696,11 @@ export default function PCBQuote() {
                                                 }
                                                 if (["Rogers", "PTFE", "Teflon"].includes(m)) {
                                                     setLayers("2");
+                                                }
+                                                if (m === "Rogers") {
+                                                    setElecTest("Flying Probe Fully Test");
+                                                } else if (baseMaterial === "Rogers" && elecTest === "Flying Probe Fully Test") {
+                                                    setElecTest("");
                                                 }
                                             }}
                                         >
@@ -1070,8 +1075,8 @@ export default function PCBQuote() {
                                         </ConfigRow>
 
                                         <ConfigRow label="Via Covering">
-                                            {["Not Specified", "Tented", "Untented", "Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map(v => (
-                                                <Pill key={v} active={viaCovering === v} onClick={() => setViaCovering(v)}>{v}</Pill>
+                                            {["Plugged", "Epoxy Filled & Capped", "Copper paste Filled & Capped"].map(v => (
+                                                <Pill key={v} active={viaCovering === v} onClick={() => setViaCovering(viaCovering === v ? "Not Specified" : v)}>{v}</Pill>
                                             ))}
                                         </ConfigRow>
 
@@ -1083,7 +1088,21 @@ export default function PCBQuote() {
 
                                         <ConfigRow label="Electrical Test">
                                             {["Flying Probe Fully Test", "Not Tested"].map(t => (
-                                                <Pill key={t} active={elecTest === t} onClick={() => setElecTest(t)} activeColor="blue">{t}</Pill>
+                                                <Pill
+                                                    key={t}
+                                                    active={baseMaterial === "Rogers" ? t === "Flying Probe Fully Test" : elecTest === t}
+                                                    disabled={baseMaterial === "Rogers" && t !== "Flying Probe Fully Test"}
+                                                    onClick={() => {
+                                                        if (baseMaterial === "Rogers") {
+                                                            setElecTest("Flying Probe Fully Test");
+                                                        } else {
+                                                            setElecTest(elecTest === t ? "" : t);
+                                                        }
+                                                    }}
+                                                    activeColor="blue"
+                                                >
+                                                    {t}
+                                                </Pill>
                                             ))}
                                         </ConfigRow>
 
