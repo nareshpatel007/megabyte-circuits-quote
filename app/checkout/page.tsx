@@ -327,15 +327,28 @@ function CheckoutContent() {
         const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
         const newShippingCharge = Math.round(newRate * chargedWeightKg);
 
-        const pcbBasePrice = item.price - (item.shippingCharge || 0);
-        const newTotalPrice = Math.max(pcbBasePrice, 0) + newShippingCharge;
+        const currentShipping = item.shippingCharge || (item as any).shipping_charge || 0;
+        let newTotalPrice = item.price;
+        let updatedGst = (item as any).gst_amount ?? (item as any).gstAmount;
+        if (newShippingCharge !== currentShipping) {
+            const currentGst = updatedGst || 0;
+            const currentPcb = (item as any).pcb_price ?? (item as any).pcbPrice ?? (item.price - currentShipping - currentGst);
+            const taxable = currentPcb + newShippingCharge;
+            const gstRate = (item as any).gst_rate ?? (item as any).gstRate ?? 18;
+            updatedGst = (currentGst > 0 || gstRate > 0) ? Math.round(((taxable * gstRate) / 100) * 100) / 100 : 0;
+            newTotalPrice = Math.round((taxable + updatedGst) * 100) / 100;
+        }
 
         return {
             ...item,
             shippingOption: newOption,
             shippingOptionKey: newOptionKey,
             shippingCharge: newShippingCharge,
-            price: newTotalPrice
+            shipping_charge: newShippingCharge,
+            gst_amount: updatedGst,
+            gstAmount: updatedGst,
+            price: newTotalPrice,
+            total_price: newTotalPrice
         };
     });
 

@@ -11,8 +11,6 @@ import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus, Loader2, Sl
 import { useCurrency } from "@/context/CurrencyContext";
 import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend, setCartSessionId, getMinCartQuantity, safeSetStorage } from "@/lib/cartSession";
 import { isJlcpcbRequired, getMatchedJlcpcbConditions } from "@/lib/jlcpcbCondition";
-import EditSpecsModal from "@/components/EditSpecsModal";
-
 import { getAuthToken, getAuthUser } from "@/lib/auth";
 
 interface CartItem {
@@ -38,6 +36,19 @@ interface CartItem {
     shippingOption?: string;
     shippingOptionKey?: string;
     shippingCharge?: number;
+    shipping_charge?: number;
+    pcb_price?: number;
+    pcbPrice?: number;
+    gst_rate?: number;
+    gstRate?: number;
+    gst_amount?: number;
+    gstAmount?: number;
+    subtotal?: number;
+    total_price?: number;
+    pricing_breakdown?: any;
+    build_days?: number;
+    working_days?: number;
+    selectedDay?: number;
     width?: number | string;
     height?: number | string;
     date: string;
@@ -89,6 +100,19 @@ const calculateCartDeliveryDate = (targetWorkingDays: number): string => {
 
 const validatePcbItemLeadTime = (item: CartItem): CartItem & { areaExceeded?: boolean } => {
     if (item.productType === "part") return item;
+
+    // Preserved authoritative quotation delivery date & build time from Instant Quote
+    const existingDate = item.deliveryDate || item.delivery_date || item.date;
+    const existingBuildTime = item.buildTime;
+    if (existingDate && existingBuildTime) {
+        return {
+            ...item,
+            buildTime: existingBuildTime,
+            date: existingDate,
+            deliveryDate: existingDate,
+            delivery_date: item.delivery_date || existingDate
+        };
+    }
 
     let w = Number(item.width);
     let h = Number(item.height);
@@ -155,7 +179,6 @@ export default function CartPage() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [minPartsOrderAmount, setMinPartsOrderAmount] = useState<number>(3000);
     const [calculatingItemIds, setCalculatingItemIds] = useState<Record<string, boolean>>({});
-    const [editingItem, setEditingItem] = useState<CartItem | null>(null);
 
     const saveBackendTimerRef = useRef<NodeJS.Timeout | null>(null);
     const jlcpcbDebounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
@@ -507,16 +530,28 @@ export default function CartPage() {
                     newShippingCharge = Math.round(foundOpt.rate * chargedWeightKg);
                 }
 
-                const totalPrice = jlcBasePrice + newShippingCharge;
+                const jlcGstRate = json.gst_percentage !== undefined ? Number(json.gst_percentage) : 18;
+                const jlcTaxable = jlcBasePrice + newShippingCharge;
+                const jlcGstAmount = json.gst_amount !== undefined ? parseFloat(json.gst_amount) : Math.round(((jlcTaxable * jlcGstRate) / 100) * 100) / 100;
+                const totalPrice = Math.round((jlcTaxable + jlcGstAmount) * 100) / 100;
                 const unitPrice = newQty > 0 ? Math.round((jlcBasePrice / newQty) * 100) / 100 : jlcBasePrice;
 
                 return validatePcbItemLeadTime({
                     ...item,
                     qty: newQty,
                     price: totalPrice,
+                    total_price: totalPrice,
+                    pcb_price: jlcBasePrice,
+                    pcbPrice: jlcBasePrice,
+                    subtotal: jlcTaxable,
+                    gst_rate: jlcGstRate,
+                    gstRate: jlcGstRate,
+                    gst_amount: jlcGstAmount,
+                    gstAmount: jlcGstAmount,
                     unitPrice: unitPrice,
                     jlcpcb_price: jlcBasePrice,
                     shippingCharge: newShippingCharge,
+                    shipping_charge: newShippingCharge,
                     quotation_source: "jlcpcb",
                     order_type: "jlcpcb",
                     jlcpcb_quote: json,
@@ -529,16 +564,30 @@ export default function CartPage() {
         }
 
         const prevShippingCharge = item.shippingCharge || 0;
-        const prevPcbPrice = Math.max(item.price - prevShippingCharge, 0);
-        const pcbUnitPrice = item.unitPrice || (item.qty > 0 ? prevPcbPrice / item.qty : prevPcbPrice);
-        const newPcbPrice = Math.max(Math.round(pcbUnitPrice * newQty), 10);
+        const prevPcbPrice = item.pcb_price ?? item.pcbPrice ?? Math.max((item.price - prevShippingCharge) / 1.18, 0);
+        const pcbUnitPrice = item.qty > 0 ? prevPcbPrice / item.qty : prevPcbPrice;
+        const newPcbPrice = Math.max(Math.round(pcbUnitPrice * newQty * 100) / 100, 10);
+        const gstRate = item.gst_rate ?? item.gstRate ?? 18;
+        const taxable = newPcbPrice + prevShippingCharge;
+        const newGstAmount = Math.round(((taxable * gstRate) / 100) * 100) / 100;
+        const newTotalPrice = Math.round((taxable + newGstAmount) * 100) / 100;
 
         const isJlc = isJlcpcbRequired(item);
 
         return validatePcbItemLeadTime({
             ...item,
             qty: newQty,
-            price: newPcbPrice + prevShippingCharge,
+            price: newTotalPrice,
+            total_price: newTotalPrice,
+            pcb_price: newPcbPrice,
+            pcbPrice: newPcbPrice,
+            subtotal: taxable,
+            gst_rate: gstRate,
+            gstRate: gstRate,
+            gst_amount: newGstAmount,
+            gstAmount: newGstAmount,
+            shippingCharge: prevShippingCharge,
+            shipping_charge: prevShippingCharge,
             unitPrice: pcbUnitPrice,
             quotation_source: isJlc ? (item.quotation_source || "jlcpcb") : "internal",
             order_type: isJlc ? (item.order_type || "jlcpcb") : "normal",
@@ -772,12 +821,20 @@ export default function CartPage() {
     const selectedCount = effectiveSummaryItems.length;
 
     const selectedShippingTotal = effectiveSummaryItems.reduce(
-        (acc, item) => acc + (item.shippingCharge || 0),
+        (acc, item) => acc + (item.shippingCharge || item.shipping_charge || 0),
         0
     );
 
-    const selectedSubtotal = effectiveSummaryItems.reduce(
-        (acc, item) => acc + (item.price - (item.shippingCharge || 0)),
+    const selectedGstTotal = effectiveSummaryItems.reduce(
+        (acc, item) => acc + (item.gst_amount ?? item.gstAmount ?? (item.price > 0 ? Math.round(((item.price - (item.price / 1.18))) * 100) / 100 : 0)),
+        0
+    );
+
+    const selectedPcbSubtotal = effectiveSummaryItems.reduce(
+        (acc, item) => {
+            const pcbPrice = item.pcb_price ?? item.pcbPrice ?? (item.price - (item.shippingCharge || item.shipping_charge || 0) - (item.gst_amount ?? item.gstAmount ?? 0));
+            return acc + pcbPrice;
+        },
         0
     );
 
@@ -866,7 +923,7 @@ export default function CartPage() {
                                                     <span className="w-36 text-center">Delivery Option</span>
                                                 </>
                                             )}
-                                            <span className="w-24 text-right">Price</span>
+                                            <span className="w-32 text-right">Price</span>
                                             <div className="w-8 flex justify-center">
                                                 <button type="button" onClick={handleRemoveSelectedItems} disabled={selectedItemIds.length === 0} className={`p-1 rounded transition-colors ${selectedItemIds.length > 0 ? "text-red-500 hover:bg-red-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`} title="Delete Selected">
                                                     <Trash2 className="w-4 h-4" />
@@ -934,22 +991,27 @@ export default function CartPage() {
                                                         <div className="space-y-1 min-w-0 flex-1">
                                                             <div className="flex flex-wrap items-center gap-2">
                                                                 <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">{item.boardName || (item as any).partNumber}</h3>
-                                                                {item.productType !== "part" && isJlcpcbRequired(item) && (
-                                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
-                                                                        <Zap className="w-3 h-3 text-amber-500 fill-amber-400" />
-                                                                        JLCPCB Live
-                                                                    </span>
+                                                                {item.productType !== "part" && (
+                                                                    (isJlcpcbRequired(item) || item.quotation_source === "jlcpcb") ? (
+                                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
+                                                                            <Zap className="w-3 h-3 text-amber-500 fill-amber-400" />
+                                                                            JLCPCB Live
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
+                                                                            Local (In-House)
+                                                                        </span>
+                                                                    )
                                                                 )}
                                                                 {item.productType !== "part" && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => setEditingItem(item)}
-                                                                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-white hover:bg-primary bg-primary/10 px-2 py-0.5 rounded transition-all cursor-pointer shadow-2xs"
-                                                                        title="Edit board specifications and recalculate live quotation"
+                                                                    <Link
+                                                                        href={`/quote?cart_item_id=${item.id}`}
+                                                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:text-white hover:bg-primary bg-primary/10 px-2.5 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs"
+                                                                        title="Edit board specifications in Instant Quote"
                                                                     >
                                                                         <Sliders className="w-3 h-3" />
-                                                                        Edit Specs
-                                                                    </button>
+                                                                        Edit
+                                                                    </Link>
                                                                 )}
                                                             </div>
                                                             {item.productType === "part" ? (
@@ -1071,15 +1133,20 @@ export default function CartPage() {
                                                         {item.productType !== "part" && (
                                                             <>
                                                                 <div className="text-xs font-semibold text-gray-600 w-20 text-center flex justify-center items-center">
-                                                                    {item.buildTime || "-"}
+                                                                    {item.buildTime || `${item.build_days || 3} days`}
                                                                 </div>
                                                                 <div className="w-36 text-center flex flex-col justify-center items-center">
                                                                     {item.shippingOption ? (
                                                                         <div className="bg-blue-50/80 border border-blue-100 rounded-lg px-2 py-1 text-[11px] font-bold text-blue-900 leading-tight">
                                                                             <div>{item.shippingOption}</div>
                                                                             <div className="text-[10px] text-primary font-semibold mt-0.5">
-                                                                                Fee: {formatPrice(item.shippingCharge || 0)}
+                                                                                Fee: {formatPrice(item.shippingCharge || item.shipping_charge || 0)}
                                                                             </div>
+                                                                            {(item.deliveryDate || item.date) && (
+                                                                                <div className="text-[9.5px] text-slate-500 font-medium mt-0.5 whitespace-nowrap">
+                                                                                    {item.deliveryDate || item.date}
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     ) : (
                                                                         <span className="text-xs text-gray-400 font-medium">-</span>
@@ -1087,13 +1154,25 @@ export default function CartPage() {
                                                                 </div>
                                                             </>
                                                         )}
-                                                        <div className="text-sm font-extrabold text-primary w-24 text-right flex justify-end items-center gap-1.5">
-                                                            {calculatingItemIds[String(item.id)] && (
-                                                                <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-600 shrink-0" />
+                                                        <div className="text-sm font-extrabold text-primary w-32 text-right flex flex-col justify-end items-end gap-0.5">
+                                                            <div className="flex items-center gap-1.5">
+                                                                {calculatingItemIds[String(item.id)] && (
+                                                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-600 shrink-0" />
+                                                                )}
+                                                                <span className={calculatingItemIds[String(item.id)] ? "opacity-60 transition-opacity" : ""}>
+                                                                    {formatPrice(item.price)}
+                                                                </span>
+                                                            </div>
+                                                            {item.productType !== "part" && (
+                                                                <div className="text-[10px] font-semibold text-slate-500 leading-tight">
+                                                                    <span>PCB: {formatPrice(item.pcb_price ?? item.pcbPrice ?? (item.price - (item.shippingCharge || item.shipping_charge || 0) - (item.gst_amount ?? item.gstAmount ?? 0)))}</span>
+                                                                    {((item.gst_amount ?? item.gstAmount) || 0) > 0 && (
+                                                                        <span className="block text-[9.5px] text-slate-400 font-normal">
+                                                                            + GST ({item.gst_rate ?? item.gstRate ?? 18}%): {formatPrice(item.gst_amount ?? item.gstAmount ?? 0)}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             )}
-                                                            <span className={calculatingItemIds[String(item.id)] ? "opacity-60 transition-opacity" : ""}>
-                                                                {formatPrice(item.price)}
-                                                            </span>
                                                         </div>
                                                         <div className="w-8 flex justify-center items-center">
                                                             <button type="button" onClick={() => handleRemoveItem(item.id)} className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer" title="Remove item"><Trash2 className="w-4 h-4" /></button>
@@ -1115,12 +1194,18 @@ export default function CartPage() {
                                     <div className="space-y-2 py-2 border-b border-gray-100 text-xs">
                                         <div className="flex items-center justify-between text-gray-600 font-medium">
                                             <span>Subtotal ({selectedCount} {selectedCount === 1 ? "item" : "items"})</span>
-                                            <span className="font-semibold text-gray-800">{formatPrice(selectedSubtotal)}</span>
+                                            <span className="font-semibold text-gray-800">{formatPrice(selectedPcbSubtotal)}</span>
                                         </div>
                                         {selectedShippingTotal > 0 && (
                                             <div className="flex items-center justify-between text-gray-600 font-medium">
-                                                <span>Shipping Cost</span>
+                                                <span>Delivery / Shipping</span>
                                                 <span className="font-semibold text-gray-800">{formatPrice(selectedShippingTotal)}</span>
+                                            </div>
+                                        )}
+                                        {selectedGstTotal > 0 && (
+                                            <div className="flex items-center justify-between text-gray-600 font-medium">
+                                                <span>GST (18%)</span>
+                                                <span className="font-semibold text-gray-800">{formatPrice(selectedGstTotal)}</span>
                                             </div>
                                         )}
                                     </div>
@@ -1166,19 +1251,6 @@ export default function CartPage() {
                         </div>
                     </div>
                 </main>
-                {editingItem && (
-                    <EditSpecsModal
-                        isOpen={!!editingItem}
-                        item={editingItem}
-                        onClose={() => setEditingItem(null)}
-                        onSave={async (updatedItem) => {
-                            const updated = cartItems.map((it) => (String(it.id) === String(updatedItem.id) ? updatedItem : it));
-                            setCartItems(updated);
-                            await saveCart(updated, true);
-                            setEditingItem(null);
-                        }}
-                    />
-                )}
                 <Footer />
             </div>
         </div>

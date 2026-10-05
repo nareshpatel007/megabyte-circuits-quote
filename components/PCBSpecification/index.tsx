@@ -14,7 +14,7 @@ import { loadLayers, renderStack, renderWithGerbersRenderer, type RenderOptions,
 import { submitOrder, OrderFormData } from "../../lib/api/orderService";
 import { fetchPublicHolidays, PublicHoliday, getJlcpcbQuotationDate } from "../../lib/api/deliveryService";
 import Toast, { ToastType } from "../Toast";
-import { saveCartToBackend } from "@/lib/cartSession";
+import { saveCartToBackend, loadCartFromBackend } from "@/lib/cartSession";
 import { useCurrency } from "../../context/CurrencyContext";
 import { isJlcpcbRequired } from "@/lib/jlcpcbCondition";
 
@@ -500,14 +500,151 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
     const [jlcpcbFileKey, setJlcpcbFileKey] = useState<string | null>(null);
     const [clientLayers, setClientLayers] = useState<InputLayer[]>([]);
     const [detectedInfo, setDetectedInfo] = useState<{ layers: string; width: string; height: string } | null>(null);
+    const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
+    const [editingCartItemName, setEditingCartItemName] = useState<string>("");
 
     const [formData, setFormData] = useState<QuoteFormData>(INITIAL_FORM_DATA);
     const [pricingConfig, setPricingConfig] = useState<{ fixedCosts: any; priceTiers: any; shippingOptions?: any[]; gstPercentage?: number; minPartsOrderAmount?: number } | null>(null);
 
-    // Read URL search params for prefilling parameters passed from main site
+    // Read URL search params for prefilling parameters passed from main site or cart item edit
     React.useEffect(() => {
         if (typeof window === "undefined") return;
         const params = new URLSearchParams(window.location.search);
+        const cartItemId = params.get("cart_item_id");
+
+        if (cartItemId) {
+            (async () => {
+                try {
+                    let cartItems: any[] = [];
+                    const savedCart = localStorage.getItem("megabyte_cart");
+                    if (savedCart) {
+                        try { cartItems = JSON.parse(savedCart); } catch (e) {}
+                    }
+                    if (!cartItems || !cartItems.length) {
+                        cartItems = await loadCartFromBackend();
+                    }
+                    const item = cartItems.find((it: any) => String(it.id) === String(cartItemId));
+                    if (item) {
+                        setEditingCartItemId(String(item.id));
+                        setEditingCartItemName(item.boardName || item.pn_number || item.gerberFileName || "PCB Item");
+
+                        const colorNameToHex: Record<string, string> = {
+                            "Green": "#52c41a",
+                            "Purple": "#722ed1",
+                            "Red": "#f5222d",
+                            "Yellow": "#fadb14",
+                            "Blue": "#1677ff",
+                            "White": "#ffffff",
+                            "Black": "#000000"
+                        };
+
+                        let rawLayers = String(item.layers || "2").replace(/\D/g, "");
+                        if (!rawLayers) rawLayers = "2";
+
+                        let w = String(item.width || "");
+                        let h = String(item.height || "");
+                        if ((!w || !h) && item.dimensions) {
+                            const match = String(item.dimensions).match(/(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i);
+                            if (match) {
+                                w = match[1];
+                                h = match[2];
+                            }
+                        }
+
+                        setFormData(prev => ({
+                            ...prev,
+                            baseMaterial: item.baseMaterial || item.material || "FR-4",
+                            layers: rawLayers,
+                            width: w || "100",
+                            height: h || "100",
+                            unit: item.unit || "mm",
+                            qty: String(item.qty || "5"),
+                            thickness: item.thickness || "1.6mm",
+                            pcbColor: colorNameToHex[item.pcbColor] || item.pcbColor || "#52c41a",
+                            silkscreen: item.silkscreen || "White",
+                            materialType: item.materialType || "FR4-TG135",
+                            surfaceFinish: item.surfaceFinish || "HASL(Leaded)",
+                            copperWeight: item.copperWeight || "1 oz",
+                            differentDesign: String(item.differentDesign || "1"),
+                            deliveryFormat: item.deliveryFormat || "Single PCB",
+                            panelColumn: item.panelColumn || "",
+                            panelRow: item.panelRow || "",
+                            goldThickness: item.goldThickness || '1 U"',
+                            viaCovering: item.viaCovering || "Not Specified",
+                            viaPlating: item.viaPlating || item.viaPlatingMethod || "Not Specified",
+                            minHole: item.minHole || "0.3mm/(0.4/0.45mm)",
+                            confirmFile: item.confirmFile || "No",
+                            markOnPcb: item.markOnPcb || "Remove Mark",
+                            elecTest: item.elecTest || "Flying Probe Fully Test",
+                            goldFingers: item.goldFingers || "No",
+                            castellated: item.castellated || "No",
+                            edgePlating: item.edgePlating || "No",
+                            blindSlots: item.blindSlots || "No",
+                            ulMarking: item.ulMarking || "No",
+                            humidity: item.humidity || "No",
+                            kelvinTest: item.kelvinTest || "No",
+                            paperBetween: item.paperBetween || "No",
+                            appearanceQuality: item.appearanceQuality || "IPC Class 2 Standard",
+                            silkscreenTech: item.silkscreenTech || "Ink-jet Printing Silkscreen",
+                            inspectionReport: item.inspectionReport || "No",
+                            pcbRemark: item.pcbRemark || "",
+                            pnNumber: item.pnNumber || item.pn_number || "",
+                            boardName: item.boardName || "",
+                            substrateType: item.substrateType || "",
+                            coverlayColor: item.coverlayColor || "",
+                            coverlayThickness: item.coverlayThickness || "",
+                            copperType: item.copperType || "",
+                            stiffener: item.stiffener || "",
+                            emiShielding: item.emiShielding || "",
+                            cuttingMethod: item.cuttingMethod || "",
+                            edaSoftware: item.edaSoftware || "",
+                            silkscreenOnStiffener: item.silkscreenOnStiffener || ""
+                        }));
+
+                        const gId = item.gerber_file_id || item.uploadedGerberFileId;
+                        if (gId) {
+                            setUploadedGerberFileId(gId);
+                        }
+                        const fKey = item.jlcpcb_file_key || item.jlcpcbFileKey;
+                        if (fKey) {
+                            setJlcpcbFileKey(fKey);
+                        }
+
+                        const fileName = item.gerberFileName || item.boardName || "Gerber.zip";
+                        const fakeFile = new File([""], fileName, { type: "application/zip" });
+                        setUploadedFile(fakeFile);
+
+                        setDetectedInfo({
+                            layers: rawLayers,
+                            width: w || "100",
+                            height: h || "100"
+                        });
+
+                        if (item.gerberPreview || item.topSvg || item.preview_data) {
+                            setTopSvg(item.topSvg || item.gerberPreview || item.preview_data || "");
+                        }
+                        if (item.bottomSvg) {
+                            setBottomSvg(item.bottomSvg);
+                        }
+
+                        if (item.selectedDay) {
+                            setSelectedDay(Number(item.selectedDay));
+                        } else if (item.buildTime) {
+                            const days = parseInt(String(item.buildTime).replace(/\D/g, ""), 10);
+                            if (days) setSelectedDay(days);
+                        }
+
+                        if (item.shippingOptionKey) {
+                            setShippingOptionKey(item.shippingOptionKey);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to load cart item for edit:", err);
+                }
+            })();
+            return;
+        }
+
         const updates: Partial<QuoteFormData> = {};
 
         if (params.get("layers")) updates.layers = params.get("layers")!;
@@ -1332,99 +1469,296 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         }
     };
 
-    const getCalculatedOrderPrice = (targetDay: number | null): number => {
-        if (!targetDay) return 0;
+    const quoteCalculation = React.useMemo(() => {
+        const layers = parseInt(formData.layers, 10) || 1;
+        const { options, totalAreaInSqM = 0 } = getLeadTimePricing();
 
-        const { options } = getLeadTimePricing();
         const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
         const length = (parseFloat(formData.width) || 0) * unitMultiplier;
         const width = (parseFloat(formData.height) || 0) * unitMultiplier;
         const quantity = Math.max(parseInt(formData.qty, 10) || 5, 5);
-        const layers = parseInt(formData.layers, 10) || 1;
 
         const defaultOrderValue = Math.max(Math.round(length * width * 0.05 * quantity), 100);
+        const defaultUnitPrice = (defaultOrderValue / quantity).toFixed(2);
+
         const getOption = (dayNum: number) => options.find(o => o.day === dayNum && o.visible);
 
-        const daysAhead = targetDay;
-        let matchedOrderValue = defaultOrderValue;
+        let workingDayCounter = 0;
 
-        if (isJlcpcbRequired(formData)) {
-            if (jlcpcbQuote && jlcpcbQuote.dates && Array.isArray(jlcpcbQuote.dates)) {
-                const targetDateObj = new Date();
-                targetDateObj.setDate(targetDateObj.getDate() + targetDay);
-                const yyyy = targetDateObj.getFullYear();
-                const mm = String(targetDateObj.getMonth() + 1).padStart(2, "0");
-                const dd = String(targetDateObj.getDate()).padStart(2, "0");
-                const targetIso = `${yyyy}-${mm}-${dd}`;
-                const matchedOpt = jlcpcbQuote.dates.find((d: any) => d.date === targetIso && d.enabled);
-                if (matchedOpt) {
-                    return Math.round(matchedOpt.pcb_price_inr);
+        const getShortMonthYear = (d: Date) => {
+            const monthStr = d.toLocaleDateString("en-IN", { month: "short" });
+            const formattedMonth = monthStr === "Sep" ? "Sept" : monthStr;
+            return `${formattedMonth} ${d.getFullYear()}`;
+        };
+
+        let next20Days: any[] = [];
+        const isJLCPCB = isJlcpcbRequired(formData);
+
+        if (isJLCPCB) {
+            const jlcDate = getJlcpcbQuotationDate(new Date(), publicHolidays);
+            const yyyy = jlcDate.getFullYear();
+            const mm = String(jlcDate.getMonth() + 1).padStart(2, "0");
+            const dd = String(jlcDate.getDate()).padStart(2, "0");
+            const jlcIsoDateStr = `${yyyy}-${mm}-${dd}`;
+
+            let matchedVal = 0;
+            let pcbPriceVal = 0;
+            let shippingChargeVal = 0;
+            let subtotalVal = 0;
+            let gstAmountVal = 0;
+            let finalTotalVal = 0;
+
+            if (jlcpcbQuote) {
+                if (jlcpcbQuote.dates && Array.isArray(jlcpcbQuote.dates) && jlcpcbQuote.dates.length > 0) {
+                    const firstDate = jlcpcbQuote.dates[0];
+                    subtotalVal = parseFloat(firstDate.subtotal ?? jlcpcbQuote.subtotal ?? jlcpcbQuote.selling_price_before_gst ?? 0);
+                    gstAmountVal = parseFloat(firstDate.gst_amount ?? jlcpcbQuote.gst_amount ?? (subtotalVal * 0.18));
+                    finalTotalVal = parseFloat(firstDate.final_total ?? jlcpcbQuote.final_total ?? (subtotalVal + gstAmountVal));
+                } else {
+                    subtotalVal = parseFloat(jlcpcbQuote.subtotal ?? jlcpcbQuote.selling_price_before_gst ?? jlcpcbQuote.without_gst ?? 0);
+                    gstAmountVal = parseFloat(jlcpcbQuote.gst_amount ?? jlcpcbQuote.sales_gst_amount ?? (subtotalVal * 0.18));
+                    finalTotalVal = parseFloat(jlcpcbQuote.final_total ?? jlcpcbQuote.with_gst ?? (subtotalVal + gstAmountVal));
                 }
-                const defaultOpt = jlcpcbQuote.dates.find((d: any) => d.enabled) || jlcpcbQuote.dates[0];
-                if (defaultOpt) {
-                    return Math.round(defaultOpt.pcb_price_inr);
-                }
-                if (jlcpcbQuote.base_inr) {
-                    return Math.round(jlcpcbQuote.base_inr);
-                }
+                matchedVal = subtotalVal;
             }
-        } else {
-            const directOpt = getOption(daysAhead);
-            if (directOpt) {
-                matchedOrderValue = parseFloat(directOpt.orderValue);
-            } else {
-                const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
-                    const o1 = getOption(d1);
-                    const o2 = getOption(d2);
-                    if (o1 && o2) {
-                        const val1 = parseFloat(o1.orderValue);
-                        const val2 = parseFloat(o2.orderValue);
-                        return val1 + (val2 - val1) * ratio;
-                    } else if (o2) {
-                        return parseFloat(o2.orderValue);
-                    } else if (o1) {
-                        return parseFloat(o1.orderValue);
-                    }
-                    return null;
-                };
 
-                if (daysAhead === 2) {
-                    const res = interpolate(1, 3, 0.5);
-                    if (res !== null) matchedOrderValue = res;
-                } else if (daysAhead === 4) {
-                    const res = interpolate(3, 5, 0.5);
-                    if (res !== null) matchedOrderValue = res;
-                } else if (daysAhead === 6) {
-                    const res = interpolate(5, 7, 0.5);
-                    if (res !== null) matchedOrderValue = res;
-                } else if (daysAhead === 8) {
-                    const res = interpolate(7, 10, 1 / 3);
-                    if (res !== null) matchedOrderValue = res;
-                } else if (daysAhead === 9) {
-                    const res = interpolate(7, 10, 2 / 3);
-                    if (res !== null) matchedOrderValue = res;
-                } else if (daysAhead >= 10 && daysAhead <= 20) {
-                    const ratio = (daysAhead - 10) / 10;
-                    const res = interpolate(10, 20, ratio);
-                    if (res !== null) {
-                        matchedOrderValue = res;
-                    } else {
-                        const o20 = getOption(20);
-                        if (o20) matchedOrderValue = parseFloat(o20.orderValue);
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            const targetDateZero = new Date(jlcDate.getTime());
+            targetDateZero.setHours(0, 0, 0, 0);
+            const diffDays = Math.max(1, Math.round((targetDateZero.getTime() - todayDate.getTime()) / (1000 * 3600 * 24)));
+
+            const singleItem = {
+                day: diffDays,
+                dateObj: jlcDate,
+                isoDateStr: jlcIsoDateStr,
+                dateNum: jlcDate.getDate(),
+                monthStr: jlcDate.toLocaleDateString("en-IN", { month: "short" }),
+                fullMonthYear: jlcDate.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+                shortMonthYear: getShortMonthYear(jlcDate),
+                weekday: jlcDate.toLocaleDateString("en-IN", { weekday: "short" }).toUpperCase(),
+                formattedDate: jlcDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                orderValue: matchedVal.toFixed(2),
+                pcb_price: pcbPriceVal,
+                shipping_charge: shippingChargeVal,
+                subtotal: subtotalVal,
+                gst_amount: gstAmountVal,
+                final_total: finalTotalVal,
+                unitPrice: (matchedVal / quantity).toFixed(2),
+                visible: true,
+                isSunday: false,
+                isHoliday: false,
+                holidayName: null,
+                isUnavailable: false,
+                workingDayNum: diffDays
+            };
+
+            next20Days = [singleItem];
+        } else {
+            next20Days = Array.from({ length: 20 }, (_, i) => {
+                const daysAhead = i + 1;
+                const date = new Date();
+                date.setDate(date.getDate() + daysAhead);
+
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const dayOfMonth = String(date.getDate()).padStart(2, "0");
+                const isoDateStr = `${year}-${month}-${dayOfMonth}`;
+
+                const isSunday = date.getDay() === 0;
+                const activeHoliday = publicHolidays.find(h => (typeof h.date === "string" ? h.date.split("T")[0] : "") === isoDateStr);
+                const isHoliday = !!activeHoliday;
+
+                let matchedOrderValue = defaultOrderValue;
+                let matchedUnitPrice = parseFloat(defaultUnitPrice);
+                let visible = false;
+                let workingDayNum = 0;
+
+                if (!isSunday && !isHoliday) {
+                    workingDayCounter++;
+                    workingDayNum = workingDayCounter;
+                    const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
+                        const o1 = getOption(d1);
+                        const o2 = getOption(d2);
+                        if (o1 && o2) {
+                            const val1 = parseFloat(o1.orderValue);
+                            const val2 = parseFloat(o2.orderValue);
+                            const u1 = parseFloat(o1.unitPrice);
+                            const u2 = parseFloat(o2.unitPrice);
+                            return {
+                                orderValue: val1 + (val2 - val1) * ratio,
+                                unitPrice: u1 + (u2 - u1) * ratio,
+                                visible: true
+                            };
+                        }
+                        return null;
+                    };
+
+                    const dayNum = workingDayNum;
+                    const directOpt = getOption(dayNum);
+                    if (directOpt) {
+                        matchedOrderValue = parseFloat(directOpt.orderValue);
+                        matchedUnitPrice = parseFloat(directOpt.unitPrice);
+                        visible = true;
+                    } else if (dayNum === 2) {
+                        const res = interpolate(1, 3, 0.5);
+                        if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                    } else if (dayNum === 4) {
+                        const res = interpolate(3, 5, 0.5);
+                        if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                    } else if (dayNum === 6) {
+                        const res = interpolate(5, 7, 0.5);
+                        if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                    } else if (dayNum === 8) {
+                        const res = interpolate(7, 10, 1 / 3);
+                        if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                    } else if (dayNum === 9) {
+                        const res = interpolate(7, 10, 2 / 3);
+                        if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
+                    } else if (dayNum >= 10) {
+                        const ratio = Math.min((dayNum - 10) / 10, 1);
+                        const res = interpolate(10, 20, ratio);
+                        if (res) {
+                            matchedOrderValue = res.orderValue;
+                            matchedUnitPrice = res.unitPrice;
+                            visible = res.visible;
+                        } else {
+                            const o20 = getOption(20);
+                            if (o20) {
+                                matchedOrderValue = parseFloat(o20.orderValue);
+                                matchedUnitPrice = parseFloat(o20.unitPrice);
+                                visible = true;
+                            }
+                        }
                     }
                 }
+
+                const isUnavailable = isSunday || isHoliday || !visible;
+
+                return {
+                    day: daysAhead,
+                    dateObj: date,
+                    isoDateStr,
+                    dateNum: date.getDate(),
+                    monthStr: date.toLocaleDateString("en-IN", { month: "short" }),
+                    fullMonthYear: date.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+                    shortMonthYear: getShortMonthYear(date),
+                    weekday: date.toLocaleDateString("en-IN", { weekday: "short" }),
+                    formattedDate: date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                    orderValue: isUnavailable ? "0.00" : matchedOrderValue.toFixed(2),
+                    unitPrice: isUnavailable ? "0.00" : matchedUnitPrice.toFixed(2),
+                    visible,
+                    isSunday,
+                    isHoliday,
+                    holidayName: activeHoliday?.name || null,
+                    isUnavailable,
+                    workingDayNum
+                };
+            });
+        }
+
+        const uniqueMonths = Array.from(new Set(next20Days.map(item => item.shortMonthYear)));
+        const calendarHeaderTitle = uniqueMonths.length > 1
+            ? `${uniqueMonths[0]} - ${uniqueMonths[uniqueMonths.length - 1]}`
+            : uniqueMonths[0] || getShortMonthYear(new Date());
+
+        const selectedDayData = next20Days.find(item => item.day === selectedDay && !item.isUnavailable) || next20Days.find(item => !item.isUnavailable);
+
+        // Weight & Shipping calculation
+        let jlcWeightKg: number | null = null;
+        if (isJLCPCB && jlcpcbQuote) {
+            if (jlcpcbQuote.weight_kg !== undefined && jlcpcbQuote.weight_kg !== null && parseFloat(jlcpcbQuote.weight_kg) > 0) {
+                jlcWeightKg = parseFloat(jlcpcbQuote.weight_kg);
+            } else if (jlcpcbQuote.pcbCostInfo?.weight !== undefined && parseFloat(jlcpcbQuote.pcbCostInfo.weight) > 0) {
+                jlcWeightKg = parseFloat(jlcpcbQuote.pcbCostInfo.weight);
+            } else if (jlcpcbQuote.orderTotalWeight !== undefined && parseFloat(jlcpcbQuote.orderTotalWeight) > 0) {
+                const w = parseFloat(jlcpcbQuote.orderTotalWeight);
+                jlcWeightKg = w > 10 ? w / 1000.0 : w;
+            } else if (jlcpcbQuote.weight !== undefined && parseFloat(jlcpcbQuote.weight) > 0) {
+                const w = parseFloat(jlcpcbQuote.weight);
+                jlcWeightKg = w > 10 ? w / 1000.0 : w;
             }
         }
 
-        return Math.round(matchedOrderValue);
-    };
+        const thicknessMm = parseFloat((formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "")) || 1.6;
+        const weightPerSqM = formData.baseMaterial === "Flex" ? 0.3 : 3.8 * (thicknessMm / 1.6);
+        const calculatedEstWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
+        const estimatedWeightKg = (jlcWeightKg !== null && jlcWeightKg > 0) ? parseFloat(jlcWeightKg.toFixed(2)) : calculatedEstWeightKg;
+        const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
+
+        const defaultShippingOptions = [
+            { key: "standard", location: "Standard", method: "Standard", rate: 0 },
+            { key: "plus", location: "Plus", method: "Plus", rate: 150 },
+            { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
+        ];
+        const shippingOptions = pricingConfig?.shippingOptions && Array.isArray(pricingConfig.shippingOptions) && pricingConfig.shippingOptions.length > 0
+            ? pricingConfig.shippingOptions
+            : defaultShippingOptions;
+
+        const activeShipping = shippingOptions.find((o: any) => o.key === shippingOptionKey) || shippingOptions[0];
+        const shippingCharge = Math.round(activeShipping.rate * chargedWeightKg);
+
+        let pcbPrice = 0;
+        let gstPercentage = 18;
+
+        if (isJLCPCB && jlcpcbQuote) {
+            if (selectedDayData) {
+                pcbPrice = selectedDayData.subtotal !== undefined ? parseFloat(selectedDayData.subtotal) : (jlcpcbQuote.subtotal || jlcpcbQuote.selling_price_before_gst || 0);
+            } else {
+                pcbPrice = jlcpcbQuote.subtotal !== undefined ? jlcpcbQuote.subtotal : (jlcpcbQuote.selling_price_before_gst || 0);
+            }
+            gstPercentage = jlcpcbQuote.gst_percentage !== undefined ? Number(jlcpcbQuote.gst_percentage) : (pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18);
+        } else {
+            pcbPrice = selectedDayData ? parseFloat(selectedDayData.orderValue) : 0;
+            gstPercentage = pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18;
+        }
+
+        const taxableTotal = pcbPrice > 0 ? pcbPrice + shippingCharge : 0;
+        const gstAmount = taxableTotal > 0 ? Math.round(((taxableTotal * gstPercentage) / 100) * 100) / 100 : 0;
+        const mainTotal = Math.round((taxableTotal + gstAmount) * 100) / 100;
+
+        return {
+            next20Days,
+            calendarHeaderTitle,
+            selectedDayData,
+            totalAreaInSqM,
+            estimatedWeightKg,
+            chargedWeightKg,
+            shippingOptions,
+            activeShipping,
+            shippingCharge,
+            pcbPrice,
+            gstPercentage,
+            taxableTotal,
+            gstAmount,
+            mainTotal,
+            isJLCPCB
+        };
+    }, [formData, pricingConfig, selectedDay, shippingOptionKey, publicHolidays, jlcpcbQuote, isJlcpcbLoading, jlcpcbError]);
 
     const handleSaveToCart = async () => {
         setIsSavingCart(true);
         try {
             const savedCart = localStorage.getItem("megabyte_cart");
-            const existingCart = savedCart ? JSON.parse(savedCart) : [];
-            const calculatedPrice = getCalculatedOrderPrice(selectedDay);
+            let existingCart = savedCart ? JSON.parse(savedCart) : [];
+            if (!Array.isArray(existingCart)) existingCart = [];
+
+            const {
+                pcbPrice,
+                shippingCharge,
+                gstPercentage,
+                gstAmount,
+                taxableTotal,
+                mainTotal,
+                selectedDayData,
+                activeShipping,
+                isJLCPCB
+            } = quoteCalculation;
+
+            if (!selectedDayData) {
+                setToast({ message: "Please pick a valid delivery date", type: "warning" });
+                return;
+            }
 
             const hexToColorName: Record<string, string> = {
                 "#52c41a": "Green",
@@ -1448,44 +1782,15 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             const previewSvg = (uploadedGerberFileId ? `/api/gerber/${uploadedGerberFileId}/preview/front?color=${colorSlug}` : (topSvg || bottomSvg || ""));
             const generatedBoardId = "Y2-" + Math.floor(10000000 + Math.random() * 90000000);
 
-            const defaultShippingOptions = [
-                { key: "standard", location: "Standard", method: "Standard", rate: 0 },
-                { key: "plus", location: "Plus", method: "Plus", rate: 150 },
-                { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
-            ];
-            const currentShippingOpts = pricingConfig?.shippingOptions && Array.isArray(pricingConfig.shippingOptions) && pricingConfig.shippingOptions.length > 0
-                ? pricingConfig.shippingOptions
-                : defaultShippingOptions;
-            const activeShippingObj = currentShippingOpts.find((o: any) => o.key === shippingOptionKey) || currentShippingOpts[0];
+            const isJlcpcbCart = isJLCPCB && !!jlcpcbQuote;
+            const targetFormattedDate = selectedDayData.formattedDate;
+            const targetIsoDate = selectedDayData.isoDateStr;
+            const targetDays = selectedDayData.day;
 
-            const totalAreaInSqM = ((Number(formData.width) || 100) / 1000) * ((Number(formData.height) || 100) / 1000) * (Number(formData.qty) || 5);
-            const isJlcpcbCart = isJlcpcbRequired(formData) && !!jlcpcbQuote;
-            let jlcCartWeightKg: number | null = null;
-            if (isJlcpcbCart && jlcpcbQuote) {
-                if (jlcpcbQuote.weight_kg !== undefined && jlcpcbQuote.weight_kg !== null && parseFloat(jlcpcbQuote.weight_kg) > 0) {
-                    jlcCartWeightKg = parseFloat(jlcpcbQuote.weight_kg);
-                } else if (jlcpcbQuote.pcbCostInfo?.weight !== undefined && parseFloat(jlcpcbQuote.pcbCostInfo.weight) > 0) {
-                    jlcCartWeightKg = parseFloat(jlcpcbQuote.pcbCostInfo.weight);
-                } else if (jlcpcbQuote.orderTotalWeight !== undefined && parseFloat(jlcpcbQuote.orderTotalWeight) > 0) {
-                    const w = parseFloat(jlcpcbQuote.orderTotalWeight);
-                    jlcCartWeightKg = w > 10 ? w / 1000.0 : w;
-                }
-            }
-            const estimatedWeightKg = (jlcCartWeightKg !== null && jlcCartWeightKg > 0) ? jlcCartWeightKg : Math.max(0.1, parseFloat((totalAreaInSqM * (formData.baseMaterial === "Flex" ? 0.3 : 3.8)).toFixed(2)));
-            const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
-
-            const calculatedShippingCharge = Math.round((activeShippingObj?.rate || 0) * chargedWeightKg);
-
-            const pcbBasePrice = isJlcpcbCart && jlcpcbQuote
-                ? parseFloat(jlcpcbQuote.subtotal ?? jlcpcbQuote.selling_price_before_gst ?? (jlcpcbQuote.pcb_price || 0))
-                : (Number(calculatedPrice) || 100);
-
-            const itemTotalPrice = pcbBasePrice + calculatedShippingCharge;
-
-            const targetFormattedDate = calculateCartDeliveryDate(selectedDay || 3);
+            const cartItemId = editingCartItemId || ('cart_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4));
 
             const newItem = {
-                id: 'cart_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                id: cartItemId,
                 productType: selectedProduct || "pcb",
                 boardName: formData.boardName || pnNumberVal || (uploadedFile ? gerberName : "PCB_Board"),
                 pn_number: pnNumberVal,
@@ -1495,7 +1800,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 jlcpcb_file_key: isJlcpcbCart ? (jlcpcbFileKey || undefined) : undefined,
                 quotation_source: isJlcpcbCart ? "jlcpcb" : "internal",
                 order_type: isJlcpcbCart ? "jlcpcb" : "normal",
-                jlcpcb_price: isJlcpcbCart ? pcbBasePrice : undefined,
+                jlcpcb_price: isJlcpcbCart ? pcbPrice : undefined,
                 jlcpcb_quote: isJlcpcbCart ? jlcpcbQuote : undefined,
                 jlcpcb_quotation_snapshot: isJlcpcbCart ? jlcpcbQuote : undefined,
                 gerberPreview: previewSvg,
@@ -1507,14 +1812,33 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 height: Number(formData.height) || 100,
                 unit: formData.unit || "mm",
                 qty: Number(formData.qty) || 5,
-                buildTime: `${selectedDay || 3} days`,
+                buildTime: `${targetDays} days`,
+                build_days: targetDays,
+                working_days: selectedDayData.workingDayNum,
+                selectedDay: targetDays,
                 date: targetFormattedDate,
                 deliveryDate: targetFormattedDate,
-                delivery_date: targetFormattedDate,
-                price: itemTotalPrice,
-                shippingOption: (!activeShippingObj.method || activeShippingObj.location === activeShippingObj.method) ? (activeShippingObj.location || activeShippingObj.method) : `${activeShippingObj.location} - ${activeShippingObj.method}`,
-                shippingOptionKey: activeShippingObj.key,
-                shippingCharge: calculatedShippingCharge,
+                delivery_date: targetIsoDate,
+                price: mainTotal,
+                total_price: mainTotal,
+                pcb_price: pcbPrice,
+                pcbPrice: pcbPrice,
+                subtotal: taxableTotal,
+                shippingOption: (!activeShipping.method || activeShipping.location === activeShipping.method) ? (activeShipping.location || activeShipping.method) : `${activeShipping.location} - ${activeShipping.method}`,
+                shippingOptionKey: activeShipping.key,
+                shippingCharge: shippingCharge,
+                shipping_charge: shippingCharge,
+                gst_rate: gstPercentage,
+                gstRate: gstPercentage,
+                gst_amount: gstAmount,
+                gstAmount: gstAmount,
+                pricing_breakdown: {
+                    pcb_price: pcbPrice,
+                    delivery_charge: shippingCharge,
+                    gst_rate: gstPercentage,
+                    gst_amount: gstAmount,
+                    total: mainTotal
+                },
                 material: formData.baseMaterial || "FR-4",
                 baseMaterial: formData.baseMaterial || "FR-4",
                 materialType: formData.materialType || (formData.baseMaterial === "Flex" ? "Polyimide (PI)" : formData.baseMaterial === "Rogers" ? "RO4350B(Dk=3.48,Df=0.0037)" : formData.baseMaterial === "PTFE Teflon" ? "ZYF300CA-P(Dk=3.0,Df=0.0016)" : "FR4-TG135"),
@@ -1555,9 +1879,22 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 ...(formData.edaSoftware ? { edaSoftware: formData.edaSoftware } : {}),
                 ...(formData.silkscreenOnStiffener ? { silkscreenOnStiffener: formData.silkscreenOnStiffener } : {})
             };
-            const updatedCart = [...existingCart, newItem];
+
+            let updatedCart: any[];
+            if (editingCartItemId) {
+                const existingIndex = existingCart.findIndex((it: any) => String(it.id) === String(editingCartItemId));
+                if (existingIndex !== -1) {
+                    updatedCart = [...existingCart];
+                    updatedCart[existingIndex] = { ...existingCart[existingIndex], ...newItem, id: editingCartItemId };
+                } else {
+                    updatedCart = [...existingCart, newItem];
+                }
+            } else {
+                updatedCart = [...existingCart, newItem];
+            }
+
             await saveCartToBackend(updatedCart);
-            setToast({ message: "Item saved to cart!", type: "success" });
+            setToast({ message: editingCartItemId ? "Cart item updated!" : "Item saved to cart!", type: "success" });
             window.location.href = "/cart";
         } catch (e) {
             console.error("Failed to save item to cart", e);
@@ -1570,6 +1907,23 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         <div className="bg-[#f0f2f5] dark:bg-transparent font-sans">
             {/* Main grid */}
             <main className={isLoggedIn ? "w-full py-2" : "max-w-[1550px] mx-auto px-4 py-6"}>
+                {editingCartItemId && (
+                    <div className="mb-4 bg-amber-50 border border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 shadow-sm animate-in fade-in">
+                        <div className="flex items-center gap-2.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-amber-800">Editing Cart Item</p>
+                                <p className="text-sm font-extrabold text-amber-950">{editingCartItemName || "PCB Board"}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-amber-700 font-medium hidden md:inline">Make changes below and click UPDATE CART</span>
+                            <Link href="/cart" className="px-3 py-1.5 bg-amber-200/80 hover:bg-amber-300 text-amber-900 rounded-lg text-xs font-bold transition-all">
+                                Cancel Edit
+                            </Link>
+                        </div>
+                    </div>
+                )}
                 <div className="flex flex-col lg:flex-row gap-6 items-start">
 
                     {/* Left Quote Section */}
@@ -2186,7 +2540,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                         <span>SAVING...</span>
                                                     </>
                                                 ) : (
-                                                    <span>SAVE TO CART</span>
+                                                    <span>{editingCartItemId ? "UPDATE CART" : "SAVE TO CART"}</span>
                                                 )}
                                             </button>
                                             {!isCanSaveToCart && (
