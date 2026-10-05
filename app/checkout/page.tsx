@@ -33,6 +33,8 @@ interface CartItem {
     copperWeight?: string;
     shippingOption?: string;
     shippingOptionKey?: string;
+    delivery_method?: string;
+    delivery_method_label?: string;
     shippingCharge?: number;
     width?: number | string;
     height?: number | string;
@@ -297,6 +299,7 @@ function CheckoutContent() {
         ];
 
         const foundOpt = defaultShippingOptions.find(o => 
+            o.key === item.delivery_method ||
             o.key === item.shippingOptionKey || 
             item.shippingOption?.toLowerCase().includes(o.key) ||
             (o.key === "standard" && (item.shippingOption?.toLowerCase().includes("standard") || item.shippingOptionKey === "gujarat_road")) ||
@@ -304,7 +307,8 @@ function CheckoutContent() {
             (o.key === "fasttrack" && (item.shippingOption?.toLowerCase().includes("fasttrack") || item.shippingOptionKey === "out_fastrack"))
         ) || defaultShippingOptions[0];
 
-        const newOptionKey = foundOpt.key;
+        const newOptionKey = item.delivery_method || foundOpt.key;
+        const newOptionLabel = item.delivery_method_label || foundOpt.location || foundOpt.method;
         const newOption = (!foundOpt.method || foundOpt.location === foundOpt.method) ? foundOpt.location : `${foundOpt.location} - ${foundOpt.method}`;
         const newRate = foundOpt.rate;
 
@@ -341,6 +345,8 @@ function CheckoutContent() {
 
         return {
             ...item,
+            delivery_method: newOptionKey,
+            delivery_method_label: newOptionLabel,
             shippingOption: newOption,
             shippingOptionKey: newOptionKey,
             shippingCharge: newShippingCharge,

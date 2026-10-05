@@ -35,6 +35,9 @@ interface CartItem {
     copperWeight?: string;
     shippingOption?: string;
     shippingOptionKey?: string;
+    shipping_option?: string;
+    delivery_method?: string;
+    delivery_method_label?: string;
     shippingCharge?: number;
     shipping_charge?: number;
     pcb_price?: number;
@@ -509,7 +512,7 @@ export default function CartPage() {
             });
             const json = await res.json();
             if (json.success && json.code === 200) {
-                const jlcBasePrice = parseFloat(json.subtotal ?? json.with_gst_amount ?? (json.pcb_price || 0));
+                const jlcBasePrice = parseFloat(json.with_gst_amount ?? json.with_gst ?? json.final_total ?? json.final_customer_price ?? json.subtotal ?? (json.pcb_price || 0));
 
                 let weightKg = 0;
                 if (json.weight_kg !== undefined && json.weight_kg !== null && parseFloat(json.weight_kg) > 0) {
@@ -526,9 +529,11 @@ export default function CartPage() {
                         { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
                     ];
                     const foundOpt = defaultShippingOptions.find(o =>
+                        o.key === item.delivery_method ||
+                        o.key === item.shippingOptionKey ||
                         `${o.location} - ${o.method}` === item.shippingOption ||
                         o.location === item.shippingOption ||
-                        o.key === item.shippingOptionKey
+                        item.shippingOption?.toLowerCase().includes(o.key)
                     ) || defaultShippingOptions[0];
 
                     const totalAreaInSqM = (width / 1000) * (height / 1000) * newQty;
@@ -539,7 +544,7 @@ export default function CartPage() {
 
                 const jlcGstRate = json.gst_percentage !== undefined ? Number(json.gst_percentage) : 18;
                 const jlcTaxable = jlcBasePrice + newShippingCharge;
-                const jlcGstAmount = json.gst_amount !== undefined ? parseFloat(json.gst_amount) : Math.round(((jlcTaxable * jlcGstRate) / 100) * 100) / 100;
+                const jlcGstAmount = Math.round(((jlcTaxable * jlcGstRate) / 100) * 100) / 100;
                 const totalPrice = Math.round((jlcTaxable + jlcGstAmount) * 100) / 100;
                 const unitPrice = newQty > 0 ? Math.round((jlcBasePrice / newQty) * 100) / 100 : jlcBasePrice;
 
@@ -722,9 +727,11 @@ export default function CartPage() {
                     { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
                 ];
                 const foundOpt = defaultShippingOptions.find(o =>
+                    o.key === targetItem.delivery_method ||
+                    o.key === targetItem.shippingOptionKey ||
                     `${o.location} - ${o.method}` === targetItem.shippingOption ||
                     o.location === targetItem.shippingOption ||
-                    o.key === targetItem.shippingOptionKey
+                    targetItem.shippingOption?.toLowerCase().includes(o.key)
                 ) || defaultShippingOptions[0];
 
                 const totalAreaInSqM = (w / 1000) * (h / 1000) * validQty;
@@ -1029,9 +1036,9 @@ export default function CartPage() {
                                                                     {item.buildTime || `${item.build_days || 3} days`}
                                                                 </div>
                                                                 <div className="w-36 text-center flex flex-col justify-center items-center">
-                                                                    {item.shippingOption ? (
+                                                                    {(item.shippingOption || item.delivery_method_label || item.delivery_method) ? (
                                                                         <div className="bg-blue-50/80 border border-blue-100 rounded-lg px-2 py-1 text-[11px] font-bold text-blue-900 leading-tight">
-                                                                            <div>{item.shippingOption}</div>
+                                                                            <div>{item.delivery_method_label || item.shippingOption || (item.delivery_method ? item.delivery_method.charAt(0).toUpperCase() + item.delivery_method.slice(1) : "Standard")}</div>
                                                                             <div className="text-[10px] text-primary font-semibold mt-0.5">
                                                                                 Fee: {formatPrice(item.shippingCharge || item.shipping_charge || 0)}
                                                                             </div>

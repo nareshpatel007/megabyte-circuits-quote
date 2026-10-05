@@ -69,6 +69,8 @@ interface OrderDetail {
     unit_price: number;
     order_value: number;
     delivery_date: string;
+    delivery_method?: string;
+    delivery_method_label?: string;
     created_at: string;
     transaction_number?: string;
     razorpay_payment_id?: string;
@@ -337,6 +339,13 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
 
                                     <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-gray-100">
                                         <div>
+                                            <span className="text-xs text-gray-400 font-bold uppercase block">Delivery Method</span>
+                                            <span className="text-xs font-extrabold text-gray-800">
+                                                {order.delivery_method_label || (order.delivery_method ? (order.delivery_method.charAt(0).toUpperCase() + order.delivery_method.slice(1)) : (order.meta?.shipping_option || "—"))}
+                                            </span>
+                                        </div>
+
+                                        <div>
                                             <span className="text-xs text-gray-400 font-bold uppercase block">Estimated Delivery</span>
                                             <span className="text-xs font-extrabold text-gray-800">{order.delivery_date || "3-5 Business Days"}</span>
                                         </div>
@@ -421,6 +430,13 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                                             <div>
                                                 <span className="text-gray-400 font-bold block text-[10px] uppercase">Dimensions</span>
                                                 <strong className="text-gray-900">{order.meta?.dimensions || "100x100mm"}</strong>
+                                            </div>
+
+                                            <div>
+                                                <span className="text-gray-400 font-bold block text-[10px] uppercase">Delivery Method</span>
+                                                <strong className="text-gray-900">
+                                                    {order.delivery_method_label || (order.delivery_method ? (order.delivery_method.charAt(0).toUpperCase() + order.delivery_method.slice(1)) : (order.meta?.shipping_option || "—"))}
+                                                </strong>
                                             </div>
 
                                             <div>

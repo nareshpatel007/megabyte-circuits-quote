@@ -26,6 +26,8 @@ interface OrderItem {
     unit_price: number;
     order_value: number;
     delivery_date: string;
+    delivery_method?: string;
+    delivery_method_label?: string;
     created_at: string;
     transaction_number?: string;
     razorpay_payment_id?: string;
@@ -178,6 +180,11 @@ function OrdersContent() {
                                             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                                 <span className="text-sm font-black text-gray-900 dark:text-white">{ord.order_number}</span>
                                                 {getStatusBadge(ord.status || ord.status_name)}
+                                                {Boolean(ord.delivery_method_label || ord.delivery_method) && (
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                                                        {ord.delivery_method_label || (ord.delivery_method ? ord.delivery_method.charAt(0).toUpperCase() + ord.delivery_method.slice(1) : "")}
+                                                    </span>
+                                                )}
                                             </div>
                                             <p className="text-xs font-bold text-gray-700 dark:text-zinc-300 truncate">
                                                 {ord.gerber_name || ord.meta?.board_name || "Standard PCB Order"}

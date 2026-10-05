@@ -643,8 +643,9 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                             if (days) setSelectedDay(days);
                         }
 
-                        if (item.shippingOptionKey) {
-                            setShippingOptionKey(item.shippingOptionKey);
+                        const methodKey = item.delivery_method || item.shippingOptionKey || (item.shippingOption?.toLowerCase().includes("fasttrack") ? "fasttrack" : item.shippingOption?.toLowerCase().includes("plus") ? "plus" : item.shippingOption ? "standard" : null);
+                        if (methodKey) {
+                            setShippingOptionKey(methodKey);
                         }
                     }
                 } catch (err) {
@@ -1580,17 +1581,28 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             let finalTotalVal = 0;
 
             if (jlcpcbQuote) {
-                if (jlcpcbQuote.dates && Array.isArray(jlcpcbQuote.dates) && jlcpcbQuote.dates.length > 0) {
-                    const firstDate = jlcpcbQuote.dates[0];
-                    subtotalVal = parseFloat(firstDate.subtotal ?? jlcpcbQuote.subtotal ?? jlcpcbQuote.with_gst_amount ?? 0);
-                    gstAmountVal = parseFloat(firstDate.gst_amount ?? jlcpcbQuote.gst_amount ?? (subtotalVal * 0.18));
-                    finalTotalVal = parseFloat(firstDate.final_total ?? jlcpcbQuote.final_total ?? (subtotalVal + gstAmountVal));
-                } else {
-                    subtotalVal = parseFloat(jlcpcbQuote.subtotal ?? jlcpcbQuote.with_gst_amount ?? jlcpcbQuote.without_gst ?? 0);
-                    gstAmountVal = parseFloat(jlcpcbQuote.gst_amount ?? jlcpcbQuote.sales_gst_amount ?? (subtotalVal * 0.18));
-                    finalTotalVal = parseFloat(jlcpcbQuote.final_total ?? jlcpcbQuote.with_gst ?? (subtotalVal + gstAmountVal));
-                }
-                matchedVal = subtotalVal;
+                const jlcBaseWithGst = jlcpcbQuote.dates && Array.isArray(jlcpcbQuote.dates) && jlcpcbQuote.dates.length > 0
+                    ? parseFloat(
+                        jlcpcbQuote.dates[0].with_gst_amount ??
+                        jlcpcbQuote.dates[0].final_total ??
+                        jlcpcbQuote.with_gst_amount ??
+                        jlcpcbQuote.with_gst ??
+                        jlcpcbQuote.final_total ??
+                        jlcpcbQuote.subtotal ??
+                        0
+                    )
+                    : parseFloat(
+                        jlcpcbQuote.with_gst_amount ??
+                        jlcpcbQuote.with_gst ??
+                        jlcpcbQuote.final_total ??
+                        jlcpcbQuote.final_customer_price ??
+                        jlcpcbQuote.subtotal ??
+                        0
+                    );
+
+                matchedVal = jlcBaseWithGst;
+                subtotalVal = jlcBaseWithGst;
+                pcbPriceVal = jlcBaseWithGst;
             }
 
             const todayDate = new Date();
@@ -1613,6 +1625,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 pcb_price: pcbPriceVal,
                 shipping_charge: shippingChargeVal,
                 subtotal: subtotalVal,
+                with_gst_amount: pcbPriceVal,
+                with_gst: pcbPriceVal,
                 gst_amount: gstAmountVal,
                 final_total: finalTotalVal,
                 unitPrice: (matchedVal / quantity).toFixed(2),
@@ -1758,9 +1772,13 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
         if (isJLCPCB && jlcpcbQuote) {
             if (selectedDayData) {
-                pcbPrice = selectedDayData.subtotal !== undefined ? parseFloat(selectedDayData.subtotal) : (jlcpcbQuote.subtotal || jlcpcbQuote.with_gst_amount || 0);
+                pcbPrice = selectedDayData.with_gst_amount !== undefined
+                    ? parseFloat(selectedDayData.with_gst_amount)
+                    : (selectedDayData.subtotal !== undefined
+                        ? parseFloat(selectedDayData.subtotal)
+                        : parseFloat(jlcpcbQuote.with_gst_amount ?? jlcpcbQuote.with_gst ?? jlcpcbQuote.final_total ?? jlcpcbQuote.subtotal ?? 0));
             } else {
-                pcbPrice = jlcpcbQuote.subtotal !== undefined ? jlcpcbQuote.subtotal : (jlcpcbQuote.with_gst_amount || 0);
+                pcbPrice = parseFloat(jlcpcbQuote.with_gst_amount ?? jlcpcbQuote.with_gst ?? jlcpcbQuote.final_total ?? jlcpcbQuote.subtotal ?? 0);
             }
             gstPercentage = jlcpcbQuote.gst_percentage !== undefined ? Number(jlcpcbQuote.gst_percentage) : (pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18);
         } else {
@@ -1881,6 +1899,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 subtotal: taxableTotal,
                 shippingOption: (!activeShipping.method || activeShipping.location === activeShipping.method) ? (activeShipping.location || activeShipping.method) : `${activeShipping.location} - ${activeShipping.method}`,
                 shippingOptionKey: activeShipping.key,
+                delivery_method: activeShipping.key,
+                delivery_method_label: activeShipping.method || activeShipping.location || "Standard",
+                deliveryMethod: activeShipping.key,
+                shipping_option: (!activeShipping.method || activeShipping.location === activeShipping.method) ? (activeShipping.location || activeShipping.method) : `${activeShipping.location} - ${activeShipping.method}`,
                 shippingCharge: shippingCharge,
                 shipping_charge: shippingCharge,
                 gst_rate: gstPercentage,
