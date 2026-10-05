@@ -959,7 +959,14 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     copperWeight: copperWeightVal,
                     ...(layersCount >= 4 ? { insideCuprumThickness: "0.5" } : {}),
                     goldFinger: formData.goldFingers === "Yes" ? 1 : 0,
-                    materialDetails: 0,
+                    materialDetails: (() => {
+                        const mtLower = (formData.materialType || "").toLowerCase();
+                        if (mtLower.includes("kb6164")) return 1;
+                        if (mtLower.includes("nan ya") || mtLower.includes("np-140f")) return 2;
+                        if (mtLower.includes("s1141")) return 3;
+                        if (mtLower.includes("s1000h")) return 4;
+                        return 0;
+                    })(),
                     panelFlag: 0,
                     differentDesign: parseInt(formData.differentDesign || "1", 10) || 1,
                     flyingProbeTest: formData.elecTest === "Flying Probe Fully Test" ? 2 : 1,
@@ -1026,6 +1033,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         quoteTrigger,
         formData.layers,
         formData.baseMaterial,
+        formData.materialType,
         formData.width,
         formData.height,
         formData.qty,
