@@ -263,6 +263,13 @@ export default function EditSpecsModal({
                         });
                     }
 
+                    if (item.confirmFile === "Yes") {
+                        modalServiceConfigs.push({
+                            serviceConfigCode: "CPF",
+                            configOptionShow: "Yes"
+                        });
+                    }
+
                     const payload = {
                         orderType: 1,
                         achieveDate: 48,
@@ -292,7 +299,8 @@ export default function EditSpecsModal({
                             impedanceFlag: "no",
                             isAddCustomerCode: "nocode",
                             plateType: plateTypeVal,
-                            autoConfirmProductionFile: true,
+                            autoConfirmProductionFile: item.confirmFile === "Yes" ? false : true,
+                            confirmFile: item.confirmFile || "No",
                             markOnPcb: 1,
                             viaCovering: viaCoveringVal,
                             needTechnics: 0,

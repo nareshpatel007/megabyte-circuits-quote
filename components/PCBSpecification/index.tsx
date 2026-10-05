@@ -18,6 +18,7 @@ import { saveCartToBackend, loadCartFromBackend } from "@/lib/cartSession";
 import { useCurrency } from "../../context/CurrencyContext";
 import { isJlcpcbRequired } from "@/lib/jlcpcbCondition";
 import { fetchActiveProviderRules } from "@/lib/manufacturingProviderResolver";
+import ChargeDetails from "../ChargeDetails";
 
 const INITIAL_FORM_DATA: QuoteFormData = {
     pnNumber: "",
@@ -978,6 +979,13 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 });
             }
 
+            if (formData.confirmFile === "Yes") {
+                serviceConfigs.push({
+                    serviceConfigCode: "CPF",
+                    configOptionShow: "Yes"
+                });
+            }
+
             const payload = {
                 orderType: 1,
                 achieveDate: 48,
@@ -1014,7 +1022,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     impedanceFlag: "no",
                     isAddCustomerCode: "nocode",
                     plateType: plateTypeVal,
-                    autoConfirmProductionFile: true,
+                    autoConfirmProductionFile: formData.confirmFile === "Yes" ? false : true,
+                    confirmFile: formData.confirmFile || "No",
                     markOnPcb: (formData.markOnPcb || "").toLowerCase().includes("barcode") ? 2 : 1,
                     viaCovering: viaCoveringVal,
                     needTechnics: 0,
@@ -1095,6 +1104,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         formData.edgePlating,
         formData.blindSlots,
         formData.markOnPcb,
+        formData.confirmFile,
         uploadedGerberFileId,
         jlcpcbFileKey
     ]);
@@ -1175,7 +1185,15 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         // If JLCPCB is required, use live JLCPCB API quote when available
         if (isJlcpcbRequired(formData)) {
             if (jlcpcbQuote) {
-                const usdTotalFee = parseFloat(jlcpcbQuote?.pcbCostInfo?.totalFee || jlcpcbQuote?.priceWithoutFreight || 0);
+                const usdTotalFee = parseFloat(
+                    jlcpcbQuote?.normalized_quote?.basePcbPrice ||
+                    jlcpcbQuote?.calculated_price_usd ||
+                    jlcpcbQuote?.base_usd ||
+                    jlcpcbQuote?.pcbCostInfo?.stencilFee ||
+                    jlcpcbQuote?.pcbCostInfo?.totalFee ||
+                    jlcpcbQuote?.priceWithoutFreight ||
+                    0
+                );
                 if (usdTotalFee > 0) {
                     const inrTotalFee = Math.max(Math.round(usdTotalFee * 88.5), 100);
                     const daysList = [1, 3, 5, 7, 10, 13, 15, 17, 20];
@@ -2212,7 +2230,14 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                 } = quoteCalculation;
 
                                                 return (
-                                                    <div className="bg-[#8DD3A5]/10 border border-[#41A96A]/30 rounded-xl p-3.5 shadow-2xs space-y-3">
+                                                    <div className="space-y-3">
+                                                        {isJLCPCB && jlcpcbQuote?.normalized_quote && (
+                                                            <ChargeDetails
+                                                                normalizedQuote={jlcpcbQuote.normalized_quote}
+                                                                currencySymbol="$"
+                                                            />
+                                                        )}
+                                                        <div className="bg-[#8DD3A5]/10 border border-[#41A96A]/30 rounded-xl p-3.5 shadow-2xs space-y-3">
                                                         <div className="flex justify-between items-center text-xs">
                                                             <span className="text-slate-600 dark:text-slate-300 font-semibold">Total Area:</span>
                                                             <span className="font-extrabold text-[#0F7438] dark:text-[#8DD3A5]">
@@ -2302,7 +2327,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                             </div>
                                                         )}
                                                     </div>
-                                                );
+                                                </div>
+                                            );
                                             })()}
                                         </div>
                                     );
