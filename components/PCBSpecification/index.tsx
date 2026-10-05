@@ -1585,58 +1585,42 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 if (!isSunday && !isHoliday) {
                     workingDayCounter++;
                     workingDayNum = workingDayCounter;
-                    const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
-                        const o1 = getOption(d1);
-                        const o2 = getOption(d2);
-                        if (o1 && o2) {
-                            const val1 = parseFloat(o1.orderValue);
-                            const val2 = parseFloat(o2.orderValue);
-                            const u1 = parseFloat(o1.unitPrice);
-                            const u2 = parseFloat(o2.unitPrice);
-                            return {
-                                orderValue: val1 + (val2 - val1) * ratio,
-                                unitPrice: u1 + (u2 - u1) * ratio,
-                                visible: true
-                            };
-                        }
-                        return null;
-                    };
 
-                    const dayNum = workingDayNum;
-                    const directOpt = getOption(dayNum);
+                    const visibleAnchors = options.filter(o => o.visible).sort((a, b) => a.day - b.day);
+                    const directOpt = visibleAnchors.find(o => o.day === workingDayNum);
                     if (directOpt) {
                         matchedOrderValue = parseFloat(directOpt.orderValue);
                         matchedUnitPrice = parseFloat(directOpt.unitPrice);
                         visible = true;
-                    } else if (dayNum === 2) {
-                        const res = interpolate(1, 3, 0.5);
-                        if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                    } else if (dayNum === 4) {
-                        const res = interpolate(3, 5, 0.5);
-                        if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                    } else if (dayNum === 6) {
-                        const res = interpolate(5, 7, 0.5);
-                        if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                    } else if (dayNum === 8) {
-                        const res = interpolate(7, 10, 1 / 3);
-                        if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                    } else if (dayNum === 9) {
-                        const res = interpolate(7, 10, 2 / 3);
-                        if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                    } else if (dayNum >= 10) {
-                        const ratio = Math.min((dayNum - 10) / 10, 1);
-                        const res = interpolate(10, 20, ratio);
-                        if (res) {
-                            matchedOrderValue = res.orderValue;
-                            matchedUnitPrice = res.unitPrice;
-                            visible = res.visible;
-                        } else {
-                            const o20 = getOption(20);
-                            if (o20) {
-                                matchedOrderValue = parseFloat(o20.orderValue);
-                                matchedUnitPrice = parseFloat(o20.unitPrice);
-                                visible = true;
+                    } else if (visibleAnchors.length > 0) {
+                        let prevAnchor: (typeof visibleAnchors)[0] | null = null;
+                        let nextAnchor: (typeof visibleAnchors)[0] | null = null;
+                        for (const a of visibleAnchors) {
+                            if (a.day < workingDayNum) {
+                                prevAnchor = a;
+                            } else if (a.day > workingDayNum && !nextAnchor) {
+                                nextAnchor = a;
+                                break;
                             }
+                        }
+
+                        if (prevAnchor && nextAnchor) {
+                            const ratio = (workingDayNum - prevAnchor.day) / (nextAnchor.day - prevAnchor.day);
+                            const val1 = parseFloat(prevAnchor.orderValue);
+                            const val2 = parseFloat(nextAnchor.orderValue);
+                            const u1 = parseFloat(prevAnchor.unitPrice);
+                            const u2 = parseFloat(nextAnchor.unitPrice);
+                            matchedOrderValue = val1 + (val2 - val1) * ratio;
+                            matchedUnitPrice = u1 + (u2 - u1) * ratio;
+                            visible = true;
+                        } else if (prevAnchor) {
+                            matchedOrderValue = parseFloat(prevAnchor.orderValue);
+                            matchedUnitPrice = parseFloat(prevAnchor.unitPrice);
+                            visible = true;
+                        } else if (nextAnchor) {
+                            matchedOrderValue = parseFloat(nextAnchor.orderValue);
+                            matchedUnitPrice = parseFloat(nextAnchor.unitPrice);
+                            visible = true;
                         }
                     }
                 }
@@ -2006,200 +1990,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                 {/* Sticky Notes Board Delivery Calendar */}
                                 {(() => {
-                                    const layers = parseInt(formData.layers, 10) || 1;
-
-                                    const { options, totalAreaInSqM = 0 } = getLeadTimePricing();
-
-                                    const unitMultiplier = formData.unit === "inches" ? 25.4 : 1;
-                                    const length = (parseFloat(formData.width) || 0) * unitMultiplier;
-                                    const width = (parseFloat(formData.height) || 0) * unitMultiplier;
-                                    const quantity = Math.max(parseInt(formData.qty, 10) || 5, 5);
-
-                                    const defaultOrderValue = Math.max(Math.round(length * width * 0.05 * quantity), 100);
-                                    const defaultUnitPrice = (defaultOrderValue / quantity).toFixed(2);
-
-                                    // Generate 20 calendar days while mapping lead time prices ONLY to valid working days
-                                    const getOption = (dayNum: number) => options.find(o => o.day === dayNum && o.visible);
-
-                                    let workingDayCounter = 0;
-
-                                    const getShortMonthYear = (d: Date) => {
-                                        const monthStr = d.toLocaleDateString("en-IN", { month: "short" });
-                                        const formattedMonth = monthStr === "Sep" ? "Sept" : monthStr;
-                                        return `${formattedMonth} ${d.getFullYear()}`;
-                                    };
-
-                                    let next20Days: any[] = [];
-
-                                    if (isJlcpcbRequired(formData)) {
-                                        const jlcDate = getJlcpcbQuotationDate(new Date(), publicHolidays);
-                                        const yyyy = jlcDate.getFullYear();
-                                        const mm = String(jlcDate.getMonth() + 1).padStart(2, "0");
-                                        const dd = String(jlcDate.getDate()).padStart(2, "0");
-                                        const jlcIsoDateStr = `${yyyy}-${mm}-${dd}`;
-
-                                        let matchedVal = 0;
-                                        let pcbPriceVal = 0;
-                                        let shippingChargeVal = 0;
-                                        let subtotalVal = 0;
-                                        let gstAmountVal = 0;
-                                        let finalTotalVal = 0;
-
-                                        if (jlcpcbQuote) {
-                                            if (jlcpcbQuote.dates && Array.isArray(jlcpcbQuote.dates) && jlcpcbQuote.dates.length > 0) {
-                                                const firstDate = jlcpcbQuote.dates[0];
-                                                subtotalVal = parseFloat(firstDate.subtotal ?? jlcpcbQuote.subtotal ?? jlcpcbQuote.selling_price_before_gst ?? 0);
-                                                gstAmountVal = parseFloat(firstDate.gst_amount ?? jlcpcbQuote.gst_amount ?? (subtotalVal * 0.18));
-                                                finalTotalVal = parseFloat(firstDate.final_total ?? jlcpcbQuote.final_total ?? (subtotalVal + gstAmountVal));
-                                            } else {
-                                                subtotalVal = parseFloat(jlcpcbQuote.subtotal ?? jlcpcbQuote.selling_price_before_gst ?? jlcpcbQuote.without_gst ?? 0);
-                                                gstAmountVal = parseFloat(jlcpcbQuote.gst_amount ?? jlcpcbQuote.sales_gst_amount ?? (subtotalVal * 0.18));
-                                                finalTotalVal = parseFloat(jlcpcbQuote.final_total ?? jlcpcbQuote.with_gst ?? (subtotalVal + gstAmountVal));
-                                            }
-                                            matchedVal = subtotalVal;
-                                        }
-
-                                        const todayDate = new Date();
-                                        todayDate.setHours(0, 0, 0, 0);
-                                        const targetDateZero = new Date(jlcDate.getTime());
-                                        targetDateZero.setHours(0, 0, 0, 0);
-                                        const diffDays = Math.max(1, Math.round((targetDateZero.getTime() - todayDate.getTime()) / (1000 * 3600 * 24)));
-
-                                        const singleItem = {
-                                            day: diffDays,
-                                            dateObj: jlcDate,
-                                            isoDateStr: jlcIsoDateStr,
-                                            dateNum: jlcDate.getDate(),
-                                            monthStr: jlcDate.toLocaleDateString("en-IN", { month: "short" }),
-                                            fullMonthYear: jlcDate.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
-                                            shortMonthYear: getShortMonthYear(jlcDate),
-                                            weekday: jlcDate.toLocaleDateString("en-IN", { weekday: "short" }).toUpperCase(),
-                                            formattedDate: jlcDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-                                            orderValue: matchedVal.toFixed(2),
-                                            pcb_price: pcbPriceVal,
-                                            shipping_charge: shippingChargeVal,
-                                            subtotal: subtotalVal,
-                                            gst_amount: gstAmountVal,
-                                            final_total: finalTotalVal,
-                                            unitPrice: (matchedVal / quantity).toFixed(2),
-                                            visible: true,
-                                            isSunday: false,
-                                            isHoliday: false,
-                                            holidayName: null,
-                                            isUnavailable: false,
-                                            workingDayNum: diffDays
-                                        };
-
-                                        next20Days = [singleItem];
-                                    } else {
-                                        next20Days = Array.from({ length: 20 }, (_, i) => {
-                                            const daysAhead = i + 1;
-                                            const date = new Date();
-                                            date.setDate(date.getDate() + daysAhead);
-
-                                            const year = date.getFullYear();
-                                            const month = String(date.getMonth() + 1).padStart(2, "0");
-                                            const dayOfMonth = String(date.getDate()).padStart(2, "0");
-                                            const isoDateStr = `${year}-${month}-${dayOfMonth}`;
-
-                                            const isSunday = date.getDay() === 0;
-                                            const activeHoliday = publicHolidays.find(h => (typeof h.date === "string" ? h.date.split("T")[0] : "") === isoDateStr);
-                                            const isHoliday = !!activeHoliday;
-
-                                            let matchedOrderValue = defaultOrderValue;
-                                            let matchedUnitPrice = parseFloat(defaultUnitPrice);
-                                            let visible = false;
-                                            let workingDayNum = 0;
-
-                                            if (!isSunday && !isHoliday) {
-                                                workingDayCounter++;
-                                                workingDayNum = workingDayCounter;
-                                                const interpolate = (d1: number, d2: number, ratio: number = 0.5) => {
-                                                    const o1 = getOption(d1);
-                                                    const o2 = getOption(d2);
-                                                    if (o1 && o2) {
-                                                        const val1 = parseFloat(o1.orderValue);
-                                                        const val2 = parseFloat(o2.orderValue);
-                                                        const u1 = parseFloat(o1.unitPrice);
-                                                        const u2 = parseFloat(o2.unitPrice);
-                                                        return {
-                                                            orderValue: val1 + (val2 - val1) * ratio,
-                                                            unitPrice: u1 + (u2 - u1) * ratio,
-                                                            visible: true
-                                                        };
-                                                    }
-                                                    return null;
-                                                };
-
-                                                const dayNum = workingDayNum;
-                                                const directOpt = getOption(dayNum);
-                                                if (directOpt) {
-                                                    matchedOrderValue = parseFloat(directOpt.orderValue);
-                                                    matchedUnitPrice = parseFloat(directOpt.unitPrice);
-                                                    visible = true;
-                                                } else if (dayNum === 2) {
-                                                    const res = interpolate(1, 3, 0.5);
-                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                                } else if (dayNum === 4) {
-                                                    const res = interpolate(3, 5, 0.5);
-                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                                } else if (dayNum === 6) {
-                                                    const res = interpolate(5, 7, 0.5);
-                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                                } else if (dayNum === 8) {
-                                                    const res = interpolate(7, 10, 1 / 3);
-                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                                } else if (dayNum === 9) {
-                                                    const res = interpolate(7, 10, 2 / 3);
-                                                    if (res) { matchedOrderValue = res.orderValue; matchedUnitPrice = res.unitPrice; visible = res.visible; }
-                                                } else if (dayNum >= 10) {
-                                                    const ratio = Math.min((dayNum - 10) / 10, 1);
-                                                    const res = interpolate(10, 20, ratio);
-                                                    if (res) {
-                                                        matchedOrderValue = res.orderValue;
-                                                        matchedUnitPrice = res.unitPrice;
-                                                        visible = res.visible;
-                                                    } else {
-                                                        const o20 = getOption(20);
-                                                        if (o20) {
-                                                            matchedOrderValue = parseFloat(o20.orderValue);
-                                                            matchedUnitPrice = parseFloat(o20.unitPrice);
-                                                            visible = true;
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                                            const isUnavailable = isSunday || isHoliday || !visible;
-
-                                            return {
-                                                day: daysAhead,
-                                                dateObj: date,
-                                                isoDateStr,
-                                                dateNum: date.getDate(),
-                                                monthStr: date.toLocaleDateString("en-IN", { month: "short" }),
-                                                fullMonthYear: date.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
-                                                shortMonthYear: getShortMonthYear(date),
-                                                weekday: date.toLocaleDateString("en-IN", { weekday: "short" }),
-                                                formattedDate: date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-                                                orderValue: isUnavailable ? "0.00" : matchedOrderValue.toFixed(2),
-                                                unitPrice: isUnavailable ? "0.00" : matchedUnitPrice.toFixed(2),
-                                                visible,
-                                                isSunday,
-                                                isHoliday,
-                                                holidayName: activeHoliday?.name || null,
-                                                isUnavailable,
-                                                workingDayNum
-                                            };
-                                        });
-                                    }
-                                    const uniqueMonths = Array.from(new Set(next20Days.map(item => item.shortMonthYear)));
-                                    const calendarHeaderTitle = uniqueMonths.length > 1
-                                        ? `${uniqueMonths[0]} - ${uniqueMonths[uniqueMonths.length - 1]}`
-                                        : uniqueMonths[0] || getShortMonthYear(new Date());
-
-                                    // Ensure selectedDay is valid available date
-                                    const selectedDayData = next20Days.find(item => item.day === selectedDay && !item.isUnavailable) || next20Days.find(item => !item.isUnavailable);
+                                    const { next20Days, calendarHeaderTitle, selectedDayData } = quoteCalculation;
                                     const hasValidGerber = !!uploadedFile && detectedInfo?.layers !== "0" && (!!topSvg || !!bottomSvg || previewLoading);
 
                                     if (isJlcpcbRequired(formData) && isJlcpcbLoading) {
@@ -2244,7 +2035,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                     return (
                                         <div className="space-y-4">
-                                            <div className="bg-[#8DD3A5]/15 dark:bg-[#0F7438]/20 p-4 sm:p-5 rounded-2xl border border-[#41A96A]/30 shadow-inner relative overflow-hidden">
+                                            <div className="bg-[#8DD3A5]/15 dark:bg-[#0F7438]/20 p-3 sm:p-4 rounded-2xl border border-[#41A96A]/30 shadow-inner relative overflow-hidden">
                                                 <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-[#41A96A]/20 dark:border-[#69C48A]/30 relative z-10 gap-2">
                                                     <div className="min-w-0">
                                                         <h3 className="text-xs sm:text-sm font-bold text-[#0F7438] dark:text-[#8DD3A5] uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
@@ -2260,7 +2051,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                     </div>
                                                 </div>
 
-                                                <div className={isJlcpcbRequired(formData) ? "flex justify-center max-w-[180px] mx-auto relative z-10" : "grid grid-cols-5 gap-2.5 sm:gap-3.5 relative z-10"}>
+                                                <div className={isJlcpcbRequired(formData) ? "flex justify-center max-w-[180px] mx-auto relative z-10" : "grid grid-cols-5 gap-1.5 sm:gap-2 relative z-10"}>
                                                     {next20Days.map((item, idx) => {
                                                         const isSelected = selectedDayData?.day === item.day;
                                                         const stickyColors = [
@@ -2280,7 +2071,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                     key={item.day}
                                                                     aria-disabled="true"
                                                                     title={`${item.formattedDate} - Sunday - Unavailable`}
-                                                                    className={`relative flex flex-col items-center justify-between p-1.5 sm:p-2 rounded-md select-none aspect-square shadow-2xs opacity-80 bg-slate-100 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 cursor-not-allowed ${rotation}`}
+                                                                    className={`relative flex flex-col items-center justify-between px-1 py-1.5 sm:px-1.5 sm:py-2 rounded-md select-none aspect-square shadow-2xs opacity-80 bg-slate-100 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 cursor-not-allowed ${rotation}`}
                                                                 >
                                                                     <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
                                                                         <div className="w-2.5 h-2.5 rounded-full bg-slate-400 border border-white/80 shadow-2xs" />
@@ -2300,7 +2091,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                     key={item.day}
                                                                     aria-disabled="true"
                                                                     title={`${item.formattedDate} - ${item.holidayName} - Holiday`}
-                                                                    className={`relative flex flex-col items-center justify-between p-1.5 sm:p-2 rounded-md select-none aspect-square shadow-2xs bg-amber-50 dark:bg-amber-950/30 border border-amber-400/80 dark:border-amber-600/60 cursor-not-allowed ${rotation}`}
+                                                                    className={`relative flex flex-col items-center justify-between px-1 py-1.5 sm:px-1.5 sm:py-2 rounded-md select-none aspect-square shadow-2xs bg-amber-50 dark:bg-amber-950/30 border border-amber-400/80 dark:border-amber-600/60 cursor-not-allowed ${rotation}`}
                                                                 >
                                                                     <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
                                                                         <div className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white/80 shadow-2xs" />
@@ -2322,7 +2113,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                                     key={item.day}
                                                                     aria-disabled="true"
                                                                     title={`${item.formattedDate} - Unavailable for this order area`}
-                                                                    className={`relative flex flex-col items-center justify-between p-1.5 sm:p-2 rounded-md select-none aspect-square shadow-2xs opacity-60 bg-gray-100 dark:bg-slate-800/40 border border-gray-300 dark:border-slate-700 cursor-not-allowed ${rotation}`}
+                                                                    className={`relative flex flex-col items-center justify-between px-1 py-1.5 sm:px-1.5 sm:py-2 rounded-md select-none aspect-square shadow-2xs opacity-60 bg-gray-100 dark:bg-slate-800/40 border border-gray-300 dark:border-slate-700 cursor-not-allowed ${rotation}`}
                                                                 >
                                                                     <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20">
                                                                         <div className="w-2.5 h-2.5 rounded-full bg-red-400 border border-white/80 shadow-2xs" />
@@ -2338,7 +2129,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                                                             <div
                                                                 key={item.day}
                                                                 onClick={() => setSelectedDay(item.day)}
-                                                                className={`relative flex flex-col items-center justify-between p-1.5 sm:p-2 rounded-md transition-all duration-200 cursor-pointer select-none aspect-square shadow-sm ${rotation} ${isSelected
+                                                                className={`relative flex flex-col items-center justify-between px-1 py-1.5 sm:px-1.5 sm:py-2 rounded-md transition-all duration-200 cursor-pointer select-none aspect-square shadow-sm ${rotation} ${isSelected
                                                                     ? `${color.activeBg} ring-2 ring-[#238E4E] border-2 border-[#0F7438] scale-[1.06] z-20 shadow-md rotate-0`
                                                                     : `${color.bg} border ${color.border} hover:scale-[1.03] hover:rotate-0 hover:z-10 hover:shadow-md`
                                                                     }`}
@@ -2349,7 +2140,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                                                 <span className="text-[8.5px] sm:text-[9px] font-bold uppercase text-[#0F7438]/80 dark:text-[#8DD3A5]/80 leading-none mt-0.5">{item.weekday}</span>
                                                                 <span className={`text-xs sm:text-sm font-extrabold my-0.5 leading-tight ${color.text}`}>{item.dateNum}</span>
-                                                                <span className={`text-[9.5px] sm:text-[10px] font-bold ${color.subtext} leading-none pb-0.5 tracking-tight`}>
+                                                                <span className={`text-[8.5px] sm:text-[9.5px] font-bold ${color.subtext} leading-none pb-0.5 tracking-tight whitespace-nowrap text-center max-w-full inline-block`}>
                                                                     {formatPrice(item.orderValue)}
                                                                 </span>
                                                             </div>
@@ -2360,61 +2151,20 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
 
                                             {/* Shipping Options & Total Calculation */}
                                             {(() => {
-                                                const isJLCPCB = isJlcpcbRequired(formData) && !!jlcpcbQuote;
-                                                let jlcWeightKg: number | null = null;
-                                                if (isJLCPCB && jlcpcbQuote) {
-                                                    if (jlcpcbQuote.weight_kg !== undefined && jlcpcbQuote.weight_kg !== null && parseFloat(jlcpcbQuote.weight_kg) > 0) {
-                                                        jlcWeightKg = parseFloat(jlcpcbQuote.weight_kg);
-                                                    } else if (jlcpcbQuote.pcbCostInfo?.weight !== undefined && parseFloat(jlcpcbQuote.pcbCostInfo.weight) > 0) {
-                                                        jlcWeightKg = parseFloat(jlcpcbQuote.pcbCostInfo.weight);
-                                                    } else if (jlcpcbQuote.orderTotalWeight !== undefined && parseFloat(jlcpcbQuote.orderTotalWeight) > 0) {
-                                                        const w = parseFloat(jlcpcbQuote.orderTotalWeight);
-                                                        jlcWeightKg = w > 10 ? w / 1000.0 : w;
-                                                    } else if (jlcpcbQuote.weight !== undefined && parseFloat(jlcpcbQuote.weight) > 0) {
-                                                        const w = parseFloat(jlcpcbQuote.weight);
-                                                        jlcWeightKg = w > 10 ? w / 1000.0 : w;
-                                                    }
-                                                }
-
-                                                // Estimate PCB weight in KG or use actual JLCPCB weight from API
-                                                const thicknessMm = parseFloat((formData.thickness || "1.6").toString().replace(/[^0-9.]/g, "")) || 1.6;
-                                                const weightPerSqM = formData.baseMaterial === "Flex" ? 0.3 : 3.8 * (thicknessMm / 1.6);
-                                                const calculatedEstWeightKg = Math.max(0.1, parseFloat((totalAreaInSqM * weightPerSqM).toFixed(2)));
-
-                                                const estimatedWeightKg = (jlcWeightKg !== null && jlcWeightKg > 0) ? parseFloat(jlcWeightKg.toFixed(2)) : calculatedEstWeightKg;
-                                                const chargedWeightKg = Math.max(1.0, estimatedWeightKg);
-
-                                                const defaultShippingOptions = [
-                                                    { key: "standard", location: "Standard", method: "Standard", rate: 0 },
-                                                    { key: "plus", location: "Plus", method: "Plus", rate: 150 },
-                                                    { key: "fasttrack", location: "Fasttrack", method: "Fasttrack", rate: 450 },
-                                                ];
-                                                const shippingOptions = pricingConfig?.shippingOptions && Array.isArray(pricingConfig.shippingOptions) && pricingConfig.shippingOptions.length > 0
-                                                    ? pricingConfig.shippingOptions
-                                                    : defaultShippingOptions;
-
-                                                const activeShipping = shippingOptions.find((o: any) => o.key === shippingOptionKey) || shippingOptions[0];
-
-                                                const shippingCharge = Math.round(activeShipping.rate * chargedWeightKg);
-
-                                                let pcbPrice = 0;
-                                                let gstPercentage = 18;
-
-                                                if (isJLCPCB && jlcpcbQuote) {
-                                                    if (selectedDayData) {
-                                                        pcbPrice = selectedDayData.subtotal !== undefined ? parseFloat(selectedDayData.subtotal) : (jlcpcbQuote.subtotal || jlcpcbQuote.selling_price_before_gst || 0);
-                                                    } else {
-                                                        pcbPrice = jlcpcbQuote.subtotal !== undefined ? jlcpcbQuote.subtotal : (jlcpcbQuote.selling_price_before_gst || 0);
-                                                    }
-                                                    gstPercentage = jlcpcbQuote.gst_percentage !== undefined ? Number(jlcpcbQuote.gst_percentage) : (pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18);
-                                                } else {
-                                                    pcbPrice = selectedDayData ? parseFloat(selectedDayData.orderValue) : 0;
-                                                    gstPercentage = pricingConfig?.gstPercentage !== undefined ? Number(pricingConfig.gstPercentage) : 18;
-                                                }
-
-                                                const taxableTotal = pcbPrice > 0 ? pcbPrice + shippingCharge : 0;
-                                                const gstAmount = taxableTotal > 0 ? (taxableTotal * gstPercentage) / 100 : 0;
-                                                const mainTotal = taxableTotal + gstAmount;
+                                                const {
+                                                    shippingOptions,
+                                                    activeShipping,
+                                                    chargedWeightKg,
+                                                    totalAreaInSqM,
+                                                    estimatedWeightKg,
+                                                    shippingCharge,
+                                                    pcbPrice,
+                                                    gstPercentage,
+                                                    taxableTotal,
+                                                    gstAmount,
+                                                    mainTotal,
+                                                    isJLCPCB
+                                                } = quoteCalculation;
 
                                                 return (
                                                     <div className="bg-[#8DD3A5]/10 border border-[#41A96A]/30 rounded-xl p-3.5 shadow-2xs space-y-3">
