@@ -218,8 +218,8 @@ export default function CartPage() {
                 if (savedCart) {
                     try {
                         const items = JSON.parse(savedCart);
-                        saveCartToBackend(items).catch(() => {});
-                    } catch (e) {}
+                        saveCartToBackend(items).catch(() => { });
+                    } catch (e) { }
                 }
             }
         };
@@ -810,10 +810,10 @@ export default function CartPage() {
             (activeTab === "pcb"
                 ? item.productType === "pcb"
                 : activeTab === "part"
-                ? item.productType === "part"
-                : item.productType === "stencil")
+                    ? item.productType === "part"
+                    : item.productType === "stencil")
     );
-    
+
     // Summary ALWAYS reflects the currently active tab.
     // If specific items in the active tab are checked, calculate those.
     // If no items in active tab are checked, calculate all items in the active tab.
@@ -992,18 +992,6 @@ export default function CartPage() {
                                                             <div className="flex flex-wrap items-center gap-2">
                                                                 <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 truncate max-w-[240px] sm:max-w-[320px]">{item.boardName || (item as any).partNumber}</h3>
                                                                 {item.productType !== "part" && (
-                                                                    (isJlcpcbRequired(item) || item.quotation_source === "jlcpcb") ? (
-                                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
-                                                                            <Zap className="w-3 h-3 text-amber-500 fill-amber-400" />
-                                                                            JLCPCB Live
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
-                                                                            Local (In-House)
-                                                                        </span>
-                                                                    )
-                                                                )}
-                                                                {item.productType !== "part" && (
                                                                     <Link
                                                                         href={`/quote?cart_item_id=${item.id}`}
                                                                         className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:text-white hover:bg-primary bg-primary/10 px-2.5 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs"
@@ -1028,48 +1016,6 @@ export default function CartPage() {
                                                                         {(item as any).coverlayColor ? `, Coverlay: ${(item as any).coverlayColor}` : ""}
                                                                         {(item as any).stiffener && (item as any).stiffener !== "Without" ? `, Stiffener: ${(item as any).stiffener}` : ""}
                                                                     </p>
-                                                                    <div className="flex flex-wrap gap-1 pt-0.5">
-                                                                        {(item as any).materialType && (item as any).materialType !== "FR4-TG135" && (item as any).materialType !== "FR4 TG135" && (
-                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-blue-50 text-blue-700 rounded border border-blue-200">
-                                                                                Material: {(item as any).materialType}
-                                                                            </span>
-                                                                        )}
-                                                                        {item.surfaceFinish && item.surfaceFinish !== "HASL" && (
-                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-gray-100 text-gray-700 rounded border border-gray-200">
-                                                                                Finish: {item.surfaceFinish}
-                                                                            </span>
-                                                                        )}
-                                                                        {item.viaCovering && item.viaCovering !== "Tented" && (
-                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-gray-100 text-gray-700 rounded border border-gray-200">
-                                                                                Via: {item.viaCovering}
-                                                                            </span>
-                                                                        )}
-                                                                        {(item as any).viaPlatingMethod && (item as any).viaPlatingMethod !== "Standard" && (
-                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-gray-100 text-gray-700 rounded border border-gray-200">
-                                                                                Plating: {(item as any).viaPlatingMethod}
-                                                                            </span>
-                                                                        )}
-                                                                        {(item as any).goldFingers && (item as any).goldFingers !== "No" && (
-                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-amber-50 text-amber-700 rounded border border-amber-200">
-                                                                                Gold Fingers
-                                                                            </span>
-                                                                        )}
-                                                                        {(item as any).castellatedHoles && (item as any).castellatedHoles !== "No" && (
-                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-amber-50 text-amber-700 rounded border border-amber-200">
-                                                                                Castellated Holes
-                                                                            </span>
-                                                                        )}
-                                                                        {(item as any).edgePlating && (item as any).edgePlating !== "No" && (
-                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-amber-50 text-amber-700 rounded border border-amber-200">
-                                                                                Edge Plating
-                                                                            </span>
-                                                                        )}
-                                                                        {(item as any).blindSlots && (item as any).blindSlots !== "No" && (
-                                                                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-amber-50 text-amber-700 rounded border border-amber-200">
-                                                                                Blind Slots
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
                                                                 </>
                                                             )}
                                                         </div>
@@ -1090,11 +1036,10 @@ export default function CartPage() {
                                                                                     const step = 1;
                                                                                     handleQuantityChange(item.id, Math.max(min, currentQty - step));
                                                                                 }}
-                                                                                className={`w-6 h-full flex items-center justify-center text-xs font-bold transition-colors ${
-                                                                                    isMinReached
-                                                                                        ? "text-gray-300 bg-gray-100 cursor-not-allowed"
-                                                                                        : "text-gray-500 hover:bg-gray-200 cursor-pointer"
-                                                                                }`}
+                                                                                className={`w-6 h-full flex items-center justify-center text-xs font-bold transition-colors ${isMinReached
+                                                                                    ? "text-gray-300 bg-gray-100 cursor-not-allowed"
+                                                                                    : "text-gray-500 hover:bg-gray-200 cursor-pointer"
+                                                                                    }`}
                                                                             >
                                                                                 -
                                                                             </button>
@@ -1232,11 +1177,10 @@ export default function CartPage() {
                                     type="button"
                                     onClick={handleCheckoutClick}
                                     disabled={selectedItemIds.length === 0 || (activeTab === "part" && selectedTotal < minPartsOrderAmount)}
-                                    className={`w-full py-3 rounded-full text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs ${
-                                        selectedItemIds.length > 0 && !(activeTab === "part" && selectedTotal < minPartsOrderAmount)
-                                            ? "bg-primary hover:bg-secondary cursor-pointer active:scale-95"
-                                            : "bg-gray-300 cursor-not-allowed opacity-75"
-                                    }`}
+                                    className={`w-full py-3 rounded-full text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-xs ${selectedItemIds.length > 0 && !(activeTab === "part" && selectedTotal < minPartsOrderAmount)
+                                        ? "bg-primary hover:bg-secondary cursor-pointer active:scale-95"
+                                        : "bg-gray-300 cursor-not-allowed opacity-75"
+                                        }`}
                                 >
                                     <ShieldCheck className="w-4 h-4" />
                                     <span>Secure Checkout</span>
