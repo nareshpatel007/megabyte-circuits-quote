@@ -509,7 +509,7 @@ export default function CartPage() {
             });
             const json = await res.json();
             if (json.success && json.code === 200) {
-                const jlcBasePrice = parseFloat(json.subtotal ?? json.selling_price_before_gst ?? (json.pcb_price || 0));
+                const jlcBasePrice = parseFloat(json.subtotal ?? json.with_gst_amount ?? (json.pcb_price || 0));
 
                 let weightKg = 0;
                 if (json.weight_kg !== undefined && json.weight_kg !== null && parseFloat(json.weight_kg) > 0) {
