@@ -9,7 +9,7 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import GerberBoardPreview from "@/components/GerberBoardPreview";
 import { Search, ShoppingBag, Trash2, ShieldCheck, ArrowRight, Plus, Loader2, Sliders, Zap, Pencil } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
-import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend, setCartSessionId, getMinCartQuantity, safeSetStorage } from "@/lib/cartSession";
+import { saveCartToBackend, loadCartFromBackend, removeCartItemFromBackend, setCartSessionId, getMinCartQuantity, safeSetStorage, attachCartOnLogin } from "@/lib/cartSession";
 import { isJlcpcbRequired, getMatchedJlcpcbConditions } from "@/lib/jlcpcbCondition";
 import { getAuthToken, getAuthUser } from "@/lib/auth";
 
@@ -234,8 +234,13 @@ export default function CartPage() {
                 if (typeof window !== "undefined") {
                     const searchParams = new URLSearchParams(window.location.search);
                     const urlSessionId = searchParams.get("session_id");
+                    const user = getAuthUser();
                     if (urlSessionId) {
-                        setCartSessionId(urlSessionId);
+                        if (user && user.id && urlSessionId !== `user_cart_${user.id}`) {
+                            await attachCartOnLogin(user.id);
+                        } else {
+                            setCartSessionId(urlSessionId);
+                        }
                     }
                 }
                 const savedCart = localStorage.getItem("megabyte_cart");

@@ -1,7 +1,18 @@
 "use client";
 
+import { getAuthUser, getAuthToken, getCookie as getAuthCookie, setCookie as setAuthCookie, removeCookie as removeAuthCookie } from "./auth";
+
 const COOKIE_NAME = "megabyte_cart_session_id";
 const COOKIE_MAX_AGE_DAYS = 30;
+
+function getCookieDomain(): string | undefined {
+    if (typeof window === "undefined") return undefined;
+    const hostname = window.location.hostname;
+    if (hostname.includes("megabytecircuit.com")) {
+        return ".megabytecircuit.com";
+    }
+    return undefined;
+}
 
 /**
  * Helper to get a cookie value by name
@@ -11,7 +22,8 @@ export function getCookie(name: string): string | null {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) {
-        return parts.pop()?.split(';').shift() || null;
+        const item = parts.pop()?.split(";").shift();
+        return item ? decodeURIComponent(item) : null;
     }
     return null;
 }
@@ -23,7 +35,15 @@ export function setCookie(name: string, value: string, days: number = COOKIE_MAX
     if (typeof document === "undefined") return;
     const maxAgeSeconds = days * 24 * 60 * 60;
     const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${maxAgeSeconds}; expires=${expires}; path=/; SameSite=Lax`;
+    const domainPart = getCookieDomain() ? `; domain=${getCookieDomain()}` : "";
+    document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${maxAgeSeconds}; expires=${expires}; path=/; SameSite=Lax${domainPart}`;
+}
+
+/**
+ * Canonical cart session ID format for an authenticated user across all devices
+ */
+export function getUserCartSessionId(userId: string | number): string {
+    return `user_cart_${userId}`;
 }
 
 /**
@@ -35,15 +55,32 @@ export function setCartSessionId(sessionId: string) {
 }
 
 /**
- * Gets existing cart session ID or generates a new unique 30-day session ID
+ * Gets existing cart session ID or generates/resolves a deterministic cart ID.
+ * When a user is logged in, this ALWAYS resolves to the user's canonical cart ID (user_cart_{userId})
+ * across all devices.
  */
 export function getOrCreateCartSessionId(): string {
+    const authUser = getAuthUser();
+    if (authUser && authUser.id) {
+        const canonicalId = getUserCartSessionId(authUser.id);
+        const currentCookie = getCookie(COOKIE_NAME);
+        if (currentCookie !== canonicalId) {
+            setCookie(COOKIE_NAME, canonicalId, COOKIE_MAX_AGE_DAYS);
+        }
+        return canonicalId;
+    }
+
     let sessionId = getCookie(COOKIE_NAME);
+    // If guest has a stale user_cart_ cookie after logout, reset to fresh guest session
+    if (sessionId && sessionId.startsWith("user_cart_")) {
+        sessionId = null;
+    }
+
     if (!sessionId) {
         sessionId = `cart_sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         setCookie(COOKIE_NAME, sessionId, COOKIE_MAX_AGE_DAYS);
     } else {
-        // Refresh expiration to 30 days
+        // Refresh expiration
         setCookie(COOKIE_NAME, sessionId, COOKIE_MAX_AGE_DAYS);
     }
     return sessionId;
@@ -121,24 +158,76 @@ export function safeSetStorage(key: string, value: any, primaryStorage: "local" 
 }
 
 /**
+ * Attaches the current guest cart to the logged-in user and synchronizes across all devices.
+ * Called immediately after successful user authentication.
+ */
+export async function attachCartOnLogin(userId: string | number, token?: string): Promise<any[]> {
+    if (!userId) return [];
+    const canonicalSessionId = getUserCartSessionId(userId);
+    const currentSessionId = getCookie(COOKIE_NAME);
+
+    try {
+        const authToken = token || getAuthToken();
+        const headers: HeadersInit = {
+            "Content-Type": "application/json",
+        };
+        if (authToken) {
+            headers["Authorization"] = `Bearer ${authToken}`;
+        }
+
+        const res = await fetch("/api/cart/attach", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+                guest_session_id: currentSessionId && currentSessionId !== canonicalSessionId ? currentSessionId : undefined,
+                user_id: userId,
+            }),
+        });
+
+        const data = await res.json();
+
+        if (data.success && Array.isArray(data.items)) {
+            setCartSessionId(data.session_id || canonicalSessionId);
+            safeSetStorage("megabyte_cart", data.items);
+            window.dispatchEvent(new Event("megabyte_cart_updated"));
+            return data.items;
+        }
+    } catch (err) {
+        console.error("Failed to attach cart on login:", err);
+    }
+
+    // Fallback: set the canonical session ID and reload from backend
+    setCartSessionId(canonicalSessionId);
+    return await loadCartFromBackend();
+}
+
+/**
  * Saves cart items to backend API and updates local storage safely
  */
 export async function saveCartToBackend(items: any[]): Promise<boolean> {
     try {
         const sessionId = getOrCreateCartSessionId();
-        
+        const token = getAuthToken();
+        const authUser = getAuthUser();
+
         // Save to localStorage safely without raw heavy SVGs
         safeSetStorage("megabyte_cart", items);
         window.dispatchEvent(new Event("megabyte_cart_updated"));
 
+        const headers: HeadersInit = {
+            "Content-Type": "application/json",
+        };
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+
         // Save to backend database
         const res = await fetch("/api/cart/save", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers,
             body: JSON.stringify({
                 session_id: sessionId,
+                user_id: authUser?.id || undefined,
                 items: items,
             }),
         });
@@ -159,7 +248,7 @@ export async function removeCartItemFromBackend(id: string): Promise<any[]> {
         const savedCart = localStorage.getItem("megabyte_cart");
         const items = savedCart ? JSON.parse(savedCart) : [];
         const updatedItems = items.filter((item: any) => String(item.id) !== String(id));
-        
+
         await saveCartToBackend(updatedItems);
         return updatedItems;
     } catch (err) {
@@ -171,7 +260,7 @@ export async function removeCartItemFromBackend(id: string): Promise<any[]> {
 let pendingLoadCartPromise: Promise<any[]> | null = null;
 
 /**
- * Fetches cart items from backend API using cookie session ID
+ * Fetches cart items from backend API using cookie session ID (or logged-in user)
  */
 export async function loadCartFromBackend(): Promise<any[]> {
     if (pendingLoadCartPromise) {
@@ -186,16 +275,28 @@ export async function loadCartFromBackend(): Promise<any[]> {
                 return savedCart ? JSON.parse(savedCart) : [];
             }
 
-            const res = await fetch(`/api/cart/get?session_id=${encodeURIComponent(sessionId)}`);
+            const token = getAuthToken();
+            const headers: HeadersInit = {};
+            if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+            }
+
+            const res = await fetch(`/api/cart/get?session_id=${encodeURIComponent(sessionId)}`, {
+                headers,
+            });
             const data = await res.json();
 
             if (data.success && Array.isArray(data.items)) {
+                // If backend confirmed canonical session_id, ensure cookie matches
+                if (data.session_id && data.session_id !== sessionId) {
+                    setCartSessionId(data.session_id);
+                }
                 // Always sync backend items to localStorage (even if empty array)
-                localStorage.setItem("megabyte_cart", JSON.stringify(data.items));
+                safeSetStorage("megabyte_cart", data.items);
                 window.dispatchEvent(new Event("megabyte_cart_updated"));
                 return data.items;
             }
-            
+
             const savedCart = localStorage.getItem("megabyte_cart");
             return savedCart ? JSON.parse(savedCart) : [];
         } catch (err) {
@@ -210,7 +311,6 @@ export async function loadCartFromBackend(): Promise<any[]> {
     return pendingLoadCartPromise;
 }
 
-
 /**
  * Gets the minimum product quantity configured in .env (default 1)
  */
@@ -222,4 +322,3 @@ export function getMinCartQuantity(): number {
     }
     return 1;
 }
-

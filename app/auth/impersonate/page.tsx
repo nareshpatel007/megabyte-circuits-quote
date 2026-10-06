@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, ShieldAlert, CheckCircle2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { setAuthSession, setImpersonationSession, clearAuthSession } from "@/lib/auth";
+import { attachCartOnLogin } from "@/lib/cartSession";
 
 function ImpersonateHandoffContent() {
     const router = useRouter();
@@ -71,6 +72,12 @@ function ImpersonateHandoffContent() {
                     }
 
                     window.dispatchEvent(new Event("megabyte_auth_updated"));
+
+                    const activeUserId = userObj.id;
+                    if (activeUserId) {
+                        attachCartOnLogin(activeUserId, token).catch(() => {});
+                    }
+
                     setStatus("success");
                     setMessage(`Logged in as client: ${userObj.name || userObj.email}`);
 

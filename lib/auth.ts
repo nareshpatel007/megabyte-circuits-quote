@@ -2,8 +2,18 @@
 
 const TOKEN_COOKIE_NAME = "megabyte_user_token";
 const USER_COOKIE_NAME = "megabyte_user";
+const CART_COOKIE_NAME = "megabyte_cart_session_id";
 const LOGOUT_REASON_KEY = "megabyte_logout_reason";
 const COOKIE_MAX_AGE_DAYS = 30;
+
+function getCookieDomain(): string | undefined {
+    if (typeof window === "undefined") return undefined;
+    const hostname = window.location.hostname;
+    if (hostname.includes("megabytecircuit.com")) {
+        return ".megabytecircuit.com";
+    }
+    return undefined;
+}
 
 export function getCookie(name: string): string | null {
     if (typeof document === "undefined") return null;
@@ -20,11 +30,16 @@ export function setCookie(name: string, value: string, days: number = COOKIE_MAX
     if (typeof document === "undefined") return;
     const maxAgeSeconds = days * 24 * 60 * 60;
     const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${maxAgeSeconds}; expires=${expires}; path=/; SameSite=Lax`;
+    const domainPart = getCookieDomain() ? `; domain=${getCookieDomain()}` : "";
+    document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${maxAgeSeconds}; expires=${expires}; path=/; SameSite=Lax${domainPart}`;
 }
 
 export function removeCookie(name: string) {
     if (typeof document === "undefined") return;
+    const domainPart = getCookieDomain() ? `; domain=${getCookieDomain()}` : "";
+    if (domainPart) {
+        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT${domainPart}`;
+    }
     document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 }
 
@@ -92,15 +107,20 @@ export function clearImpersonationSession() {
 export function clearAuthSession() {
     removeCookie(TOKEN_COOKIE_NAME);
     removeCookie(USER_COOKIE_NAME);
+    removeCookie(CART_COOKIE_NAME);
     clearImpersonationSession();
     if (typeof localStorage !== "undefined") {
         localStorage.removeItem(TOKEN_COOKIE_NAME);
         localStorage.removeItem(USER_COOKIE_NAME);
+        localStorage.removeItem("megabyte_cart");
+        localStorage.removeItem("megabyte_cart_items");
         localStorage.removeItem("megabyte_dashboard_metrics");
         localStorage.removeItem("megabyte_sidebar_counts");
         localStorage.removeItem("megabyte_recent_orders");
         localStorage.removeItem("megabyte_recent_payments");
-        localStorage.removeItem("megabyte_cart_items");
+    }
+    if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("megabyte_cart_updated"));
     }
 }
 
@@ -115,7 +135,8 @@ export function getLogoutReason(): { code: string; message: string } | null {
     const raw = sessionStorage.getItem(LOGOUT_REASON_KEY);
     if (!raw) return null;
     try {
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        return parsed && parsed.active ? parsed : null;
     } catch {
         return null;
     }

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getAuthToken, getAuthUser, setAuthSession, clearAuthSession, setLogoutReason } from "@/lib/auth";
+import { attachCartOnLogin, setCartSessionId, loadCartFromBackend, getCookie } from "@/lib/cartSession";
 import { onAuthError } from "@/lib/apiClient";
 
 const PROTECTED_ROUTES = [
@@ -119,6 +120,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setStatusMessage(null);
                     setAuthSession(currentToken, updatedUser);
                     lastValidatedRef.current = Date.now();
+
+                    // Synchronize user cart session across devices and tabs
+                    if (updatedUser?.id) {
+                        const canonicalCartId = `user_cart_${updatedUser.id}`;
+                        const currentCartSession = getCookie("megabyte_cart_session_id");
+                        if (currentCartSession && currentCartSession !== canonicalCartId && !currentCartSession.startsWith("user_cart_")) {
+                            attachCartOnLogin(updatedUser.id, currentToken).catch(() => {});
+                        } else if (currentCartSession !== canonicalCartId) {
+                            setCartSessionId(canonicalCartId);
+                            loadCartFromBackend().catch(() => {});
+                        }
+                    }
+
                     return true;
                 }
 

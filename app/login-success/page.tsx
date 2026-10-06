@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { setAuthSession } from "@/lib/auth";
+import { attachCartOnLogin } from "@/lib/cartSession";
 
 function LoginSuccessContent() {
     const router = useRouter();
@@ -66,6 +67,7 @@ function LoginSuccessContent() {
 
                 if (userObj.id) {
                     setUserId(userObj.id);
+                    attachCartOnLogin(userObj.id, token).catch((e) => console.error("Error attaching cart on Google login:", e));
                 }
 
                 const userKey = userObj.email || userObj.id;

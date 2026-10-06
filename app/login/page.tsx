@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck, Loader2, AlertCircle, ArrowLeft, MailCheck } from "lucide-react";
 import { setAuthSession, getAuthToken, getLogoutReason, clearLogoutReason } from "@/lib/auth";
+import { attachCartOnLogin } from "@/lib/cartSession";
 import { signInSchema, signUpSchema } from "@/lib/validations/auth";
 
 function LoginContent() {
@@ -149,6 +150,10 @@ function LoginContent() {
 
                     setAuthSession(token, userObj);
                     window.dispatchEvent(new Event("megabyte_auth_updated"));
+
+                    if (userObj.id) {
+                        attachCartOnLogin(userObj.id, token).catch((e) => console.error("Error attaching cart:", e));
+                    }
 
                     setSuccessMessage("Signed in successfully!");
                     setTimeout(() => {
@@ -295,6 +300,10 @@ function LoginContent() {
 
                 setAuthSession(token, userObj);
                 window.dispatchEvent(new Event("megabyte_auth_updated"));
+
+                if (userObj.id) {
+                    attachCartOnLogin(userObj.id, token).catch((e) => console.error("Error attaching cart:", e));
+                }
 
                 setSuccessMessage("Account created successfully! Redirecting...");
                 setTimeout(() => {
