@@ -169,7 +169,6 @@ export default function QuoteForm({
                 if (!["0.51mm", "0.76mm", "1.52mm"].includes(next.thickness)) {
                     next.thickness = "0.51mm";
                 }
-                next.elecTest = "Flying Probe Fully Test";
             } else if (field === "baseMaterial" && value === "PTFE Teflon") {
                 next.layers = "2";
                 next.materialType = "ZYF300CA-C(Dk=2.94,Df=0.0016)";
@@ -178,17 +177,8 @@ export default function QuoteForm({
                 if (!["0.76mm", "1.52mm"].includes(next.thickness)) {
                     next.thickness = "0.76mm";
                 }
-                if (prev.baseMaterial === "Rogers" && next.elecTest === "Flying Probe Fully Test") {
-                    next.elecTest = "";
-                }
-            } else if (field === "baseMaterial" && value === "FR-4") {
-                next.surfaceFinish = parseInt(next.layers, 10) >= 6 ? "LeadFree HASL" : "HASL(Leaded)";
-                next.goldThickness = "N/A";
                 if (!["FR4 TG135", "KB6164 - TG135", "Nan Ya NP-140F", "S1141 TG140", "S1000H TG155", "FR4-TG135"].includes(next.materialType)) {
                     next.materialType = "FR4 TG135";
-                }
-                if (prev.baseMaterial === "Rogers" && next.elecTest === "Flying Probe Fully Test") {
-                    next.elecTest = "";
                 }
             } else if (field === "substrateType" && next.baseMaterial === "Flex") {
                 if (value === "Transparent") {
@@ -240,10 +230,6 @@ export default function QuoteForm({
 
             if (next.baseMaterial === "Flex") {
                 next.surfaceFinish = "ENIG";
-            }
-
-            if (next.baseMaterial === "Rogers") {
-                next.elecTest = "Flying Probe Fully Test";
             }
             return next;
         });
@@ -939,7 +925,7 @@ export default function QuoteForm({
                                     {["0.3mm/(0.4/0.45mm)", "0.25mm/(0.35/0.4mm)", "0.2mm/(0.3/0.35mm)", "0.15mm/(0.25/0.3mm)"].map(h => (
                                         <Pill
                                             key={h}
-                                            active={formData.minHole === h}
+                                            active={formData.minHole === h || (h.startsWith("0.3mm") && (!formData.minHole || formData.minHole === "0.3mm"))}
                                             onClick={() => updateField("minHole", h)}
                                         >
                                             {h}
@@ -1016,36 +1002,6 @@ export default function QuoteForm({
                                         onClick={() => updateField("confirmFile", cpf)}
                                     >
                                         {cpf}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
-
-                            <ConfigRow label="Mark on PCB">
-                                {["Remove Mark"].map(m => (
-                                    <Pill
-                                        key={m}
-                                        active={formData.markOnPcb === m}
-                                        onClick={() => updateField("markOnPcb", formData.markOnPcb === m ? "" : m)}
-                                    >
-                                        {m}
-                                    </Pill>
-                                ))}
-                            </ConfigRow>
-
-                            <ConfigRow label="Electrical Test">
-                                {["Flying Probe Fully Test"].map(et => (
-                                    <Pill
-                                        key={et}
-                                        active={formData.elecTest === et || formData.baseMaterial === "Rogers"}
-                                        onClick={() => {
-                                            if (formData.baseMaterial === "Rogers") {
-                                                updateField("elecTest", "Flying Probe Fully Test");
-                                            } else {
-                                                updateField("elecTest", formData.elecTest === et ? "" : et);
-                                            }
-                                        }}
-                                    >
-                                        {et}
                                     </Pill>
                                 ))}
                             </ConfigRow>

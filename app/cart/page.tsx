@@ -84,7 +84,6 @@ interface CartItem {
     blindSlots?: string;
     silkscreen?: string;
     differentDesign?: string;
-    elecTest?: string;
     pnNumber?: string;
     pn_number?: string;
 }
@@ -498,7 +497,7 @@ export default function CartPage() {
                     materialDetails: materialDetailsVal,
                     panelFlag: 0,
                     differentDesign: parseInt((item as any).differentDesign || "1", 10) || 1,
-                    flyingProbeTest: (item as any).elecTest === "Flying Probe Fully Test" || (item as any).elec_test === "Flying Probe Fully Test" ? 2 : 1,
+                    flyingProbeTest: (plateTypeVal === 7 || plateTypeVal === 5) ? 2 : 1,
                     castellatedHoles: (item as any).castellated === "Yes" ? 1 : 0,
                     orderDetailsRemark: "Cart Quantity Update",
                     impedanceFlag: "no",

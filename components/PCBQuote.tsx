@@ -484,11 +484,9 @@ export default function PCBQuote() {
     const [copperWeight, setCopperWeight] = useState("1 oz");
     const [viaCovering, setViaCovering] = useState("Not Specified");
     const [viaPlating, setViaPlating] = useState("Not Specified");
-    const [minHole, setMinHole] = useState("0.3mm");
+    const [minHole, setMinHole] = useState("0.3mm/(0.4/0.45mm)");
     const [tolerance, setTolerance] = useState("Regular");
     const [confirmFile, setConfirmFile] = useState("No");
-    const [markOnPcb, setMarkOnPcb] = useState("");
-    const [elecTest, setElecTest] = useState("");
     const [goldFingers, setGoldFingers] = useState("No");
     const [castellated, setCastellated] = useState("No");
     const [edgePlating, setEdgePlating] = useState("No");
@@ -696,11 +694,6 @@ export default function PCBQuote() {
                                                 }
                                                 if (["Rogers", "PTFE", "Teflon"].includes(m)) {
                                                     setLayers("2");
-                                                }
-                                                if (m === "Rogers") {
-                                                    setElecTest("Flying Probe Fully Test");
-                                                } else if (baseMaterial === "Rogers" && elecTest === "Flying Probe Fully Test") {
-                                                    setElecTest("");
                                                 }
                                             }}
                                         >
@@ -1083,26 +1076,6 @@ export default function PCBQuote() {
                                         <ConfigRow label="Via Plating Method">
                                             {["Not Specified", "Conductive Adhesive", "Horizontal Electroless Copper Plating"].map(v => (
                                                 <Pill key={v} active={viaPlating === v} onClick={() => setViaPlating(v)}>{v}</Pill>
-                                            ))}
-                                        </ConfigRow>
-
-                                        <ConfigRow label="Electrical Test">
-                                            {["Flying Probe Fully Test", "Not Tested"].map(t => (
-                                                <Pill
-                                                    key={t}
-                                                    active={baseMaterial === "Rogers" ? t === "Flying Probe Fully Test" : elecTest === t}
-                                                    disabled={baseMaterial === "Rogers" && t !== "Flying Probe Fully Test"}
-                                                    onClick={() => {
-                                                        if (baseMaterial === "Rogers") {
-                                                            setElecTest("Flying Probe Fully Test");
-                                                        } else {
-                                                            setElecTest(elecTest === t ? "" : t);
-                                                        }
-                                                    }}
-                                                    activeColor="blue"
-                                                >
-                                                    {t}
-                                                </Pill>
                                             ))}
                                         </ConfigRow>
 

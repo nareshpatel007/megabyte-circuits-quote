@@ -84,7 +84,7 @@ export default function EditSpecsModal({
         const rawVc = item.viaCovering || "Not Specified";
         setViaCovering((rawVc === "Tented" || rawVc === "Untented") ? "Not Specified" : rawVc);
         setViaPlating(item.viaPlating || "Not Specified");
-        setMinHole(item.minHole || "0.3mm/(0.4/0.45mm)");
+        setMinHole(item.minHole && item.minHole !== "0.3mm" ? item.minHole : "0.3mm/(0.4/0.45mm)");
         setGoldFingers(item.goldFingers || "No");
         setCastellated(item.castellated || "No");
         setEdgePlating(item.edgePlating || "No");
@@ -134,7 +134,6 @@ export default function EditSpecsModal({
         castellated,
         edgePlating,
         blindSlots,
-        elecTest: baseMaterial === "Rogers" ? "Flying Probe Fully Test" : (item?.elecTest || ""),
         jlcpcb_file_key: item?.jlcpcb_file_key || item?.fileKey
     };
 
@@ -293,7 +292,7 @@ export default function EditSpecsModal({
                             materialDetails: materialDetailsVal,
                             panelFlag: 0,
                             differentDesign: parseInt(item.differentDesign || "1", 10) || 1,
-                            flyingProbeTest: (plateTypeVal === 7 || plateTypeVal === 5 || item.elecTest === "Flying Probe Fully Test") ? 2 : 1,
+                            flyingProbeTest: (plateTypeVal === 7 || plateTypeVal === 5) ? 2 : 1,
                             castellatedHoles: castellated === "Yes" ? 1 : 0,
                             orderDetailsRemark: "Cart Specification Edit",
                             impedanceFlag: "no",
@@ -421,7 +420,6 @@ export default function EditSpecsModal({
                 castellated,
                 edgePlating,
                 blindSlots,
-                elecTest: baseMaterial === "Rogers" ? "Flying Probe Fully Test" : (item.elecTest || ""),
                 price: finalPcbPrice,
                 unitPrice: unitPrice,
                 shippingCharge: calculatedShipping,
@@ -734,7 +732,7 @@ export default function EditSpecsModal({
                                     type="button"
                                     onClick={() => setMinHole(mh)}
                                     className={`px-3 py-1.5 rounded-lg font-bold border transition-all cursor-pointer ${
-                                        minHole === mh
+                                        (minHole === mh || (mh.startsWith("0.3mm") && (!minHole || minHole === "0.3mm")))
                                             ? "border-primary bg-primary/10 text-primary shadow-2xs"
                                             : "border-gray-200 bg-white text-gray-700 hover:border-primary/40"
                                     }`}

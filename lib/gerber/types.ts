@@ -71,8 +71,8 @@ export interface QuoteFormData {
     minHole: string;
     tolerance: string;
     confirmFile: string;
-    markOnPcb: string;
-    elecTest: string;
+    markOnPcb?: string;
+    elecTest?: string;
     goldFingers: string;
     castellated: string;
     edgePlating: string;

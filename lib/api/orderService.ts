@@ -30,8 +30,8 @@ export interface OrderFormData {
     min_hole: string;
     tolerance: string;
     confirm_file: string;
-    mark_on_pcb: string;
-    elec_test: string;
+    mark_on_pcb?: string;
+    elec_test?: string;
     gold_fingers: string;
     castellated: string;
     edge_plating: string;

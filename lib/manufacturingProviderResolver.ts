@@ -74,10 +74,6 @@ export interface JlcpcbConditionCheckInput {
     edgeRounding?: string | boolean | number;
     blindSlots?: string | boolean | number;
     blind_slots?: string | boolean | number;
-    markOnPcb?: string;
-    mark_on_pcb?: string;
-    elecTest?: string;
-    elec_test?: string;
     quotation_source?: string;
     order_type?: string;
     jlcpcb_file_key?: string;
@@ -224,14 +220,6 @@ function extractFieldValue(data: JlcpcbConditionCheckInput, field: string): any 
         case "via_plating_method":
         case "viaplatingmethod":
             return data.viaPlating ?? data.via_plating ?? data.viaPlatingMethod ?? "";
-
-        case "mark_on_pcb":
-        case "markonpcb":
-            return data.markOnPcb ?? data.mark_on_pcb ?? "";
-
-        case "elec_test":
-        case "electest":
-            return data.elecTest ?? data.elec_test ?? "";
 
         default:
             return (data as any)[field] ?? null;
@@ -501,17 +489,6 @@ export function resolveManufacturingProvider(
         }
     }
 
-    // 13. Mark on PCB: Default is none selected
-    const rawMark = String(data.markOnPcb || data.mark_on_pcb || "").trim().toLowerCase();
-    if (rawMark && rawMark !== "none" && rawMark !== "not specified" && rawMark !== "no") {
-        reasons.push(`Mark on PCB: '${data.markOnPcb || data.mark_on_pcb}' requires JLCPCB.`);
-    }
-
-    // 14. Electrical Test: Default is none selected
-    const rawEt = String(data.elecTest || data.elec_test || "").trim().toLowerCase();
-    if (rawEt && rawEt !== "none" && rawEt !== "not tested" && rawEt !== "no") {
-        reasons.push(`Electrical Test: '${data.elecTest || data.elec_test}' requires JLCPCB.`);
-    }
 
     const isEligible = reasons.length === 0;
 

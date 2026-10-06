@@ -42,11 +42,9 @@ const INITIAL_FORM_DATA: QuoteFormData = {
     copperType: "",
     viaCovering: "Not Specified",
     viaPlating: "Not Specified",
-    minHole: "0.3mm",
+    minHole: "0.3mm/(0.4/0.45mm)",
     tolerance: "Regular",
     confirmFile: "No",
-    markOnPcb: "",
-    elecTest: "",
     goldFingers: "No",
     castellated: "No",
     edgePlating: "No",
@@ -581,10 +579,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                             goldThickness: (item.surfaceFinish === "ENIG" || item.baseMaterial === "Flex") ? (item.goldThickness && item.goldThickness !== "N/A" && item.goldThickness !== "1 U*" ? item.goldThickness : '1 U"') : "N/A",
                             viaCovering: (item.viaCovering === "Tented" || item.viaCovering === "Untented") ? "Not Specified" : (item.viaCovering || "Not Specified"),
                             viaPlating: item.viaPlating || item.viaPlatingMethod || "Not Specified",
-                            minHole: item.minHole || "0.3mm/(0.4/0.45mm)",
+                            minHole: (!item.minHole || item.minHole === "0.3mm") ? "0.3mm/(0.4/0.45mm)" : item.minHole,
                             confirmFile: item.confirmFile || "No",
-                            markOnPcb: item.markOnPcb || "",
-                            elecTest: (item.baseMaterial === "Rogers" || item.material === "Rogers") ? "Flying Probe Fully Test" : (item.elecTest || ""),
                             goldFingers: item.goldFingers || "No",
                             castellated: item.castellated || "No",
                             edgePlating: item.edgePlating || "No",
@@ -687,7 +683,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     if (!params.get("copperWeight")) updates.copperWeight = "0.5 oz";
                 } else if (matchedMaterial === "Rogers") {
                     updates.materialType = "RO4350B(Dk=3.48,Df=0.0037)";
-                    updates.elecTest = "Flying Probe Fully Test";
                 } else if (matchedMaterial === "PTFE Teflon") {
                     updates.materialType = "ZYF300CA-P(Dk=3.0,Df=0.0016)";
                 } else if (matchedMaterial === "FR-4") {
@@ -720,9 +715,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 if (spec.copperWeight) updates.copperWeight = String(spec.copperWeight);
                 if (spec.baseMaterial) {
                     updates.baseMaterial = String(spec.baseMaterial);
-                    if (String(spec.baseMaterial) === "Rogers") {
-                        updates.elecTest = "Flying Probe Fully Test";
-                    }
                 }
                 if (spec.boardName) updates.boardName = String(spec.boardName);
 
@@ -1017,7 +1009,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     })(),
                     panelFlag: 0,
                     differentDesign: parseInt(formData.differentDesign || "1", 10) || 1,
-                    flyingProbeTest: (plateTypeVal === 7 || plateTypeVal === 5 || formData.elecTest === "Flying Probe Fully Test") ? 2 : 1,
+                    flyingProbeTest: (plateTypeVal === 7 || plateTypeVal === 5) ? 2 : 1,
                     castellatedHoles: formData.castellated === "Yes" ? 1 : 0,
                     orderDetailsRemark: "Web Quotation",
                     impedanceFlag: "no",
@@ -1025,7 +1017,7 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     plateType: plateTypeVal,
                     autoConfirmProductionFile: formData.confirmFile === "Yes" ? false : true,
                     confirmFile: formData.confirmFile || "No",
-                    markOnPcb: (formData.markOnPcb || "").toLowerCase().includes("barcode") ? 2 : 1,
+                    markOnPcb: 1,
                     viaCovering: viaCoveringVal,
                     needTechnics: 0,
                     edgeRounding: formData.edgePlating === "Yes",
@@ -1097,14 +1089,12 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         formData.unit,
         formData.goldFingers,
         formData.differentDesign,
-        formData.elecTest,
         formData.castellated,
         formData.viaCovering,
         formData.viaPlating,
         formData.minHole,
         formData.edgePlating,
         formData.blindSlots,
-        formData.markOnPcb,
         formData.confirmFile,
         uploadedGerberFileId,
         jlcpcbFileKey
@@ -1459,8 +1449,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
             min_hole: formData.minHole,
             tolerance: formData.tolerance,
             confirm_file: formData.confirmFile,
-            mark_on_pcb: formData.markOnPcb,
-            elec_test: formData.elecTest,
             gold_fingers: formData.goldFingers,
             castellated: formData.castellated,
             edge_plating: formData.edgePlating,
@@ -1932,8 +1920,6 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                 viaPlating: formData.viaPlating || "Not Specified",
                 minHole: formData.minHole || "0.3mm/(0.4/0.45mm)",
                 confirmFile: formData.confirmFile || "No",
-                markOnPcb: formData.markOnPcb || "",
-                elecTest: formData.baseMaterial === "Rogers" ? "Flying Probe Fully Test" : (formData.elecTest || ""),
                 goldFingers: formData.goldFingers || "No",
                 castellated: formData.castellated || "No",
                 edgePlating: formData.edgePlating || "No",
