@@ -660,6 +660,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
         if (params.get("thickness")) updates.thickness = params.get("thickness")!;
         if (params.get("copperWeight")) updates.copperWeight = params.get("copperWeight")!;
         if (params.get("surfaceFinish")) updates.surfaceFinish = params.get("surfaceFinish")!;
+        if (params.get("minHole") || params.get("min_hole")) {
+            const rawMh = (params.get("minHole") || params.get("min_hole"))!;
+            updates.minHole = rawMh.startsWith("0.3") ? "0.3mm/(0.4/0.45mm)" : rawMh;
+        }
 
         const pcbTypeParam = params.get("pcbType") || params.get("baseMaterial");
         if (pcbTypeParam) {
@@ -717,6 +721,10 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                     updates.baseMaterial = String(spec.baseMaterial);
                 }
                 if (spec.boardName) updates.boardName = String(spec.boardName);
+                if (spec.minHole || spec.min_hole) {
+                    const rawMh = String(spec.minHole || spec.min_hole);
+                    updates.minHole = rawMh.startsWith("0.3") ? "0.3mm/(0.4/0.45mm)" : rawMh;
+                }
 
                 if (Object.keys(updates).length > 0) {
                     setFormData(prev => ({ ...prev, ...updates }));
