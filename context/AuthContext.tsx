@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         const canonicalCartId = `user_cart_${updatedUser.id}`;
                         const currentCartSession = getCookie("megabyte_cart_session_id");
                         if (currentCartSession && currentCartSession !== canonicalCartId && !currentCartSession.startsWith("user_cart_")) {
-                            attachCartOnLogin(updatedUser.id, currentToken).catch(() => {});
+                            attachCartOnLogin(updatedUser.id, currentToken, currentCartSession).catch(() => {});
                         } else if (currentCartSession !== canonicalCartId) {
                             setCartSessionId(canonicalCartId);
                             loadCartFromBackend().catch(() => {});

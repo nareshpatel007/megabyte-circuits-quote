@@ -60,6 +60,14 @@ function LoginSuccessContent() {
                     };
                 }
 
+                // Capture guest cart session & local cart items BEFORE auth update alters cookies/state
+                const guestSessionId = typeof document !== "undefined" ? (`; ${document.cookie}`).split("; megabyte_cart_session_id=").pop()?.split(";").shift() : null;
+                let guestCartItems: any[] = [];
+                try {
+                    const raw = typeof window !== "undefined" ? localStorage.getItem("megabyte_cart") : null;
+                    if (raw) guestCartItems = JSON.parse(raw);
+                } catch (e) {}
+
                 setAuthSession(token, userObj);
                 localStorage.setItem("megabyte_user_token", token);
                 localStorage.setItem("megabyte_user", JSON.stringify(userObj));
@@ -67,7 +75,7 @@ function LoginSuccessContent() {
 
                 if (userObj.id) {
                     setUserId(userObj.id);
-                    attachCartOnLogin(userObj.id, token).catch((e) => console.error("Error attaching cart on Google login:", e));
+                    attachCartOnLogin(userObj.id, token, guestSessionId, guestCartItems).catch((e) => console.error("Error attaching cart on Google login:", e));
                 }
 
                 const userKey = userObj.email || userObj.id;

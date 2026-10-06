@@ -148,17 +148,29 @@ function LoginContent() {
                         email: data.data?.email || data.user?.email || usernameOrEmail,
                     };
 
+                    // Capture guest cart session & local cart items BEFORE auth update alters cookies/state
+                    const guestSessionId = typeof document !== "undefined" ? (`; ${document.cookie}`).split("; megabyte_cart_session_id=").pop()?.split(";").shift() : null;
+                    let guestCartItems: any[] = [];
+                    try {
+                        const raw = typeof window !== "undefined" ? localStorage.getItem("megabyte_cart") : null;
+                        if (raw) guestCartItems = JSON.parse(raw);
+                    } catch (e) {}
+
                     setAuthSession(token, userObj);
                     window.dispatchEvent(new Event("megabyte_auth_updated"));
 
                     if (userObj.id) {
-                        attachCartOnLogin(userObj.id, token).catch((e) => console.error("Error attaching cart:", e));
+                        try {
+                            await attachCartOnLogin(userObj.id, token, guestSessionId, guestCartItems);
+                        } catch (e) {
+                            console.error("Error attaching cart:", e);
+                        }
                     }
 
                     setSuccessMessage("Signed in successfully!");
                     setTimeout(() => {
                         router.push(redirectUrl);
-                    }, 700);
+                    }, 500);
                 } else {
                     setErrorMessage(data.message || "Invalid credentials. Please try again.");
                 }
@@ -298,17 +310,29 @@ function LoginContent() {
                     email: data.data?.email || data.user?.email || email,
                 };
 
+                // Capture guest cart session & local cart items BEFORE auth update alters cookies/state
+                const guestSessionId = typeof document !== "undefined" ? (`; ${document.cookie}`).split("; megabyte_cart_session_id=").pop()?.split(";").shift() : null;
+                let guestCartItems: any[] = [];
+                try {
+                    const raw = typeof window !== "undefined" ? localStorage.getItem("megabyte_cart") : null;
+                    if (raw) guestCartItems = JSON.parse(raw);
+                } catch (e) {}
+
                 setAuthSession(token, userObj);
                 window.dispatchEvent(new Event("megabyte_auth_updated"));
 
                 if (userObj.id) {
-                    attachCartOnLogin(userObj.id, token).catch((e) => console.error("Error attaching cart:", e));
+                    try {
+                        await attachCartOnLogin(userObj.id, token, guestSessionId, guestCartItems);
+                    } catch (e) {
+                        console.error("Error attaching cart:", e);
+                    }
                 }
 
                 setSuccessMessage("Account created successfully! Redirecting...");
                 setTimeout(() => {
                     router.push(redirectUrl);
-                }, 700);
+                }, 500);
             } else {
                 setErrorMessage(data.message || "Invalid verification code. Please try again.");
             }

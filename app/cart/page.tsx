@@ -246,7 +246,12 @@ export default function CartPage() {
                 const savedCart = localStorage.getItem("megabyte_cart");
                 let items: CartItem[] = savedCart ? JSON.parse(savedCart) : [];
                 const backendItems = await loadCartFromBackend();
-                if (Array.isArray(backendItems)) {
+                if (Array.isArray(backendItems) && backendItems.length > 0) {
+                    items = backendItems;
+                } else if (items.length > 0 && Array.isArray(backendItems) && backendItems.length === 0) {
+                    // Local cart has items, backend returned empty: sync local cart to backend!
+                    saveCartToBackend(items).catch(() => {});
+                } else if (Array.isArray(backendItems)) {
                     items = backendItems;
                 }
                 items = items.map((item) => {
