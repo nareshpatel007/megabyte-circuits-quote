@@ -1690,11 +1690,8 @@ export default function PCBSpecification({ selectedProduct = "pcb", isLoggedIn =
                             matchedOrderValue = parseFloat(prevAnchor.orderValue);
                             matchedUnitPrice = parseFloat(prevAnchor.unitPrice);
                             visible = true;
-                        } else if (nextAnchor) {
-                            matchedOrderValue = parseFloat(nextAnchor.orderValue);
-                            matchedUnitPrice = parseFloat(nextAnchor.unitPrice);
-                            visible = true;
                         }
+                        // If only nextAnchor exists, workingDayNum is earlier than the minimum allowed turnaround time, so visible remains false (unavailable)
                     }
                 }
 
